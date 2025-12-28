@@ -37,7 +37,7 @@ app.use(compression());
 
 
 // Database Connection
-mongoose.connect('mongodb://localhost:27017/iiit_surat_papers')
+mongoose.connect('mongodb+srv://yogeshkhinchi2005_db_user:PaperStack%407877@paperstack.6vynuzi.mongodb.net/PaperStack')
     .then(() => console.log("✅ MongoDB Connected"))
     .catch(err => console.log("❌ DB Error:", err));
 
