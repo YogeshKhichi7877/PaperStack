@@ -333,6 +333,9 @@ app.delete('/api/papers/:id', async (req, res) => {
     }
 });
 
-
+//health check
+app.get('/api/health', (req, res) => {
+    res.status(200).send('Server is healthy');
+});
 
 app.listen(5000, () => console.log(`🚀 Server running on Port 5000`));
