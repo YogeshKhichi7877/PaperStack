@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const https = require('https');
 
+app.set('trust proxy', 1);
 
 // 1. IMPORT CLOUDINARY STORAGE
 const { storage , cloudinary } = require('./cloudConfig'); 
@@ -25,7 +26,7 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'PaperStackSecretKey'; 
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 5 * 60 * 1000, // 5 minutes
   max: 1000 // limit each IP to 1000 requests per windowMs
 });
 
