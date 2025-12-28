@@ -26,7 +26,7 @@ const JWT_SECRET = 'PaperStackSecretKey';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 1000 // limit each IP to 1000 requests per windowMs
 });
 
 // Put this at the bottom of index.js
@@ -38,11 +38,11 @@ setInterval(() => {
   }).on('error', (err) => {
     console.error("Self-ping failed:", err.message);
   });
-}, 14 * 60 * 1000); // 14 minutes in milliseconds
+}, 2 * 60 * 1000); // 2 minutes in milliseconds
 
 // Middleware
 app.use(cors({
-    origin: "*", // For now, allow all. Later, replace with your Vercel URL for security.
+    origin: "https://paper-stack-beryl.vercel.app/", // For now, allow all. Later, replace with your Vercel URL for security.
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
@@ -54,7 +54,7 @@ app.use(compression());
 
 // Database Connection
 mongoose.connect('mongodb+srv://yogeshkhinchi2005_db_user:PaperStack%407877@paperstack.6vynuzi.mongodb.net/PaperStack')
-    .then(() => console.log("✅ MongoDB Connected"))
+    .then(() => console.log("✅ MongoDB atlas Connected"))
     .catch(err => console.log("❌ DB Error:", err));
 
 // 2. INITIALIZE MULTER WITH CLOUDINARY STORAGE
@@ -350,7 +350,7 @@ app.delete('/api/papers/:id', async (req, res) => {
 });
 
 //health check
-app.get('/api/health', (req, res) => {
+app.get('/', (req, res) => {
     res.status(200).send('Server is healthy');
 });
 
