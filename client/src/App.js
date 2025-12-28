@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import logo from './assets/Paperstack_logo_wt.png'; 
 import './App.css';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = 'https://paperstack-backend.onrender.com';
 
 // --- CUSTOM ALERT COMPONENT ---
 function CustomAlert({ alert }) {

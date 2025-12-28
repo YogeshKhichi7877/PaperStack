@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
+const https = require('https');
 
 
 // 1. IMPORT CLOUDINARY STORAGE
@@ -28,8 +29,23 @@ const limiter = rateLimit({
   max: 100 // limit each IP to 100 requests per windowMs
 });
 
+// Put this at the bottom of index.js
+const backendUrl = "https://paperstack-backend.onrender.com"; // Your Render URL
+
+setInterval(() => {
+  https.get(backendUrl, (res) => {
+    console.log("Self-ping successful: Status", res.statusCode);
+  }).on('error', (err) => {
+    console.error("Self-ping failed:", err.message);
+  });
+}, 14 * 60 * 1000); // 14 minutes in milliseconds
+
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: "*", // For now, allow all. Later, replace with your Vercel URL for security.
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 app.use(express.json());
 app.use(helmet());
 app.use(limiter);
