@@ -358,4 +358,7 @@ app.get('/', (req, res) => {
     res.status(200).send('Server is healthy');
 });
 
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'OK', timestamp: new Date() });
+});
 app.listen(5000, () => console.log(`🚀 Server running on Port 5000`));
