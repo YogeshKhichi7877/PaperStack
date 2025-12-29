@@ -9,6 +9,6 @@ PaperStack is a modern, centralized archive for IIIT Surat students to access pr
 * **Discussion Hub:** Real-time comments on specific papers.
 
 ## 🛠️ Tech Stack
-* **Frontend:** React.js, Recharts, CSS3
-* **Backend:** Node.js, Express.js
-* **Database:** MongoDB
+* **Frontend:** React.js, Recharts, CSS3 |||| Uploaded at versel 
+* **Backend:** Node.js, Express.js |||| uploaded at render 
+* **Database:** MongoDB ||| uploaded at mongoDB atlas 

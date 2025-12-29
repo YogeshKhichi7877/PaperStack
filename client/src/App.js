@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -6,6 +6,16 @@ import logo from './assets/Paperstack_logo_wt.png';
 import './App.css';
 
 const API_URL = 'https://paperstack-backend.onrender.com';
+
+// --- HELPER: PAGE LOADER ---
+function PageLoader() {
+  return (
+    <div className="page-loading-screen">
+       <img src="/logo.png" alt="Loading..." style={{ height: '60px', marginBottom: '10px' }} />
+       <p>Loading PaperStack...</p>
+    </div>
+  );
+}
 
 // --- CUSTOM ALERT COMPONENT ---
 function CustomAlert({ alert }) {
@@ -32,13 +42,14 @@ function Footer() {
               The official archive for IIIT Surat previous year papers. 
               Helping students prepare better with organized academic resources.
             </p>
+            <p>Managed and maintained by <strong>Yogesh Khinchi</strong>.</p>
           </div>
 
           {/* Quick Links */}
           <div className="footer-links">
             <h4 className="footer-heading">Navigation</h4>
             <ul className="footer-list">
-              <li><Link to="/">Home</Link></li>
+              <li><Link to="">Home</Link></li>
               <li><Link to="/login">Student Login</Link></li>
               <li><Link to="/admin">Admin Access</Link></li>
             </ul>
@@ -332,13 +343,26 @@ function AnalyticsDashboard({ onClose }) {
     );
 }
 
-// --- PAPER DETAILS MODAL ---
+// --- UPDATED PAPER DETAILS MODAL ---
 function PaperModal({ paper, user, onClose, showAlert }) {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
+    const [iframeLoading, setIframeLoading] = useState(true); // Track PDF loading
 
-    useEffect(() => { fetchComments(); }, [paper._id]);
-    const fetchComments = async () => { const res = await axios.get(`${API_URL}/api/papers/${paper._id}/comments`); setComments(res.data); };
+
+    useEffect(() => { 
+        fetchComments(); 
+        setIframeLoading(true);
+    }, [paper._id]);
+
+    const fetchComments = async () => { 
+        try {
+            const res = await axios.get(`${API_URL}/api/papers/${paper._id}/comments`); 
+            setComments(res.data); 
+        } catch (err) {
+            console.error("Error fetching comments", err);
+        }
+    };
 
     const postComment = async (e) => {
         e.preventDefault();
@@ -346,34 +370,98 @@ function PaperModal({ paper, user, onClose, showAlert }) {
         if(!user) { showAlert("Please Login to comment", "error"); return; }
         
         try {
-            await axios.post(`${API_URL}/api/papers/${paper._id}/comments`, { text: newComment }, { headers: { Authorization: localStorage.getItem('token') } });
-            setNewComment(''); fetchComments();
-        } catch (err) { showAlert("Failed to post comment", "error"); }
+            await axios.post(
+                `${API_URL}/api/papers/${paper._id}/comments`, 
+                { text: newComment }, 
+                { headers: { Authorization: localStorage.getItem('token') } }
+            );
+            setNewComment(''); 
+            fetchComments();
+        } catch (err) { 
+            showAlert("Failed to post comment", "error"); 
+        }
     };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <button className="close-modal-btn" onClick={onClose}>✖</button>
+                
                 <div className="modal-split">
+                    {/* LEFT SIDE: PDF Viewer */}
                     <div className="modal-left">
-                        <h3>📄 {paper.subject} ({paper.examType})</h3>
-                        <iframe src={paper.filePath} title="PDF" className="pdf-frame"></iframe>
+                        <div className="modal-header-info">
+                            <h3>📄 {paper.subject}</h3>
+                            <span className="badge-pill">{paper.examType} • {paper.year}</span>
+                        </div>
+
+                        <div className="pdf-container">
+                            {/* SKELETON LOADER FOR PDF */}
+                            {iframeLoading && (
+                                <div className="pdf-skeleton">
+                                    <div className="skeleton-shimmer"></div>
+                                    <p>Loading document...</p>
+                                </div>
+                            )}
+                            
+                            <iframe 
+                                src={`${paper.filePath}#toolbar=0`} // Hide toolbar for cleaner look
+                                title="PDF Preview" 
+                                className="pdf-frame"
+                                onLoad={() => setIframeLoading(false)}
+                                style={{ opacity: iframeLoading ? 0 : 1 }}
+                            ></iframe>
+                        </div>
+
                         <div className="modal-actions">
-                            <a href={paper.filePath} target="_blank" rel="noreferrer" className="btn-download">Download PDF</a>
-                            {paper.solutionPath && <a href={paper.solutionPath} target="_blank" rel="noreferrer" className="btn-solution">💡 View Solution</a>}
+                            <a href={paper.filePath} target="_blank" rel="noreferrer" className="btn-download">
+                                ⬇️ Download Paper
+                            </a>
+                            {paper.solutionPath && (
+                                <a href={paper.solutionPath} target="_blank" rel="noreferrer" className="btn-solution">
+                                    💡 View Solution
+                                </a>
+                            )}
                         </div>
                     </div>
+
+                    {/* RIGHT SIDE: Comments/Doubts */}
                     <div className="modal-right">
-                        <h3>💬 Discussion Board</h3>
-                        <div className="comments-list">
-                            {comments.length === 0 ? <p className="no-comments">No doubts yet.</p> : comments.map(c => (
-                                <div key={c._id} className="comment-bubble"><strong>{c.username}</strong><p>{c.text}</p></div>
-                            ))}
+                        <div className="discussion-header">
+                            <h3>💬 Doubt Section</h3>
+                            <p>{comments.length} Thoughts</p>
                         </div>
+
+                        <div className="comments-list">
+                            {comments.length === 0 ? (
+                                <div className="empty-comments">
+                                    <p>No doubts yet. Be the first to ask!</p>
+                                </div>
+                            ) : (
+                                comments.map(c => (
+                                    <div key={c._id} className="comment-bubble">
+                                        <div className="comment-user-icon">
+                                            {c.username.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="comment-details">
+                                            <strong>{c.username}</strong>
+                                            <p>{c.text}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
                         <form onSubmit={postComment} className="comment-form">
-                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder={user ? "Ask a doubt..." : "Login to chat"} disabled={!user} />
-                            <button type="submit" disabled={!user}>➤</button>
+                            <input 
+                                value={newComment} 
+                                onChange={e => setNewComment(e.target.value)} 
+                                placeholder={user ? "Write a doubt..." : "Login to join discussion"} 
+                                disabled={!user} 
+                            />
+                            <button type="submit" disabled={!user || !newComment.trim()}>
+                                Send
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -382,9 +470,31 @@ function PaperModal({ paper, user, onClose, showAlert }) {
     );
 }
 
+function PaperSkeleton() {
+  return (
+    <div className="paper-card skeleton">
+      <div className="card-stats-row">
+        <div className="skeleton-circle"></div>
+        <div className="skeleton-circle"></div>
+        <div className="skeleton-circle"></div>
+      </div>
+      <div className="card-body">
+        <div className="skeleton-line skeleton-badge"></div>
+        <div className="skeleton-line skeleton-title"></div>
+        <div className="skeleton-line skeleton-text"></div>
+        <div className="skeleton-line skeleton-meta"></div>
+      </div>
+      <div className="card-actions">
+        <div className="skeleton-line skeleton-button"></div>
+      </div>
+    </div>
+  );
+}
+
 // --- HOME COMPONENT ---
 function Home({ user, setUser, theme, toggleTheme, showAlert }) {
-  const [papers, setPapers] = useState([]);
+const [papers, setPapers] = useState([]);
+  const [loading, setLoading] = useState(true); // ✅ Added Loading State
   const [filter, setFilter] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSem, setFilterSem] = useState(user?.semester?.toString() || '');
@@ -395,9 +505,8 @@ function Home({ user, setUser, theme, toggleTheme, showAlert }) {
   const [formData, setFormData] = useState({ title: '', subject: '', year: '', semester: '', examType: 'Mid-Sem' });
   const [file, setFile] = useState(null);
   const [solutionFile, setSolutionFile] = useState(null);
-  
-  // NEW: Loader state
   const [isUploading, setIsUploading] = useState(false);
+  
 
   const handleSolution = (e, paper) => {
       e.stopPropagation();
@@ -417,6 +526,7 @@ function Home({ user, setUser, theme, toggleTheme, showAlert }) {
 
   // Updated fetch with Sorting (Newest Year First, then Newest Sem)
  const fetchPapers = async () => { 
+    setLoading(true);
     try {
         const res = await axios.get(`${API_URL}/api/papers`); 
         const sorted = res.data.sort((a, b) => {
@@ -435,6 +545,10 @@ function Home({ user, setUser, theme, toggleTheme, showAlert }) {
         setPapers(sorted); 
     } catch (err) { 
         console.error("Fetch Error:", err); 
+        showAlert("Failed to load papers", "error");
+    } finally {
+        // Add a slight delay (500ms) so the skeleton doesn't "flash" too fast
+        setTimeout(() => setLoading(false), 500); 
     }
   };
   // Fixed handleUpload with Loader and proper logic
@@ -614,27 +728,52 @@ function Home({ user, setUser, theme, toggleTheme, showAlert }) {
         )}
 
         <div className="controls-section">
-            <div className="controls-bar">
-                <div className="tabs"><button className={filter === 'all' ? 'tab active' : 'tab'} onClick={() => setFilter('all')}>📚 Papers</button><button className={filter === 'saved' ? 'tab active' : 'tab'} onClick={() => setFilter('saved')}>❤️ Saved</button></div>
-               <span className="navbar-paper-count"><h5>Total Papers Available : {papers.length} </h5></span>
-                <div className="filters">
-                    <select className="sem-filter" value={filterSem} onChange={e => setFilterSem(e.target.value)}>
-                        <option value="">All Sems</option>
-                        {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>Sem {s}</option>)}
-                    </select>
-                    <input className="search-input" type="text" placeholder="🔍 Search..." onChange={e => setSearchTerm(e.target.value)} />
-                </div>
-            </div>
-            {hardestSubject && (
-                <div className="difficulty-banner">
-                    <span className="fire-icon">🔥</span>
-                    <div><strong>Insight:</strong> <span className="highlight-subject">{hardestSubject.subject}</span> is currently the toughest subject!</div>
-                </div>
-            )}
+    <div className="controls-bar">
+        <div className="tabs">
+            <button className={filter === 'all' ? 'tab active' : 'tab'} onClick={() => setFilter('all')}>
+                📚 Papers
+            </button>
+            <button className={filter === 'saved' ? 'tab active' : 'tab'} onClick={() => setFilter('saved')}>
+                ❤️ Saved
+            </button>
         </div>
 
+        {/* Updated this line to show filtered count */}
+        <span className="navbar-paper-count">
+            <h5>
+                {searchTerm || filterSem !== '' ? 'Papers Found: ' : 'Total Papers: '} 
+                {displayedPapers.length}
+            </h5>
+        </span>
+
+        <div className="filters">
+            <select className="sem-filter" value={filterSem} onChange={e => setFilterSem(e.target.value)}>
+                <option value="">All Sems</option>
+                {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>Sem {s}</option>)}
+            </select>
+            <input 
+                className="search-input" 
+                type="text" 
+                placeholder="🔍 Search..." 
+                onChange={e => setSearchTerm(e.target.value)} 
+            />
+        </div>
+    </div>
+
+    {hardestSubject && (
+        <div className="difficulty-banner">
+            <span className="fire-icon">🔥</span>
+            <div><strong>Insight:</strong> <span className="highlight-subject">{hardestSubject.subject}</span> is currently the toughest!</div>
+        </div>
+    )}
+</div>
+
         <div className="papers-grid">
-            {displayedPapers.length === 0 && filterSem ? (
+            {loading ? (
+                // showing skeleton while loading
+                [...Array(6)].map((_, idx) => <PaperSkeleton key={idx} />) ) :
+
+                displayedPapers.length === 0 && filterSem ? (
                 <div style={{gridColumn: '1/-1', textAlign: 'center', padding: '2rem', color: '#888'}}>
                     <h3>No papers found for Semester {filterSem}</h3>
                     <p>Try switching to "All Sems"</p>
@@ -718,12 +857,15 @@ export default function App() {
   return (
     <Router>
         <CustomAlert alert={alertInfo} />
+        <Suspense fallback={<PageLoader />}>
         <Routes>
             <Route path="/" element={<Home user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} showAlert={showAlert} />} />
             <Route path="/login" element={<Login setUser={setUser} showAlert={showAlert} />} />
             <Route path="/register" element={<Register showAlert={showAlert} />} />
             <Route path="/admin" element={<AdminLogin showAlert={showAlert} />} />
         </Routes>
+        </Suspense>
     </Router>
+    
   );
 }
