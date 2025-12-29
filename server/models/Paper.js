@@ -1,21 +1,23 @@
 const mongoose = require('mongoose');
 
 const paperSchema = new mongoose.Schema({
-    title: String,
-    subject: String,
+    title: { type: String, required: true },
+    
+    subject: { type: String, index: true }, 
+    semester: { type: Number, index: true },
+    examType: { type: String, index: true },
+    
     year: Number,
-    semester: Number,
-    examType: String,
-    
     filePath: String,
-    filePublicId: String, // ✅ ADD THIS (Stores the ID for deletion)
-    
+    filePublicId: String,
     solutionPath: String,
-    solutionPublicId: String, // ✅ ADD THIS
+    solutionPublicId: String,
     
-    views: { type: Number, default: 0 },
+    views: { type: Number, default: 0, index: -1 }, 
     downloads: { type: Number, default: 0 },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now, index: -1 }
 });
+
+paperSchema.index({ semester: 1, subject: 1 });
 
 module.exports = mongoose.model('Paper', paperSchema);

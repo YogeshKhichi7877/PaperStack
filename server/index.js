@@ -26,9 +26,12 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'PaperStackSecretKey'; 
 
 const limiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 1000 // limit each IP to 1000 requests per windowMs
+  windowMs: 2 * 60 * 1000, // Increase to 2 mins
+  max: 300, // Lower for testing, increase later
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+
 
 // Put this at the bottom of index.js
 const backendUrl = "https://paperstack-backend.onrender.com"; // Your Render URL
@@ -44,12 +47,12 @@ setInterval(() => {
 // Middleware
 app.use(cors({
     origin: "https://paper-stack-beryl.vercel.app/", // For now, allow all. Later, replace with your Vercel URL for security.
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
   credentials: true
 }));
 app.use(express.json());
 app.use(helmet());
-app.use(limiter);
+app.use('/api/', limiter);
 app.use(compression());
 
 
@@ -84,7 +87,7 @@ app.post('/api/auth/register', async (req, res) => {
         // 1. Get semester from the request body
         const { username, email, password, semester } = req.body; 
         
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email }).lean();
         if (existingUser) return res.status(400).json({ error: "User already exists" });
 
         const hashedPassword = await bcrypt.hash(password, saltrounds);
@@ -107,7 +110,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).lean();
         if (!user) return res.status(400).json({ error: "User not found" });
 
         const validPass = await bcrypt.compare(password, user.password);
@@ -205,7 +208,7 @@ app.post('/api/upload', upload.fields([{ name: 'file' }, { name: 'solution' }]),
 
 app.get('/api/papers', async (req, res) => {
     try {
-        const papers = await Paper.find().sort({ year: -1, semester: 1 });
+        const papers = await Paper.find().sort({ year: -1, semester: 1 }).lean();
         res.json(papers);
     } catch(err) { res.status(500).json({ error: "Fetch failed" }); }
 });
@@ -213,7 +216,7 @@ app.get('/api/papers', async (req, res) => {
 // 3. Analytics & Views
 app.post('/api/papers/:id/view', async (req, res) => {
     try {
-        await Paper.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+        await Paper.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } }).lean();
         res.status(200).json({ message: "View counted" });
     } catch (err) {
         console.error("❌ View Count Error:", err.message);
@@ -224,7 +227,7 @@ app.post('/api/papers/:id/view', async (req, res) => {
 // --- NEW ROUTE: Track Downloads ---
 app.post('/api/papers/:id/download', async (req, res) => {
     try {
-        await Paper.findByIdAndUpdate(req.params.id, { $inc: { downloads: 1 } });
+        await Paper.findByIdAndUpdate(req.params.id, { $inc: { downloads: 1 } }).lean();
         res.status(200).json({ message: "Download counted" });
     } catch (err) {
         res.status(500).json({ error: "Error counting download" });
@@ -237,7 +240,7 @@ app.get('/api/analytics', async (req, res) => {
             { $group: { _id: "$subject", totalViews: { $sum: "$views" } } },
             { $sort: { totalViews: -1 } },
             { $limit: 5 }
-        ]);
+        ]).lean();
         res.json(stats);
     } catch (err) { res.status(500).json({ error: "Analytics failed" }); }
 });
@@ -245,7 +248,7 @@ app.get('/api/analytics', async (req, res) => {
 // 4. Comments
 app.get('/api/papers/:id/comments', async (req, res) => {
     try {
-        const comments = await Comment.find({ paperId: req.params.id }).sort({ createdAt: -1 });
+        const comments = await Comment.find({ paperId: req.params.id }).sort({ createdAt: -1 }).lean();
         res.json(comments);
     } catch(err) { res.status(500).json({ error: "Fetch comments failed" }); }
 });
@@ -271,7 +274,7 @@ app.post('/api/papers/:id/comments', authenticate, async (req, res) => {
 // 5. Bookmarks
 app.put('/api/user/bookmark/:id', authenticate, async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user._id).lean();
         const index = user.bookmarks.indexOf(req.params.id);
         if(index === -1) user.bookmarks.push(req.params.id);
         else user.bookmarks.splice(index, 1);
@@ -288,7 +291,7 @@ app.put('/api/user/semester', authenticate, async (req, res) => {
             req.user._id, 
             { semester: semester }, 
             { new: true } // Return updated doc
-        );
+        ).lean();
         res.json({ message: "Semester updated", semester: user.semester });
     } catch (err) {
         res.status(500).json({ error: "Could not update semester" });
@@ -298,7 +301,7 @@ app.put('/api/user/semester', authenticate, async (req, res) => {
 // Use upload.fields to handle two separate file keys
 app.put('/api/papers/:id/solution', upload.single('solution'), async (req, res) => {
     try {
-        const paper = await Paper.findById(req.params.id);
+        const paper = await Paper.findById(req.params.id).lean();
         if (!paper) return res.status(404).send("Paper not found");
 
         // Update with new Cloudinary solution data
@@ -321,7 +324,7 @@ app.delete('/api/papers/:id', async (req, res) => {
         }
 
         // 2. Find the paper first (so we can get the Public IDs)
-        const paper = await Paper.findById(req.params.id);
+        const paper = await Paper.findById(req.params.id).lean();
         console.log(paper)
         
         if (!paper) {

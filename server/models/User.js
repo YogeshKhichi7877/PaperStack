@@ -1,11 +1,30 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  username: { 
+    type: String, 
+    required: true, 
+    unique: true, 
+    trim: true 
+  },
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true, 
+    lowercase: true, 
+    trim: true 
+  },
   password: { type: String, required: true },
-  semester: { type: Number, default: null },
-  bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Paper' }] // Stores list of saved papers
+  
+  semester: { 
+    type: Number, 
+    default: null, 
+    index: true 
+  },
+  
+  bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Paper' }]
 });
 
-module.exports = mongoose.model('User', userSchema);
+const User = mongoose.model('User', userSchema);
+
+module.exports = User;
