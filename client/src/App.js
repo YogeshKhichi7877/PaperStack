@@ -660,7 +660,6 @@ const [papers, setPapers] = useState([]);
       <title>
         {filterSem ? `Sem ${filterSem} | PaperStack IIIT Surat` : 'PaperStack | IIIT Surat Previous Year Papers'}
       </title>
-      <title>PaperStack | IIIT Surat Previous Year Papers</title>
       <meta name="description" content="Access all IIIT Surat previous semesters exam papers, solutions, and analytics in one place." />
       <meta property="og:title" content="PaperStack - IIIT Surat Archive" />
       <link rel="canonical" href="https://paper-stack-beryl.vercel.app/" />
