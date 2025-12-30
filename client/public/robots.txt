@@ -1,3 +1,5 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Point Google to your Sitemap (Replace with your actual Vercel URL)
+Sitemap:https://paper-stack-beryl.vercel.app/sitemap.xml

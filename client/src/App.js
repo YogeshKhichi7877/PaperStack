@@ -2,6 +2,7 @@ import React, { useState, useEffect , Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { HelmetProvider , Helmet } from 'react-helmet-async';
 import logo from './assets/Paperstack_logo_wt.png'; 
 import './App.css';
 
@@ -653,6 +654,28 @@ const [papers, setPapers] = useState([]);
   });
 
   return (
+    <> 
+    <Helmet>
+      {/* 1. This is where you put the info Google sees */}
+      <title>
+        {filterSem ? `Sem ${filterSem} | PaperStack IIIT Surat` : 'PaperStack | IIIT Surat Previous Year Papers'}
+      </title>
+      <title>PaperStack | IIIT Surat Previous Year Papers</title>
+      <meta name="description" content="Access all IIIT Surat previous semesters exam papers, solutions, and analytics in one place." />
+      <meta property="og:title" content="PaperStack - IIIT Surat Archive" />
+      <link rel="canonical" href="https://paper-stack-beryl.vercel.app/" />
+
+      {/* Open Graph / Facebook (How it looks when shared) */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="PaperStack - IIIT Surat Archive" />
+        <meta property="og:description" content="Stop searching for papers on WhatsApp groups. Get them all here." />
+        <meta property="og:image" content="https://paper-stack-beryl.vercel.app/logo.png" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="PaperStack | IIIT Surat" />
+    </Helmet>
+
     <div className="app-container">
       {showSemModal && (
         <SemesterModal 
@@ -820,6 +843,7 @@ const [papers, setPapers] = useState([]);
       
       {selectedPaper && <PaperModal paper={selectedPaper} user={user} onClose={() => setSelectedPaper(null)} showAlert={showAlert} />}
     </div>
+    </>
   );
 }
 
@@ -855,6 +879,7 @@ export default function App() {
   }, [theme]);
 
   return (
+    <HelmetProvider>
     <Router>
         <CustomAlert alert={alertInfo} />
         <Suspense fallback={<PageLoader />}>
@@ -866,6 +891,6 @@ export default function App() {
         </Routes>
         </Suspense>
     </Router>
-    
+    </HelmetProvider>
   );
 }
