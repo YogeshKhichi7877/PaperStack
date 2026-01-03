@@ -8,7 +8,7 @@ import './App.css';
 
 // const API_URL = 'https://paperstack-backend.onrender.com';
 
-const API_URL = 'http://localhost:5000'
+const API_URL = 'https://paperstack-backend-7oeo.onrender.com'
 
 // --- HELPER: PAGE LOADER ---
 function PageLoader() {
