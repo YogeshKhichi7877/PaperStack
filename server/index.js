@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
-const https = require('https');
+// const https = require('https');
 
 
 
@@ -39,13 +39,13 @@ const limiter = rateLimit({
 // const backendUrl = "https://paperstack-backend.onrender.com"; // Your Render URL
 const backendUrl = 'https://paperstack-backend-7oeo.onrender.com'
 
-setInterval(() => {
-  https.get(backendUrl, (res) => {
-    console.log("Self-ping successful: Status", res.statusCode);
-  }).on('error', (err) => {
-    console.error("Self-ping failed:", err.message);
-  });
-}, 2 * 60 * 1000); // 2 minutes in milliseconds
+// setInterval(() => {
+//   https.get(backendUrl, (res) => {
+//     console.log("Self-ping successful: Status", res.statusCode);
+//   }).on('error', (err) => {
+//     console.error("Self-ping failed:", err.message);
+//   });
+// }, 2 * 60 * 1000); // 2 minutes in milliseconds
 
 // Middleware
 app.use(cors({
