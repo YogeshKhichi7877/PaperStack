@@ -34,7 +34,8 @@ const limiter = rateLimit({
 
 
 // Put this at the bottom of index.js
-const backendUrl = "https://paperstack-backend.onrender.com"; // Your Render URL
+// const backendUrl = "https://paperstack-backend.onrender.com"; // Your Render URL
+const backendUrl = 'http://localhost:5000'
 
 setInterval(() => {
   https.get(backendUrl, (res) => {

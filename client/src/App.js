@@ -6,7 +6,9 @@ import { HelmetProvider , Helmet } from 'react-helmet-async';
 import logo from './assets/Paperstack_logo_wt.png'; 
 import './App.css';
 
-const API_URL = 'https://paperstack-backend.onrender.com';
+// const API_URL = 'https://paperstack-backend.onrender.com';
+
+const API_URL = 'http://localhost:5000'
 
 // --- HELPER: PAGE LOADER ---
 function PageLoader() {
