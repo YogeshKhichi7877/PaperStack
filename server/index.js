@@ -1,4 +1,4 @@
-require(`dotenv`).config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -11,7 +11,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 // const https = require('https');
 
-
+require(`dotenv`).config();
 
 // 1. IMPORT CLOUDINARY STORAGE
 const { storage , cloudinary } = require('./cloudConfig'); 
@@ -213,7 +213,8 @@ app.post('/api/upload', upload.fields([{ name: 'file' }, { name: 'solution' }]),
 
 app.get('/api/papers', async (req, res) => {
     try {
-        const papers = await Paper.find().sort({ year: -1, semester: 1 }).lean();
+        const papers = await Paper.find().sort({ year: -1, semester: 1 });
+        console.log("papers from line 214  :" , papers)
         res.json(papers);
     } catch(err) { res.status(500).json({ error: "Fetch failed" }); }
 });

@@ -532,6 +532,7 @@ const [papers, setPapers] = useState([]);
     setLoading(true);
     try {
         const res = await axios.get(`${API_URL}/api/papers`); 
+        console.log("res from line 535 in fetchPapers" , res);
         const sorted = res.data.sort((a, b) => {
             // 1. Sort by Year (Newest first)
             if (b.year !== a.year) return b.year - a.year;
