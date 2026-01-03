@@ -11,7 +11,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const https = require('https');
 
-app.set('trust proxy', 1);
+
 
 // 1. IMPORT CLOUDINARY STORAGE
 const { storage , cloudinary } = require('./cloudConfig'); 
@@ -24,6 +24,8 @@ const Comment = require('./models/Comment');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'PaperStackSecretKey'; 
+
+app.set('trust proxy', 1);
 
 const limiter = rateLimit({
   windowMs: 2 * 60 * 1000, // Increase to 2 mins
@@ -80,7 +82,9 @@ const authenticate = (req, res, next) => {
         res.status(400).json({ error: "Invalid Token" });
     }
 };
-
+app.get('/', (req, res) => {
+    res.status(200).send('Server is healthy');
+});
 // 1. Auth
 app.post('/api/auth/register', async (req, res) => {
     try {
@@ -355,9 +359,7 @@ app.delete('/api/papers/:id', async (req, res) => {
 });
 
 //health check
-app.get('/', (req, res) => {
-    res.status(200).send('Server is healthy');
-});
+
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'OK', timestamp: new Date() });
