@@ -6,9 +6,9 @@ import { HelmetProvider , Helmet } from 'react-helmet-async';
 import logo from './assets/Paperstack_logo_wt.png'; 
 import './App.css';
 
-// const API_URL = 'https://paperstack-backend.onrender.com';
+const API_URL = 'https://paperstack-backend-7oeo.onrender.com';
 
-const API_URL = 'https://paperstack-backend-7oeo.onrender.com'
+// const API_URL = 'https://paperstack-backend-7oeo.onrender.com'
 
 // --- HELPER: PAGE LOADER ---
 function PageLoader() {
@@ -527,34 +527,88 @@ const [papers, setPapers] = useState([]);
       if (user && user.semester) { setFilterSem(user.semester.toString()); }
   }, [user]);
 
-  // Updated fetch with Sorting (Newest Year First, then Newest Sem)
- const fetchPapers = async () => { 
+//   // Updated fetch with Sorting (Newest Year First, then Newest Sem)
+//  const fetchPapers = async () => { 
+//     setLoading(true);
+//     try {
+//         const res = await axios.get(`${API_URL}/api/papers`); 
+//         console.log("res from line 535 in fetchPapers" , res);
+//         const sorted = res.data.sort((a, b) => {
+//             // 1. Sort by Year (Newest first)
+//             if (b.year !== a.year) return b.year - a.year;
+
+//             // 2. Sort by Semester (Highest first)
+//             if (b.semester !== a.semester) return b.semester - a.semester;
+
+//             // 3. Sort by Exam Type (Mid-Sem first, then End-Sem)
+//             const typeOrder = { 'Mid-Sem': 1, 'End-Sem': 2 };
+            
+//             // This ensures Mid-Sem (1) comes before End-Sem (2)
+//             return (typeOrder[a.examType] || 3) - (typeOrder[b.examType] || 3);
+//         });
+//         setPapers(sorted); 
+//     } catch (err) { 
+//         console.error("Fetch Error:", err); 
+//         showAlert("Failed to load papers", "error");
+//     } finally {
+//         // Add a slight delay (500ms) so the skeleton doesn't "flash" too fast
+//         setTimeout(() => setLoading(false), 500); 
+//     }
+//   };
+
+const fetchPapers = async () => { 
     setLoading(true);
     try {
-        const res = await axios.get(`${API_URL}/api/papers`); 
-        console.log("res from line 535 in fetchPapers" , res);
+        // 1. Ensure API_URL is defined to prevent "undefined/api..." errors
+        const baseURL = typeof API_URL !== 'undefined' ? API_URL : 'https://paperstack-backend-7oeo.onrender.com';
+        
+        const res = await axios.get(`${baseURL}/api/papers`); 
+        
+        console.log("✅ Data received:", res.data);
+
+        // 2. CRITICAL SAFETY CHECK: 
+        // If the server returns an error object or HTML (404), .sort() will crash the app.
+        if (!res.data || !Array.isArray(res.data)) {
+            console.error("Invalid data format:", res.data);
+            showAlert("Received invalid data from server", "error");
+            setPapers([]); // Set empty array to prevent map errors in UI
+            return; 
+        }
+
         const sorted = res.data.sort((a, b) => {
+            // 3. SAFE SORTING: Handle null/undefined values to prevent NaN errors
+            const yearA = a.year || 0;
+            const yearB = b.year || 0;
+            const semA = a.semester || 0;
+            const semB = b.semester || 0;
+
             // 1. Sort by Year (Newest first)
-            if (b.year !== a.year) return b.year - a.year;
+            if (yearB !== yearA) return yearB - yearA;
 
             // 2. Sort by Semester (Highest first)
-            if (b.semester !== a.semester) return b.semester - a.semester;
+            if (semB !== semA) return semB - semA;
 
-            // 3. Sort by Exam Type (Mid-Sem first, then End-Sem)
+            // 3. Sort by Exam Type
             const typeOrder = { 'Mid-Sem': 1, 'End-Sem': 2 };
+            const typeA = typeOrder[a.examType] || 3;
+            const typeB = typeOrder[b.examType] || 3;
             
-            // This ensures Mid-Sem (1) comes before End-Sem (2)
-            return (typeOrder[a.examType] || 3) - (typeOrder[b.examType] || 3);
+            return typeA - typeB;
         });
+
         setPapers(sorted); 
+
     } catch (err) { 
-        console.error("Fetch Error:", err); 
-        showAlert("Failed to load papers", "error");
+        console.error("❌ Fetch Error:", err); 
+        // Check if showAlert exists before calling it
+        if (typeof showAlert === 'function') {
+            showAlert("Failed to load papers", "error");
+        }
     } finally {
-        // Add a slight delay (500ms) so the skeleton doesn't "flash" too fast
         setTimeout(() => setLoading(false), 500); 
     }
   };
+
   // Fixed handleUpload with Loader and proper logic
   const handleUpload = async (e) => {
     e.preventDefault();

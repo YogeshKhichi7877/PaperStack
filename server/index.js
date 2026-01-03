@@ -37,7 +37,7 @@ const limiter = rateLimit({
 
 // Put this at the bottom of index.js
 // const backendUrl = "https://paperstack-backend.onrender.com"; // Your Render URL
-const backendUrl = 'https://paperstack-backend-7oeo.onrender.com'
+// const backendUrl = 'https://paperstack-backend-7oeo.onrender.com'
 
 // setInterval(() => {
 //   https.get(backendUrl, (res) => {
@@ -49,7 +49,12 @@ const backendUrl = 'https://paperstack-backend-7oeo.onrender.com'
 
 // Middleware
 app.use(cors({
-    origin: "https://paper-stack-beryl.vercel.app/", // For now, allow all. Later, replace with your Vercel URL for security.
+    origin: ["https://paper-stack-beryl.vercel.app/",
+        "https://paper-stack-beryl.vercel.app",  // Your live site
+    "http://localhost:5173",                 // Vite (Local)
+    "http://localhost:5000",
+    "http://localhost:3000"
+    ], // For now, allow all. Later, replace with your Vercel URL for security.
   methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
   credentials: true
 }));
@@ -214,7 +219,7 @@ app.post('/api/upload', upload.fields([{ name: 'file' }, { name: 'solution' }]),
 app.get('/api/papers', async (req, res) => {
     try {
         const papers = await Paper.find().sort({ year: -1, semester: 1 });
-        console.log("papers from line 214  :" , papers)
+        console.log("papers from line 214  :")
         res.json(papers);
     } catch(err) { res.status(500).json({ error: "Fetch failed" }); }
 });
