@@ -50,7 +50,8 @@ const limiter = rateLimit({
 // Middleware
 app.use(cors({
     origin: ['https://paperstack-backend-7oeo.onrender.com',
-        "https://paper-stack-beryl.vercel.app",  // Your live site
+        "https://paper-stack-beryl.vercel.app",
+         "https://paper-stack-beryl.vercel.app/",  // Your live site
     "http://localhost:5173",                 // Vite (Local)
     "http://localhost:5000",
     "http://localhost:3000"
