@@ -48,21 +48,42 @@ const limiter = rateLimit({
 // }, 2 * 60 * 1000); // 2 minutes in milliseconds
 
 // Middleware
-app.use(cors({
-    origin: ['https://paperstack-backend-7oeo.onrender.com',
-        "https://paper-stack-beryl.vercel.app",
-         "https://paper-stack-beryl.vercel.app/",  // Your live site
-    "http://localhost:5173",                 // Vite (Local)
-    "http://localhost:5000",
-    "http://localhost:3000",
-    "https://paperstack.onrender.com", // new render link
-    "https://paperstackcom.vercel.app/" , // new verseel url 
-     "https://paperstackcom.vercel.app" 
+// app.use(cors({
+//     origin: ['https://paperstack-backend-7oeo.onrender.com',
+//         "https://paper-stack-beryl.vercel.app",
+//          "https://paper-stack-beryl.vercel.app/",  // Your live site
+//     "http://localhost:5173",                 // Vite (Local)
+//     "http://localhost:5000",
+//     "http://localhost:3000",
+//     "https://paperstack.onrender.com", // new render link
+//     "https://paperstackcom.vercel.app/" , // new verseel url 
+//      "https://paperstackcom.vercel.app" 
     
-    ], // For now, allow all. Later, replace with your Vercel URL for security.
-  methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
-  credentials: true
+//     ], // For now, allow all. Later, replace with your Vercel URL for security.
+//   methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
+//   credentials: true
+// }));
+
+app.use(cors({
+    origin: true, // This dynamically allows the origin of the request
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true
 }));
+
+// Add this additional middleware to handle pre-flight (OPTIONS) requests manually if needed
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-password");
+    res.header("Access-Control-Allow-Credentials", "true");
+    
+    // Handle OPTIONS method
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 app.use(express.json());
 app.use(helmet());
 app.use('/api/', limiter);
