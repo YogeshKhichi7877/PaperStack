@@ -48,27 +48,22 @@ const limiter = rateLimit({
 // }, 2 * 60 * 1000); // 2 minutes in milliseconds
 
 // Middleware
-// app.use(cors({
-//     origin: ['https://paperstack-backend-7oeo.onrender.com',
-//         "https://paper-stack-beryl.vercel.app",
-//          "https://paper-stack-beryl.vercel.app/",  // Your live site
-//     "http://localhost:5173",                 // Vite (Local)
-//     "http://localhost:5000",
-//     "http://localhost:3000",
-//     "https://paperstack.onrender.com", // new render link
-//     "https://paperstackcom.vercel.app/" , // new verseel url 
-//      "https://paperstackcom.vercel.app" 
-    
-//     ], // For now, allow all. Later, replace with your Vercel URL for security.
-//   methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
-//   credentials: true
-// }));
-
 app.use(cors({
-    origin: '*',  // Allow ANY domain
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true
+    origin: ['https://paperstack-backend-7oeo.onrender.com',
+        "https://paper-stack-beryl.vercel.app",
+         "https://paper-stack-beryl.vercel.app/",  // Your live site
+    "http://localhost:5173",                 // Vite (Local)
+    "http://localhost:5000",
+    "http://localhost:3000",
+    "https://paperstack.onrender.com", // new render link
+    "https://paperstackcom.vercel.app/" , // new verseel url 
+     "https://paperstackcom.vercel.app" 
+    
+    ], // For now, allow all. Later, replace with your Vercel URL for security.
+  methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
+  credentials: true
 }));
+
 
 app.use(express.json());
 app.use(helmet());
