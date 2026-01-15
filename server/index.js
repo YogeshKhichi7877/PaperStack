@@ -56,7 +56,8 @@ app.use(cors({
     "http://localhost:5000",
     "http://localhost:3000",
     "https://paperstack.onrender.com", // new render link
-    "https://paperstackcom.vercel.app/"  // new verseel url 
+    "https://paperstackcom.vercel.app/" , // new verseel url 
+     "https://paperstackcom.vercel.app" 
     
     ], // For now, allow all. Later, replace with your Vercel URL for security.
   methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
