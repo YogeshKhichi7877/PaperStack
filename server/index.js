@@ -65,24 +65,10 @@ const limiter = rateLimit({
 // }));
 
 app.use(cors({
-    origin: true, // This dynamically allows the origin of the request
+    origin: '*',  // Allow ANY domain
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true
 }));
-
-// Add this additional middleware to handle pre-flight (OPTIONS) requests manually if needed
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", req.headers.origin);
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-password");
-    res.header("Access-Control-Allow-Credentials", "true");
-    
-    // Handle OPTIONS method
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-    next();
-});
 
 app.use(express.json());
 app.use(helmet());
