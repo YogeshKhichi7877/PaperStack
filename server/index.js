@@ -54,7 +54,9 @@ app.use(cors({
          "https://paper-stack-beryl.vercel.app/",  // Your live site
     "http://localhost:5173",                 // Vite (Local)
     "http://localhost:5000",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://paperstack.onrender.com", // new render link
+    
     ], // For now, allow all. Later, replace with your Vercel URL for security.
   methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
   credentials: true
