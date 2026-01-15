@@ -107,6 +107,7 @@ function Register({ showAlert }) {
     } 
     catch (err) { 
         showAlert(err.response?.data?.message || "Registration Failed", "error"); 
+        console.log("Registratin error : ", err)
     }
   };
 
@@ -562,7 +563,7 @@ const fetchPapers = async () => {
     setLoading(true);
     try {
         // 1. Ensure API_URL is defined to prevent "undefined/api..." errors
-        const baseURL = typeof API_URL !== 'undefined' ? API_URL : 'https://paperstack-backend-7oeo.onrender.com';
+        const baseURL = typeof API_URL !== 'undefined' ? API_URL : 'https://paperstack.onrender.com';
         
         const res = await axios.get(`${baseURL}/api/papers`); 
         
@@ -721,13 +722,13 @@ const fetchPapers = async () => {
       </title>
       <meta name="description" content="Access all IIIT Surat previous semesters exam papers, solutions, and analytics in one place." />
       <meta property="og:title" content="PaperStack - IIIT Surat Archive" />
-      <link rel="canonical" href="https://paper-stack-beryl.vercel.app/" />
+      <link rel="canonical" href="https://paperstackcom.vercel.app/" />
 
       {/* Open Graph / Facebook (How it looks when shared) */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="PaperStack - IIIT Surat Archive" />
         <meta property="og:description" content="Stop searching for papers on WhatsApp groups. Get them all here." />
-        <meta property="og:image" content="https://paper-stack-beryl.vercel.app/logo.png" />
+        <meta property="og:image" content="https://paperstackcom.vercel.app/logo.png" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
