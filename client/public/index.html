@@ -48,26 +48,87 @@
 
 
 
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/logo192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="PaperStack - IIIT Surat Previous Year Papers Archive. Access free question papers, solutions, and study materials for all semesters." />
-    <meta name="keywords" content="IIIT Surat, previous year papers, question papers, exam papers, semester papers, BTech papers, engineering papers" />
-    <meta name="author" content="Yogesh Khinchi" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo512.png" />
+    <link rel="icon" href="/logo192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4f46e5" />
+    
+    <!-- Primary Meta Tags -->
+    <title>PaperStack | IIIT Surat Previous Year Question Papers Archive</title>
+    <meta name="title" content="PaperStack | IIIT Surat Previous Year Question Papers Archive">
+    <meta name="description" content="Free access to IIIT Surat previous year question papers, solutions, and study resources for all engineering branches and semesters.">
+    <meta name="keywords" content="IIIT Surat previous year papers, IIIT Surat question papers, exam papers, semester papers, BTech papers, engineering papers">
+    <meta name="author" content="Yogesh Khinchi">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://paper-stack-beryl.vercel.app/">
+    <meta property="og:title" content="PaperStack | IIIT Surat Previous Year Papers">
+    <meta property="og:description" content="Access free IIIT Surat previous year question papers for all semesters (1-8). Download exam papers with solutions.">
+    <meta property="og:image" content="/logo.png">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://paper-stack-beryl.vercel.app/">
+    <meta property="twitter:title" content="PaperStack | IIIT Surat Question Papers">
+    <meta property="twitter:description" content="Access free IIIT Surat previous year question papers for all semesters (1-8). Download exam papers with solutions.">
+    <meta property="twitter:image" content="/logo.png">
     
     <!-- Preconnect for performance -->
-    <link rel="preconnect" href="https://paperstack.onrender.com" />
-    <link rel="dns-prefetch" href="https://paperstack.onrender.com" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="preconnect" href="https://paperstack.onrender.com">
     
-    <title>PaperStack | IIIT Surat Previous Year Papers</title>
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/logo192.png">
+    
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/logo.png" as="image">
+    
+    <!-- Critical CSS (optional, for faster initial paint) -->
+    <style>
+      /* Basic loading styles */
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; }
+      #root { min-height: 100vh; }
+      .initial-loader { 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        height: 100vh; 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+    </style>
   </head>
   <body>
+    <!-- Initial loader (shown until React loads) -->
+    <div id="initial-loader" class="initial-loader">
+      <img src="/logo.png" alt="PaperStack Logo" width="80" height="80" style="margin-bottom: 20px;" />
+      <h1>PaperStack</h1>
+      <p>Loading IIIT Surat Archive...</p>
+    </div>
+    
+    <!-- React root -->
     <div id="root"></div>
+    
+    <!-- Script to hide initial loader when React mounts -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Hide initial loader when React mounts
+        window.addEventListener('ReactAppMounted', function() {
+          document.getElementById('initial-loader').style.display = 'none';
+        });
+        
+        // Fallback: hide loader after 3 seconds
+        setTimeout(function() {
+          document.getElementById('initial-loader').style.display = 'none';
+        }, 3000);
+      });
+    </script>
   </body>
 </html>
