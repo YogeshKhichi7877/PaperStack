@@ -976,19 +976,19 @@
 
 
 
-import React, { useState, useEffect , Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { HelmetProvider , Helmet } from 'react-helmet-async';
+import { HelmetProvider, Helmet } from 'react-helmet-async';
 import logo from './assets/Paperstack_logo_wt.png'; 
 import './App.css';
 
- // const API_URL = 'https://paperstack-backend-7oeo.onrender.com'; // main url link hai ye 
- const API_URL = 'https://paperstack.onrender.com' // new render link 
+// Backend URL (Render) - Your backend is on Render
+const API_URL = 'https://paperstack.onrender.com';
 
-
-//  const API_URL = 'http://localhost:5000'
+// Frontend URL (Vercel) - Your frontend is on Vercel
+const FRONTEND_URL = 'https://paper-stack-beryl.vercel.app';
 
 // --- HELPER: PAGE LOADER ---
 function PageLoader() {
@@ -1010,6 +1010,7 @@ function CustomAlert({ alert }) {
     </div>
   );
 }
+
 function Footer() {
   return (
     <footer className="site-footer">
@@ -1042,8 +1043,8 @@ function Footer() {
           <div className="footer-links">
             <h4 className="footer-heading">Community</h4>
             <ul className="footer-list">
-              <li><a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a></li>
-              <li><a href="https://linkedin.com" target="_blank" rel="noreferrer">LinkedIn</a></li>
+              <li><a href="https://github.com" target="_blank" rel="noreferrer noopener">GitHub</a></li>
+              <li><a href="https://linkedin.com" target="_blank" rel="noreferrer noopener">LinkedIn</a></li>
               <li><a href="mailto:paperstack.iiitsurat@gmail.com">Support</a></li>
             </ul>
           </div>
@@ -1061,12 +1062,12 @@ function Footer() {
     </footer>
   );
 }
+
 // --- AUTH COMPONENTS ---
 function Register({ showAlert }) { 
   const [formData, setFormData] = useState({ username: '', email: '', password: '', semester: 1 });
   const navigate = useNavigate();
 
-  // Paths for your logos (Matches your Login page structure)
   const paperStackLogo = "/logo.png"; 
 
   const handleRegister = async (e) => {
@@ -1085,7 +1086,7 @@ function Register({ showAlert }) {
     } 
     catch (err) { 
         showAlert(err.response?.data?.message || "Registration Failed", "error"); 
-        console.log("Registratin error : ", err)
+        console.log("Registration error:", err);
     }
   };
 
@@ -1095,11 +1096,10 @@ function Register({ showAlert }) {
           <title>Register - PaperStack | IIIT Surat Student Portal</title>
           <meta name="description" content="Create your student account on PaperStack to access IIIT Surat previous year question papers, solutions, and study materials." />
           <meta name="keywords" content="IIIT Surat registration, student account, IIIT Surat papers access, engineering student portal" />
-          <link rel="canonical" href="https://paper-stack-beryl.vercel.app/register" />
+          <link rel="canonical" href={`${FRONTEND_URL}/register`} />
         </Helmet>
         
         <div className="auth-card login-card-animated">
-            {/* Dual Logo Section - NEW */}
             <div className="login-logo-container">
                 <img src={paperStackLogo} alt="PaperStack Logo - IIIT Surat Papers Archive" className="login-logo-img pulse-entry" />
             </div>
@@ -1111,10 +1111,9 @@ function Register({ showAlert }) {
                 <p className="fade-in-text">Create your IIIT Surat student profile</p>
             </div>
 
-            {/* Important Password Note */}
             <div className="auth-note-box pulse-entry">
                 <span className="note-icon">⚠️</span>
-                <p><strong>Important:</strong> You cant reset your password , So choose it carefully .</p>
+                <p><strong>Important:</strong> You can't reset your password, so choose it carefully.</p>
             </div>
 
             <form onSubmit={handleRegister} className="login-form-content">
@@ -1165,18 +1164,17 @@ function Register({ showAlert }) {
     </div> 
   );
 }
+
 function Login({ setUser, showAlert }) { 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const navigate = useNavigate();
 
-  // Paths for your logos (Update filename if different)
   const paperStackLogo = "/logo.png"; 
   const iiitSuratLogo = "/iiit_surat.png";
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    // 1. Domain Restriction Check
     if (!formData.email.toLowerCase().endsWith('@iiitsurat.ac.in')) {
         showAlert("Access Denied: Please use your @iiitsurat.ac.in email", "error");
         return;
@@ -1208,11 +1206,10 @@ function Login({ setUser, showAlert }) {
         <title>Login - PaperStack | IIIT Surat Student Access</title>
         <meta name="description" content="Login to your PaperStack account to access IIIT Surat previous year question papers, solutions, and exam resources." />
         <meta name="keywords" content="IIIT Surat login, student portal, access papers, engineering exam papers login" />
-        <link rel="canonical" href="https://paper-stack-beryl.vercel.app/login" />
+        <link rel="canonical" href={`${FRONTEND_URL}/login`} />
       </Helmet>
       
       <div className="auth-card login-card-animated">
-          {/* Logo Section */}
           <div className="login-logo-container">
               <img src={paperStackLogo} alt="PaperStack Logo - IIIT Surat Papers" className="login-logo-img pulse-entry" />
               <div className="logo-vertical-line"></div>
@@ -1272,12 +1269,13 @@ function AdminLogin({ showAlert }) {
           } 
       } catch { showAlert("Wrong Password", "error"); } 
   };
+  
   return ( 
     <div className="auth-container">
       <Helmet>
         <title>Admin Login - PaperStack | IIIT Surat Management</title>
         <meta name="description" content="Admin access portal for PaperStack - IIIT Surat's previous year papers archive management system." />
-        <link rel="canonical" href="https://paper-stack-beryl.vercel.app/admin" />
+        <link rel="canonical" href={`${FRONTEND_URL}/admin`} />
       </Helmet>
       <div className="auth-card">
         <h2>🔐 Admin Access</h2>
@@ -1287,7 +1285,7 @@ function AdminLogin({ showAlert }) {
         </form>
       </div>
     </div> 
-  )
+  );
 }
 
 // --- SEMESTER SELECTION MODAL ---
@@ -1315,7 +1313,7 @@ function SemesterModal({ user, setUser, onClose, showAlert }) {
 
     return (
         <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '310px', maxHeight : '250px', width: '90%', padding: '25px', textAlign: 'center', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+            <div className="modal-content" style={{ maxWidth: '310px', maxHeight: '250px', width: '90%', padding: '25px', textAlign: 'center', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
                 <h3>🎓 Which Semester are you in?</h3>
                 <p>We'll show you these papers first.</p>
                 <div style={{ margin: '10px 0' }}>
@@ -1336,21 +1334,34 @@ function SemesterModal({ user, setUser, onClose, showAlert }) {
 // --- ANALYTICS DASHBOARD ---
 function AnalyticsDashboard({ onClose }) {
     const [data, setData] = useState([]);
-    useEffect(() => { axios.get(`${API_URL}/api/analytics`).then(res => setData(res.data)); }, []);
+    useEffect(() => { 
+        axios.get(`${API_URL}/api/analytics`)
+            .then(res => setData(res.data))
+            .catch(err => console.error("Analytics error:", err)); 
+    }, []);
 
     return (
         <div className="analytics-panel">
-            <div className="panel-header"><h3>📊 Exam Difficulty Analytics</h3><button onClick={onClose} className="close-btn">✖</button></div>
+            <div className="panel-header">
+                <h3>📊 Exam Difficulty Analytics</h3>
+                <button onClick={onClose} className="close-btn">✖</button>
+            </div>
             <div className="chart-container">
                 <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={data}>
-                        <XAxis dataKey="_id" stroke="#8884d8" /><YAxis /><Tooltip cursor={{fill: 'transparent'}} contentStyle={{ color: '#333' }} />
+                        <XAxis dataKey="_id" stroke="#8884d8" />
+                        <YAxis />
+                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ color: '#333' }} />
                         <Bar dataKey="totalViews" fill="#4f46e5" radius={[4, 4, 0, 0]}>
-                            {data.map((entry, index) => (<Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#4f46e5'} />))}
+                            {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#4f46e5'} />
+                            ))}
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>
-                <p className="insight-text">💡 <strong>Insight:</strong> "{data[0]?._id}" seems to be the toughest subject!</p>
+                <p className="insight-text">
+                    💡 <strong>Insight:</strong> "{data[0]?._id || 'No data'}" seems to be the toughest subject!
+                </p>
             </div>
         </div>
     );
@@ -1360,22 +1371,21 @@ function AnalyticsDashboard({ onClose }) {
 function PaperModal({ paper, user, onClose, showAlert }) {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
-    const [iframeLoading, setIframeLoading] = useState(true); // Track PDF loading
+    const [iframeLoading, setIframeLoading] = useState(true);
 
-
-    useEffect(() => { 
-        fetchComments(); 
-        setIframeLoading(true);
-    }, [paper._id]);
-
-    const fetchComments = async () => { 
+    const fetchComments = useCallback(async () => { 
         try {
             const res = await axios.get(`${API_URL}/api/papers/${paper._id}/comments`); 
             setComments(res.data); 
         } catch (err) {
             console.error("Error fetching comments", err);
         }
-    };
+    }, [paper._id]);
+
+    useEffect(() => { 
+        fetchComments(); 
+        setIframeLoading(true);
+    }, [paper._id, fetchComments]);
 
     const postComment = async (e) => {
         e.preventDefault();
@@ -1409,7 +1419,6 @@ function PaperModal({ paper, user, onClose, showAlert }) {
                         </div>
 
                         <div className="pdf-container">
-                            {/* SKELETON LOADER FOR PDF */}
                             {iframeLoading && (
                                 <div className="pdf-skeleton">
                                     <div className="skeleton-shimmer"></div>
@@ -1418,7 +1427,7 @@ function PaperModal({ paper, user, onClose, showAlert }) {
                             )}
                             
                             <iframe 
-                                src={`${paper.filePath}#toolbar=0`} // Hide toolbar for cleaner look
+                                src={`${paper.filePath}#toolbar=0`}
                                 title={`${paper.subject} ${paper.examType} Paper - Semester ${paper.semester}, ${paper.year}`}
                                 className="pdf-frame"
                                 onLoad={() => setIframeLoading(false)}
@@ -1427,11 +1436,11 @@ function PaperModal({ paper, user, onClose, showAlert }) {
                         </div>
 
                         <div className="modal-actions">
-                            <a href={paper.filePath} target="_blank" rel="noreferrer" className="btn-download">
+                            <a href={paper.filePath} target="_blank" rel="noopener noreferrer" className="btn-download">
                                 ⬇️ Download Paper
                             </a>
                             {paper.solutionPath && (
-                                <a href={paper.solutionPath} target="_blank" rel="noreferrer" className="btn-solution">
+                                <a href={paper.solutionPath} target="_blank" rel="noopener noreferrer" className="btn-solution">
                                     💡 View Solution
                                 </a>
                             )}
@@ -1506,8 +1515,8 @@ function PaperSkeleton() {
 
 // --- HOME COMPONENT ---
 function Home({ user, setUser, theme, toggleTheme, showAlert }) {
-const [papers, setPapers] = useState([]);
-  const [loading, setLoading] = useState(true); // ✅ Added Loading State
+  const [papers, setPapers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSem, setFilterSem] = useState(user?.semester?.toString() || '');
@@ -1519,7 +1528,6 @@ const [papers, setPapers] = useState([]);
   const [file, setFile] = useState(null);
   const [solutionFile, setSolutionFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  
 
   const handleSolution = (e, paper) => {
       e.stopPropagation();
@@ -1530,46 +1538,27 @@ const [papers, setPapers] = useState([]);
       }
   };
 
-  useEffect(() => { 
-      fetchPapers(); 
-      if(localStorage.getItem('adminPass')) setIsAdmin(true);
-      if (user && !user.semester) { setShowSemModal(true); }
-      if (user && user.semester) { setFilterSem(user.semester.toString()); }
-  }, [user]);
-
-const fetchPapers = async () => { 
+  const fetchPapers = useCallback(async () => { 
     setLoading(true);
     try {
-        // 1. Ensure API_URL is defined to prevent "undefined/api..." errors
-        const baseURL = typeof API_URL !== 'undefined' ? API_URL : 'https://paperstack.onrender.com';
+        const res = await axios.get(`${API_URL}/api/papers`); 
         
-        const res = await axios.get(`${baseURL}/api/papers`); 
-        
-        console.log("✅ Data received:");
-
-        // 2. CRITICAL SAFETY CHECK: 
-        // If the server returns an error object or HTML (404), .sort() will crash the app.
         if (!res.data || !Array.isArray(res.data)) {
             console.error("Invalid data format:", res.data);
             showAlert("Received invalid data from server", "error");
-            setPapers([]); // Set empty array to prevent map errors in UI
+            setPapers([]);
             return; 
         }
 
         const sorted = res.data.sort((a, b) => {
-            // 3. SAFE SORTING: Handle null/undefined values to prevent NaN errors
             const yearA = a.year || 0;
             const yearB = b.year || 0;
             const semA = a.semester || 0;
             const semB = b.semester || 0;
 
-            // 1. Sort by Year (Newest first)
             if (yearB !== yearA) return yearB - yearA;
-
-            // 2. Sort by Semester (Highest first)
             if (semB !== semA) return semB - semA;
 
-            // 3. Sort by Exam Type
             const typeOrder = { 'Mid-Sem': 1, 'End-Sem': 2 };
             const typeA = typeOrder[a.examType] || 3;
             const typeB = typeOrder[b.examType] || 3;
@@ -1578,24 +1567,26 @@ const fetchPapers = async () => {
         });
 
         setPapers(sorted); 
-
     } catch (err) { 
         console.error("❌ Fetch Error:", err); 
-        // Check if showAlert exists before calling it
-        if (typeof showAlert === 'function') {
-            showAlert("Failed to load papers", "error");
-        }
+        showAlert("Failed to load papers. Please check your connection.", "error");
     } finally {
         setTimeout(() => setLoading(false), 500); 
     }
-  };
+  }, [showAlert]);
 
-  // Fixed handleUpload with Loader and proper logic
+  useEffect(() => { 
+      fetchPapers(); 
+      if(localStorage.getItem('adminPass')) setIsAdmin(true);
+      if (user && !user.semester) { setShowSemModal(true); }
+      if (user && user.semester) { setFilterSem(user.semester.toString()); }
+  }, [user, fetchPapers]);
+
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) { showAlert("Please select a paper PDF", "error"); return; }
     
-    setIsUploading(true); // START LOADER
+    setIsUploading(true);
 
     const data = new FormData();
     Object.keys(formData).forEach(key => data.append(key, formData[key]));
@@ -1610,16 +1601,15 @@ const fetchPapers = async () => {
         showAlert("Paper Uploaded Successfully!", "success");
         setFile(null); 
         setSolutionFile(null);
-        fetchPapers(); // Refresh the list
+        fetchPapers();
     } catch (err) { 
         showAlert("Upload Failed. Check credentials/connection.", "error"); 
         console.error(err); 
     } finally {
-        setIsUploading(false); // STOP LOADER
+        setIsUploading(false);
     }
   };
 
-  // --- NEW: FUNCTION TO ADD SOLUTION TO EXISTING PAPER ---
   const handleAddSolutionToExisting = async (paperId, selectedFile) => {
     if (!selectedFile) return;
     setIsUploading(true);
@@ -1628,7 +1618,6 @@ const fetchPapers = async () => {
 
     try {
       const adminPass = localStorage.getItem('adminPass');
-      // This matches the PUT route we discussed earlier
       await axios.put(`${API_URL}/api/papers/${paperId}/solution`, data, {
         headers: { 'Content-Type': 'multipart/form-data', 'x-admin-password': adminPass }
       });
@@ -1657,7 +1646,10 @@ const fetchPapers = async () => {
       const relevantPapers = filterSem ? papers.filter(p => p.semester.toString() === filterSem) : papers;
       if (relevantPapers.length === 0) return null;
       const scores = {};
-      relevantPapers.forEach(p => { const score = (p.views || 0) + (p.downloads || 0); scores[p.subject] = (scores[p.subject] || 0) + score; });
+      relevantPapers.forEach(p => { 
+          const score = (p.views || 0) + (p.downloads || 0); 
+          scores[p.subject] = (scores[p.subject] || 0) + score; 
+      });
       const hardest = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
       return { subject: hardest, score: scores[hardest] };
   };
@@ -1666,22 +1658,36 @@ const fetchPapers = async () => {
 
   const handleView = async (paper) => {
       setSelectedPaper(paper);
-      axios.post(`${API_URL}/api/papers/${paper._id}/view`);
+      try {
+          await axios.post(`${API_URL}/api/papers/${paper._id}/view`);
+      } catch (err) {
+          console.error("Failed to increment view count:", err);
+      }
       setPapers(prev => prev.map(p => p._id === paper._id ? { ...p, views: (p.views || 0) + 1 } : p));
   };
 
   const handleDownload = async (e, paper) => {
       e.stopPropagation();
       window.open(paper.filePath, '_blank'); 
-      await axios.post(`${API_URL}/api/papers/${paper._id}/download`);
+      try {
+          await axios.post(`${API_URL}/api/papers/${paper._id}/download`);
+      } catch (err) {
+          console.error("Failed to increment download count:", err);
+      }
       setPapers(prev => prev.map(p => p._id === paper._id ? { ...p, downloads: (p.downloads || 0) + 1 } : p));
   };
 
   const toggleBookmark = async (paperId, e) => {
       e.stopPropagation();
       if (!user) { showAlert("Please Login to Bookmark!", "info"); return; }
-      const res = await axios.put(`${API_URL}/api/user/bookmark/${paperId}`, {}, { headers: { Authorization: localStorage.getItem('token') } });
-      setUser({ ...user, bookmarks: res.data });
+      try {
+          const res = await axios.put(`${API_URL}/api/user/bookmark/${paperId}`, {}, { 
+              headers: { Authorization: localStorage.getItem('token') } 
+          });
+          setUser({ ...user, bookmarks: res.data });
+      } catch (err) {
+          showAlert("Failed to bookmark", "error");
+      }
   };
   
   const displayedPapers = papers.filter(p => {
@@ -1696,8 +1702,8 @@ const fetchPapers = async () => {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
     "name": "PaperStack - IIIT Surat Archive",
-    "url": "https://paper-stack-beryl.vercel.app/",
-    "logo": "https://paper-stack-beryl.vercel.app/logo.png",
+    "url": `${FRONTEND_URL}/`,
+    "logo": `${FRONTEND_URL}/logo.png`,
     "description": "Digital archive of previous year question papers for IIIT Surat students",
     "founder": "Yogesh Khinchi",
     "keywords": "IIIT Surat papers, question papers, exam papers, engineering papers",
@@ -1713,13 +1719,13 @@ const fetchPapers = async () => {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "https://paper-stack-beryl.vercel.app/"
+        "item": `${FRONTEND_URL}/`
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": filterSem ? `Semester ${filterSem} Papers` : "All Papers",
-        "item": `https://paper-stack-beryl.vercel.app/${filterSem ? `?sem=${filterSem}` : ''}`
+        "item": `${FRONTEND_URL}/${filterSem ? `?sem=${filterSem}` : ''}`
       }
     ]
   };
@@ -1751,14 +1757,6 @@ const fetchPapers = async () => {
           "@type": "Answer",
           "text": "We provide papers for all 8 semesters of B.Tech program including both Mid-Semester and End-Semester exams."
         }
-      },
-      {
-        "@type": "Question",
-        "name": "Who can access PaperStack?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Only IIIT Surat students with official @iiitsurat.ac.in email addresses can register and access the papers."
-        }
       }
     ]
   };
@@ -1766,7 +1764,6 @@ const fetchPapers = async () => {
   return (
     <> 
     <Helmet>
-      {/* Primary Meta Tags */}
       <title>
         {filterSem ? `Sem ${filterSem} Papers - IIIT Surat Previous Year Question Papers` : 'IIIT Surat Previous Year Papers - PaperStack Archive'}
       </title>
@@ -1779,14 +1776,14 @@ const fetchPapers = async () => {
         content="IIIT Surat previous year papers, IIIT Surat question papers, semester exam papers, engineering question papers, mid sem papers, end sem papers, computer science papers, BTech papers"
       />
       <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-      <link rel="canonical" href="https://paper-stack-beryl.vercel.app/" />
+      <link rel="canonical" href={`${FRONTEND_URL}/`} />
       
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="website" />
       <meta property="og:title" content="PaperStack - IIIT Surat Previous Year Papers Archive" />
       <meta property="og:description" content="Free access to IIIT Surat previous year question papers, solutions, and study resources for all engineering branches and semesters." />
-      <meta property="og:image" content="https://paper-stack-beryl.vercel.app/logo.png" />
-      <meta property="og:url" content="https://paper-stack-beryl.vercel.app/" />
+      <meta property="og:image" content={`${FRONTEND_URL}/logo.png`} />
+      <meta property="og:url" content={`${FRONTEND_URL}/`} />
       <meta property="og:site_name" content="PaperStack" />
       <meta property="og:locale" content="en_IN" />
       <meta property="og:image:width" content="1200" />
@@ -1797,17 +1794,15 @@ const fetchPapers = async () => {
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="PaperStack | IIIT Surat Question Papers" />
       <meta name="twitter:description" content="Download free IIIT Surat previous year papers for all semesters." />
-      <meta name="twitter:image" content="https://paper-stack-beryl.vercel.app/logo.png" />
+      <meta name="twitter:image" content={`${FRONTEND_URL}/logo.png`} />
       
-      {/* Additional Important Meta Tags */}
+      {/* Additional Meta Tags */}
       <meta name="author" content="Yogesh Khinchi, IIIT Surat" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta name="theme-color" content="#4f46e5" />
       <meta name="language" content="English" />
-      <meta name="geo.region" content="IN-GJ" />
-      <meta name="geo.placename" content="Surat, Gujarat" />
       
-      {/* Structured Data for SEO (JSON-LD) */}
+      {/* Structured Data for SEO */}
       <script type="application/ld+json">
         {JSON.stringify(websiteStructuredData)}
       </script>
@@ -1836,7 +1831,6 @@ const fetchPapers = async () => {
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src={logo} alt="PaperStack Logo - IIIT Surat Previous Year Papers Archive" style={{ height: '45px', borderRadius: '8px', objectFit: 'contain' }} /> 
           <span>PaperStack</span>
-          
         </div>
         <div className="nav-links">
           <button className="theme-btn" onClick={toggleTheme}>{theme === 'light' ? '🌙' : '☀️'}</button>
@@ -1864,7 +1858,6 @@ const fetchPapers = async () => {
         
         {isAdmin && (
             <div className="admin-upload-section">
-                <h2 className="section-heading">Admin Upload Panel</h2>
                 <div className="admin-card">
                     <h3>📤 Admin Upload Panel</h3>
                     <form onSubmit={handleUpload} className="upload-form">
@@ -1887,7 +1880,6 @@ const fetchPapers = async () => {
                             <label className="file-label">💡 Solution: <input type="file" accept="application/pdf" onChange={e => setSolutionFile(e.target.files[0])} /><b> {solutionFile ? solutionFile.name : ''}</b></label>
                         </div>
                         
-                        {/* Updated Button with Loader Logic */}
                         <button type="submit" className="btn-upload" disabled={isUploading}>
                             {isUploading ? "⏳ Uploading to Cloudinary..." : "🚀 Upload Paper"}
                         </button>
@@ -1911,7 +1903,6 @@ const fetchPapers = async () => {
                   </button>
               </div>
 
-              {/* Updated this line to show filtered count */}
               <span className="navbar-paper-count">
                   <h5>
                       {searchTerm || filterSem !== '' ? 'Papers Found: ' : 'Total Papers: '} 
@@ -1943,7 +1934,6 @@ const fetchPapers = async () => {
 
         <div className="papers-grid">
             {loading ? (
-                // showing skeleton while loading
                 [...Array(6)].map((_, idx) => <PaperSkeleton key={idx} />) ) :
 
                 displayedPapers.length === 0 && filterSem ? (
@@ -1957,7 +1947,9 @@ const fetchPapers = async () => {
                         <div className="card-stats-row">
                             <div className="stat-item">👁️ {p.views || 0}</div>
                             <div className="stat-item">⬇️ {p.downloads || 0}</div>
-                            <button className={`heart-icon ${user?.bookmarks.includes(p._id) ? 'liked' : ''}`} onClick={(e) => toggleBookmark(p._id, e)}>{user?.bookmarks.includes(p._id) ? '❤️' : '🤍'}</button>
+                            <button className={`heart-icon ${user?.bookmarks.includes(p._id) ? 'liked' : ''}`} onClick={(e) => toggleBookmark(p._id, e)}>
+                                {user?.bookmarks.includes(p._id) ? '❤️' : '🤍'}
+                            </button>
                         </div>
                         <div className="card-body">
                             <span className={`badge ${p.examType === 'Mid-Sem' ? 'mid' : 'end'}`}>{p.examType}</span>
@@ -1997,21 +1989,24 @@ const fetchPapers = async () => {
   );
 }
 
-
 // --- MAIN APP COMPONENT ---
 export default function App() { 
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [alertInfo, setAlertInfo] = useState({ show: false, msg: '', type: 'success' });
 
-  const showAlert = (msg, type = 'success') => {
+  const showAlert = useCallback((msg, type = 'success') => {
     setAlertInfo({ show: true, msg, type });
     setTimeout(() => {
         setAlertInfo({ show: false, msg: '', type: '' });
     }, 3000);
-  };
+  }, []);
 
-  const toggleTheme = () => { const newTheme = theme === 'light' ? 'dark' : 'light'; setTheme(newTheme); localStorage.setItem('theme', newTheme); };
+  const toggleTheme = () => { 
+    const newTheme = theme === 'light' ? 'dark' : 'light'; 
+    setTheme(newTheme); 
+    localStorage.setItem('theme', newTheme); 
+  };
   
   useEffect(() => { 
       document.body.className = theme; 
@@ -2038,7 +2033,6 @@ export default function App() {
             <Route path="/login" element={<Login setUser={setUser} showAlert={showAlert} />} />
             <Route path="/register" element={<Register showAlert={showAlert} />} />
             <Route path="/admin" element={<AdminLogin showAlert={showAlert} />} />
-            {/* Add 404 Route */}
             <Route path="*" element={
               <div className="not-found-page" style={{textAlign: 'center', padding: '50px 20px'}}>
                 <h1>404 - Page Not Found</h1>
