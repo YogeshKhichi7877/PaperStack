@@ -975,8 +975,7 @@
 
 
 
-
-import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -989,16 +988,6 @@ const API_URL = 'https://paperstack.onrender.com';
 
 // Frontend URL (Vercel) - Your frontend is on Vercel
 const FRONTEND_URL = 'https://paper-stack-beryl.vercel.app';
-
-// --- HELPER: PAGE LOADER ---
-function PageLoader() {
-  return (
-    <div className="page-loading-screen">
-       <img src="/logo.png" alt="Loading..." style={{ height: '60px', marginBottom: '10px' }} />
-       <p>Loading PaperStack...</p>
-    </div>
-  );
-}
 
 // --- CUSTOM ALERT COMPONENT ---
 function CustomAlert({ alert }) {
@@ -2027,7 +2016,6 @@ export default function App() {
     <HelmetProvider>
     <Router>
         <CustomAlert alert={alertInfo} />
-        <Suspense fallback={<PageLoader />}>
         <Routes>
             <Route path="/" element={<Home user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} showAlert={showAlert} />} />
             <Route path="/login" element={<Login setUser={setUser} showAlert={showAlert} />} />
@@ -2041,7 +2029,6 @@ export default function App() {
               </div>
             } />
         </Routes>
-        </Suspense>
     </Router>
     </HelmetProvider>
   );
