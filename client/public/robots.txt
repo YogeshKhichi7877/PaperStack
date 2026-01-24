@@ -1,5 +1,11 @@
 User-agent: *
 Allow: /
+Sitemap: https://paperstackcom.vercel.app/sitemap.xml
 
-# Point Google to your Sitemap (Replace with your actual Vercel URL)
-Sitemap:https://paper-stack-beryl.vercel.app/sitemap.xml
+# Block AI scraping bots
+User-agent: ChatGPT-User
+Disallow: /
+User-agent: GPTBot
+Disallow: /
+User-agent: Google-Extended
+Disallow: /
