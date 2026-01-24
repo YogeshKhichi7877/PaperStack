@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /
-Sitemap: https://paperstackcom.vercel.app/sitemap.xml
+Sitemap: https://paper-stack-beryl.vercel.app/sitemap.xml
 
 # Block AI scraping bots
 User-agent: ChatGPT-User
