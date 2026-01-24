@@ -1095,7 +1095,7 @@ function Register({ showAlert }) {
           <title>Register - PaperStack | IIIT Surat Student Portal</title>
           <meta name="description" content="Create your student account on PaperStack to access IIIT Surat previous year question papers, solutions, and study materials." />
           <meta name="keywords" content="IIIT Surat registration, student account, IIIT Surat papers access, engineering student portal" />
-          <link rel="canonical" href="https://paperstackcom.vercel.app/register" />
+          <link rel="canonical" href="https://paper-stack-beryl.vercel.app/register" />
         </Helmet>
         
         <div className="auth-card login-card-animated">
@@ -1208,7 +1208,7 @@ function Login({ setUser, showAlert }) {
         <title>Login - PaperStack | IIIT Surat Student Access</title>
         <meta name="description" content="Login to your PaperStack account to access IIIT Surat previous year question papers, solutions, and exam resources." />
         <meta name="keywords" content="IIIT Surat login, student portal, access papers, engineering exam papers login" />
-        <link rel="canonical" href="https://paperstackcom.vercel.app/login" />
+        <link rel="canonical" href="https://paper-stack-beryl.vercel.app/login" />
       </Helmet>
       
       <div className="auth-card login-card-animated">
@@ -1277,7 +1277,7 @@ function AdminLogin({ showAlert }) {
       <Helmet>
         <title>Admin Login - PaperStack | IIIT Surat Management</title>
         <meta name="description" content="Admin access portal for PaperStack - IIIT Surat's previous year papers archive management system." />
-        <link rel="canonical" href="https://paperstackcom.vercel.app/admin" />
+        <link rel="canonical" href="https://paper-stack-beryl.vercel.app/admin" />
       </Helmet>
       <div className="auth-card">
         <h2>🔐 Admin Access</h2>
@@ -1545,7 +1545,7 @@ const fetchPapers = async () => {
         
         const res = await axios.get(`${baseURL}/api/papers`); 
         
-        console.log("✅ Data received:", res.data);
+        console.log("✅ Data received:");
 
         // 2. CRITICAL SAFETY CHECK: 
         // If the server returns an error object or HTML (404), .sort() will crash the app.
@@ -1696,8 +1696,8 @@ const fetchPapers = async () => {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
     "name": "PaperStack - IIIT Surat Archive",
-    "url": "https://paperstackcom.vercel.app/",
-    "logo": "https://paperstackcom.vercel.app/logo.png",
+    "url": "https://paper-stack-beryl.vercel.app/",
+    "logo": "https://paper-stack-beryl.vercel.app/logo.png",
     "description": "Digital archive of previous year question papers for IIIT Surat students",
     "founder": "Yogesh Khinchi",
     "keywords": "IIIT Surat papers, question papers, exam papers, engineering papers",
@@ -1713,13 +1713,13 @@ const fetchPapers = async () => {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "https://paperstackcom.vercel.app/"
+        "item": "https://paper-stack-beryl.vercel.app/"
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": filterSem ? `Semester ${filterSem} Papers` : "All Papers",
-        "item": `https://paperstackcom.vercel.app/${filterSem ? `?sem=${filterSem}` : ''}`
+        "item": `https://paper-stack-beryl.vercel.app/${filterSem ? `?sem=${filterSem}` : ''}`
       }
     ]
   };
@@ -1779,14 +1779,14 @@ const fetchPapers = async () => {
         content="IIIT Surat previous year papers, IIIT Surat question papers, semester exam papers, engineering question papers, mid sem papers, end sem papers, computer science papers, BTech papers"
       />
       <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-      <link rel="canonical" href="https://paperstackcom.vercel.app/" />
+      <link rel="canonical" href="https://paper-stack-beryl.vercel.app/" />
       
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="website" />
       <meta property="og:title" content="PaperStack - IIIT Surat Previous Year Papers Archive" />
       <meta property="og:description" content="Free access to IIIT Surat previous year question papers, solutions, and study resources for all engineering branches and semesters." />
-      <meta property="og:image" content="https://paperstackcom.vercel.app/logo.png" />
-      <meta property="og:url" content="https://paperstackcom.vercel.app/" />
+      <meta property="og:image" content="https://paper-stack-beryl.vercel.app/logo.png" />
+      <meta property="og:url" content="https://paper-stack-beryl.vercel.app/" />
       <meta property="og:site_name" content="PaperStack" />
       <meta property="og:locale" content="en_IN" />
       <meta property="og:image:width" content="1200" />
@@ -1797,7 +1797,7 @@ const fetchPapers = async () => {
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="PaperStack | IIIT Surat Question Papers" />
       <meta name="twitter:description" content="Download free IIIT Surat previous year papers for all semesters." />
-      <meta name="twitter:image" content="https://paperstackcom.vercel.app/logo.png" />
+      <meta name="twitter:image" content="https://paper-stack-beryl.vercel.app/logo.png" />
       
       {/* Additional Important Meta Tags */}
       <meta name="author" content="Yogesh Khinchi, IIIT Surat" />

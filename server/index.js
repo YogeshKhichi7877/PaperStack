@@ -454,9 +454,7 @@ app.use(cors({
         "http://localhost:5173",
         "http://localhost:5000",
         "http://localhost:3000",
-        "https://paperstack.onrender.com",
-        "https://paperstackcom.vercel.app/",
-        "https://paperstackcom.vercel.app" 
+        "https://paperstack.onrender.com"
     ],
   methods: ["GET", "POST", "PUT", "PATCH" ,"DELETE"],
   credentials: true
@@ -501,25 +499,25 @@ app.get('/sitemap.xml', (req, res) => {
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
       <url>
-        <loc>https://paperstackcom.vercel.app/</loc>
+        <loc>https://paper-stack-beryl.vercel.app/</loc>
         <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
       </url>
       <url>
-        <loc>https://paperstackcom.vercel.app/login</loc>
+        <loc>https://paper-stack-beryl.vercel.app/login</loc>
         <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
       </url>
       <url>
-        <loc>https://paperstackcom.vercel.app/register</loc>
+        <loc>https://paper-stack-beryl.vercel.app/register</loc>
         <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
       </url>
       <url>
-        <loc>https://paperstackcom.vercel.app/admin</loc>
+        <loc>https://paper-stack-beryl.vercel.app/admin</loc>
         <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
@@ -534,7 +532,7 @@ app.get('/sitemap.xml', (req, res) => {
 app.get('/robots.txt', (req, res) => {
     const robots = `User-agent: *
 Allow: /
-Sitemap: https://paperstackcom.vercel.app/sitemap.xml
+Sitemap: https://paper-stack-beryl.vercel.app/sitemap.xml
 
 # Block AI scraping bots
 User-agent: ChatGPT-User
