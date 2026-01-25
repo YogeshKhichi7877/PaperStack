@@ -2775,7 +2775,7 @@ function Home({ user, setUser, theme, toggleTheme, showAlert }) {
     "logo": `${FRONTEND_URL}/logo.png`,
     "description": "Digital archive of previous year question papers for IIIT Surat students",
     "founder": "Yogesh Khinchi",
-    "keywords": "IIIT Surat papers, question papers, exam papers, engineering papers , iiit surat ",
+    "keywords": "IIIT Surat papers, question papers, exam papers, engineering papers , iiit surat, iiit surat papers , surat college papers ",
     "educationalLevel": "Undergraduate",
     "educationalProgram": "Bachelor of Technology (B.Tech)"
   };
