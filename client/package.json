@@ -11,7 +11,9 @@
     "exam papers",
     "engineering papers",
     "B.Tech papers",
-    "semester papers"
+    "semester papers",
+    "iiit surat" ,
+    "surat college papers"
   ],
   "author": "Yogesh Khinchi",
   "dependencies": {
