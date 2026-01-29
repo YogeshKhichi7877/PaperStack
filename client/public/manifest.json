@@ -1,15 +1,15 @@
 {
-  "short_name": "PS",
-  "name": "PaperStack",
+  "short_name": "PaperStack",
+  "name": "PaperStack - IIIT Surat Papers",
+  "description": "Official archive of IIIT Surat previous year question papers",
   "icons": [
     {
-            "src": "logo16.png",
+      "src": "logo16.png",
       "type": "image/png",
       "sizes": "16x16"
-
     },
     {
-  "src": "logo32.png",
+      "src": "logo32.png",
       "type": "image/png",
       "sizes": "32x32"
     },
@@ -25,7 +25,24 @@
     }
   ],
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#4f46e5",
+  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "categories": ["education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Browse Papers",
+      "short_name": "Papers",
+      "description": "Browse all semester papers",
+      "url": "/"
+    },
+    {
+      "name": "Saved Papers",
+      "short_name": "Saved",
+      "description": "View bookmarked papers",
+      "url": "/?filter=saved"
+    }
+  ]
 }
