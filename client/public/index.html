@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="/logo192.png" />
+    <link rel="icon" href="/logo192.png" sizes="any"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#4f46e5" />
      <meta name="google-site-verification" content="google18a8d3216c8ee3e8.html" />
@@ -46,5 +46,75 @@
     <!-- React root -->
     <div id="root"></div>
     
+
+   <!-- Update your script section in index.html -->
+<script>
+  // Enhanced Service Worker Registration with Caching
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('ServiceWorker registered with scope:', registration.scope);
+          
+          // Check for updates every hour
+          setInterval(() => {
+            registration.update();
+          }, 60 * 60 * 1000);
+        })
+        .catch(err => {
+          console.log('ServiceWorker registration failed:', err);
+        });
+    });
+  }
+
+  // Handle PWA install prompt
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    window.deferredPrompt = e; // Make it globally available
+    
+    // Store install prompt for later use
+    localStorage.setItem('showInstallPrompt', 'true');
+    
+    // Auto-show after delay if not dismissed
+    setTimeout(() => {
+      if (localStorage.getItem('installPromptDismissed') !== 'true') {
+        showInstallPromotion();
+      }
+    }, 15000);
+  });
+
+  function showInstallPromotion() {
+    const installBtn = document.getElementById('install-btn');
+    if (installBtn && deferredPrompt) {
+      installBtn.style.display = 'flex';
+      installBtn.addEventListener('click', installApp);
+    }
+  }
+
+  function installApp() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted install');
+          localStorage.setItem('appInstalled', 'true');
+          localStorage.removeItem('showInstallPrompt');
+        } else {
+          localStorage.setItem('installPromptDismissed', 'true');
+        }
+        deferredPrompt = null;
+        window.deferredPrompt = null;
+      });
+    }
+  }
+  
+  // Detect if app is installed
+  window.addEventListener('appinstalled', () => {
+    localStorage.setItem('appInstalled', 'true');
+    console.log('PWA was installed');
+  });
+</script>
   </body>
 </html>
