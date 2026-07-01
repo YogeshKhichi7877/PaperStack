@@ -10,6 +10,7 @@ import authWordmark from './assets/Paperstack_auth_wordmark.png';
 import paperstackWordmark from './assets/Paperstack_auth_wordmark.png';
 import paperstackOwl from './assets/Paperstack_auth_owl.png';
 import iiitSuratLogo from './assets/iiit_surat.png';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 import './App.css';
 
@@ -3920,6 +3921,7 @@ export default function App() {
   const appRoutes = (
     <Router>
       <ToastStack toasts={toasts} dismissToast={dismissToast} />
+      <PWAInstallPrompt />
       <BackToTopButton />
       <Routes>
         <Route path="/" element={<Home user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />

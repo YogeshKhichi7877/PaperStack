@@ -1,48 +1,62 @@
 {
   "short_name": "PaperStack",
-  "name": "PaperStack - IIIT Surat Papers",
-  "description": "Official archive of IIIT Surat previous year question papers",
-  "icons": [
-    {
-      "src": "logo16.png",
-      "type": "image/png",
-      "sizes": "16x16"
-    },
-    {
-      "src": "logo32.png",
-      "type": "image/png",
-      "sizes": "32x32"
-    },
-    {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
-  "start_url": ".",
+  "name": "PaperStack - IIIT Surat Archive",
+  "description": "A smart academic archive for IIIT Surat students to access papers, exam packs, missing papers, analytics, and contributions.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#4f46e5",
-  "background_color": "#ffffff",
-  "orientation": "portrait",
-  "categories": ["education", "productivity"],
-  "shortcuts": [
+  "orientation": "portrait-primary",
+  "background_color": "#07111f",
+  "theme_color": "#0f172a",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
     {
-      "name": "Browse Papers",
-      "short_name": "Papers",
-      "description": "Browse all semester papers",
-      "url": "/"
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "name": "Saved Papers",
-      "short_name": "Saved",
-      "description": "View bookmarked papers",
-      "url": "/?filter=saved"
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
