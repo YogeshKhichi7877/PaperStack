@@ -3,14 +3,36 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { HelmetProvider } from 'react-helmet-async';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+function isValidGoogleClientId(id) {
+  return Boolean(
+    id &&
+    id === id.trim() &&
+    id.includes('.apps.googleusercontent.com') &&
+    !/["'\s]/.test(id)
+  );
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
+const app = (
+  <>
     <HelmetProvider>
       <App />
     </HelmetProvider>
-  </React.StrictMode>
+  </>
+);
+
+if (process.env.NODE_ENV === 'development' && googleClientId && !isValidGoogleClientId(googleClientId)) {
+  console.warn('Google login is disabled because REACT_APP_GOOGLE_CLIENT_ID is not a valid Web OAuth client ID.');
+}
+
+root.render(
+  isValidGoogleClientId(googleClientId)
+    ? <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider>
+    : app
 );
 
 // If you want to start measuring performance in your app, pass a function
