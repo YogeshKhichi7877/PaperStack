@@ -78,15 +78,76 @@ function isValidGoogleClientId(value) {
 }
 
 // Nodemailer SMTP Transporter
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: Number(process.env.EMAIL_PORT) || 465,
-  secure: process.env.EMAIL_SECURE === 'true' || true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD,
-  },
-});
+let emailTransporter = null;
+if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
+  emailTransporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: Number(process.env.EMAIL_PORT || 465),
+    secure: String(process.env.EMAIL_SECURE || 'true') === 'true',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_APP_PASSWORD,
+    },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
+  });
+} else {
+  console.warn('Email notifications disabled.');
+}
+
+async function sendContributionEmail(contribution) {
+  if (!emailTransporter) {
+    console.warn('Contribution email skipped: email transporter not configured.');
+    return;
+  }
+
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+    console.warn('Contribution email skipped: EMAIL_USER or EMAIL_APP_PASSWORD missing.');
+    return;
+  }
+
+  const receiverEmail =
+    process.env.CONTRIBUTION_EMAIL ||
+    process.env.CONTRIBUTION_RECEIVER_EMAIL ||
+    process.env.EMAIL_USER;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: receiverEmail,
+    subject: 'New PaperStack Contribution Submitted',
+    text: `
+New contribution submitted.
+
+Subject: ${contribution.subject || ''}
+Branch: ${contribution.branch || ''}
+Semester: ${contribution.semester || ''}
+Exam Type: ${contribution.examType || ''}
+Year: ${contribution.year || ''}
+Contributor: ${contribution.contributorName || contribution.contributedByName || contribution.contributedBy || ''}
+Paper PDF: ${contribution.paperUrl || ''}
+Solution PDF: ${contribution.solutionUrl || ''}
+Admin Review Hub: ${FRONTEND_URL}/admin/contributions
+    `,
+    html: `
+      <h3>New Paper Contribution Received</h3>
+      <p><strong>Contributor Name:</strong> ${contribution.contributorName || ''}</p>
+      <p><strong>Contributor Email:</strong> ${contribution.contributorEmail || ''}</p>
+      <p><strong>Branch:</strong> ${contribution.branch || ''}</p>
+      <p><strong>Semester:</strong> Sem ${contribution.semester || ''}</p>
+      <p><strong>Subject:</strong> ${contribution.subject || ''}</p>
+      <p><strong>Paper Title:</strong> ${contribution.title || ''}</p>
+      <p><strong>Year:</strong> ${contribution.year || ''}</p>
+      <p><strong>Exam Type:</strong> ${contribution.examType || ''}</p>
+      <p><strong>Notes:</strong> ${contribution.notes || 'None'}</p>
+      <p><strong>Paper PDF Link:</strong> <a href="${contribution.paperUrl || ''}" target="_blank">View Paper PDF</a></p>
+      ${contribution.solutionUrl ? `<p><strong>Solution PDF Link:</strong> <a href="${contribution.solutionUrl}" target="_blank">View Solution PDF</a></p>` : ''}
+      <p><strong>Admin Review Hub:</strong> <a href="${FRONTEND_URL}/admin/contributions" target="_blank">${FRONTEND_URL}/admin/contributions</a></p>
+    `
+  };
+
+  await emailTransporter.sendMail(mailOptions);
+}
 let databaseStatus = 'disconnected';
 
 app.set('trust proxy', 1);
@@ -1887,48 +1948,28 @@ app.post('/api/contributions', authenticate, adminUploadFields, async (req, res)
       status: 'pending'
     }).save();
 
-    let emailSent = true;
-    try {
-      const receiverEmail = process.env.CONTRIBUTION_RECEIVER_EMAIL || 'paperstackcontribute@gmail.com';
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: receiverEmail,
-        subject: `New Paper Contribution: ${contribution.subject} ${contribution.examType} ${contribution.year}`,
-        html: `
-          <h3>New Paper Contribution Received</h3>
-          <p><strong>Contributor Name:</strong> ${contribution.contributorName}</p>
-          <p><strong>Contributor Email:</strong> ${contribution.contributorEmail}</p>
-          <p><strong>Branch:</strong> ${contribution.branch}</p>
-          <p><strong>Semester:</strong> Sem ${contribution.semester}</p>
-          <p><strong>Subject:</strong> ${contribution.subject}</p>
-          <p><strong>Paper Title:</strong> ${contribution.title}</p>
-          <p><strong>Year:</strong> ${contribution.year}</p>
-          <p><strong>Exam Type:</strong> ${contribution.examType}</p>
-          <p><strong>Notes:</strong> ${contribution.notes || 'None'}</p>
-          <p><strong>Paper PDF Link:</strong> <a href="${contribution.paperUrl}" target="_blank">View Paper PDF</a></p>
-          ${contribution.solutionUrl ? `<p><strong>Solution PDF Link:</strong> <a href="${contribution.solutionUrl}" target="_blank">View Solution PDF</a></p>` : ''}
-          <p><strong>Admin Review Hub:</strong> <a href="${FRONTEND_URL}/admin/contributions" target="_blank">${FRONTEND_URL}/admin/contributions</a></p>
-        `
-      };
-      await emailTransporter.sendMail(mailOptions);
-    } catch (emailErr) {
-      console.error('SMTP email sending failed:', emailErr.message);
-      emailSent = false;
-    }
-
-    if (!emailSent) {
-      return res.status(201).json({
-        message: 'Contribution saved, but email notification could not be sent.',
-        contribution
-      });
-    }
-
     res.status(201).json({
+      success: true,
       message: 'Contribution submitted successfully. It will appear after admin approval.',
       contribution
     });
+
+    sendContributionEmail(contribution).catch((mailError) => {
+      console.warn('Contribution email notification failed:', mailError.message);
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Contribution upload failed:', {
+      message: err.message,
+      name: err.name,
+      code: err.code,
+      stack: err.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Contribution upload failed',
+      error: process.env.NODE_ENV === 'production' ? undefined : err.message
+    });
   }
 });
 

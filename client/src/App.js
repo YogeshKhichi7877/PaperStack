@@ -1649,28 +1649,41 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
       toast('Paper PDF file is required.', 'warning');
       return;
     }
-    setSubmitting(true);
-    setUploadProgress(20);
-
-    const data = new FormData();
-    data.append('file', paperFile);
-    if (solutionFile) data.append('solution', solutionFile);
-    Object.entries(formData).forEach(([key, val]) => data.append(key, val));
-
     try {
-      setUploadProgress(50);
+      setSubmitting(true);
+      setUploadProgress(10);
+
+      const data = new FormData();
+      data.append('file', paperFile);
+      if (solutionFile) data.append('solution', solutionFile);
+      Object.entries(formData).forEach(([key, val]) => data.append(key, val));
+
       const res = await axios.post(`${API_URL}/api/contributions`, data, {
         headers: {
           ...authHeader(),
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        timeout: 120000,
+        onUploadProgress: (progressEvent) => {
+          if (!progressEvent.total) return;
+          const percent = Math.round(10 + (progressEvent.loaded * 70) / progressEvent.total);
+          setUploadProgress(Math.min(80, Math.max(10, percent)));
+        },
       });
       setUploadProgress(100);
       toast(res.data.message || 'Contribution submitted successfully.', 'success');
       navigate('/');
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.message || 'Submission failed.';
-      toast(msg, 'error');
+      console.error('Contribution upload failed:', err.response?.data || err.message);
+      const serverError = err.response?.data;
+
+      toast(
+        serverError?.error ||
+        serverError?.message ||
+        err.message ||
+        'Contribution upload failed. Please try again.',
+        'error'
+      );
       setUploadProgress(0);
     } finally {
       setSubmitting(false);
