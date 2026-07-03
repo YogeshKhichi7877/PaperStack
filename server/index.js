@@ -148,6 +148,101 @@ Admin Review Hub: ${FRONTEND_URL}/admin/contributions
 
   await emailTransporter.sendMail(mailOptions);
 }
+
+async function sendNtfyContributionNotification(contribution) {
+  const provider = process.env.NOTIFICATION_PROVIDER || 'ntfy';
+  if (provider !== 'ntfy') {
+    console.warn('ntfy notification skipped: NOTIFICATION_PROVIDER is not ntfy.');
+    return;
+  }
+
+  const server = process.env.NTFY_SERVER || 'https://ntfy.sh';
+  const topic = process.env.NTFY_TOPIC;
+  const reviewUrl =
+    process.env.ADMIN_REVIEW_URL ||
+    `${process.env.FRONTEND_URL || 'https://paper-stack-beryl.vercel.app'}/admin/contributions`;
+
+  if (!topic) {
+    console.warn('ntfy notification skipped: NTFY_TOPIC missing.');
+    return;
+  }
+
+  const cleanServer = server.replace(/\/$/, '');
+
+  const subject = contribution.subject || 'N/A';
+  const branch = contribution.branch || 'N/A';
+  const semester = contribution.semester || 'N/A';
+  const examType = contribution.examType || 'N/A';
+  const year = contribution.year || 'N/A';
+
+  const contributorName =
+    contribution.contributedByName ||
+    contribution.username ||
+    contribution.name ||
+    contribution.contributorName ||
+    'N/A';
+
+  const contributorEmail =
+    contribution.contributedByEmail ||
+    contribution.email ||
+    contribution.contributorEmail ||
+    'N/A';
+
+  const paperUrl =
+    contribution.filePath ||
+    contribution.paperUrl ||
+    contribution.paperPath ||
+    '';
+
+  const solutionUrl =
+    contribution.solutionPath ||
+    contribution.solutionUrl ||
+    '';
+
+  const message = [
+    'New PaperStack Contribution',
+    '',
+    `Subject: ${subject}`,
+    `Branch: ${branch}`,
+    `Semester: ${semester}`,
+    `Exam Type: ${examType}`,
+    `Year: ${year}`,
+    '',
+    `Contributor: ${contributorName}`,
+    `Email: ${contributorEmail}`,
+    '',
+    `Review: ${reviewUrl}`,
+    paperUrl ? `Paper PDF: ${paperUrl}` : '',
+    solutionUrl ? `Solution PDF: ${solutionUrl}` : ''
+  ].filter(Boolean).join('\n');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`${cleanServer}/${encodeURIComponent(topic)}`, {
+      method: 'POST',
+      headers: {
+        Title: 'PaperStack Contribution',
+        Priority: 'high',
+        Tags: 'inbox,books',
+        Click: reviewUrl,
+        'Content-Type': 'text/plain; charset=utf-8'
+      },
+      body: message,
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`ntfy notification failed: ${response.status} ${errorText}`);
+    }
+
+    console.log('ntfy contribution notification sent.');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 let databaseStatus = 'disconnected';
 
 app.set('trust proxy', 1);
@@ -1950,8 +2045,12 @@ app.post('/api/contributions', authenticate, adminUploadFields, async (req, res)
 
     res.status(201).json({
       success: true,
-      message: 'Contribution submitted successfully. It will appear after admin approval.',
+      message: 'Contribution submitted successfully. It will be reviewed by admin.',
       contribution
+    });
+
+    sendNtfyContributionNotification(contribution).catch((notifyError) => {
+      console.warn('Contribution ntfy notification failed:', notifyError.message);
     });
 
     sendContributionEmail(contribution).catch((mailError) => {
