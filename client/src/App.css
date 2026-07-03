@@ -15013,9 +15013,9 @@ body,
   width: 100% !important;
   min-height: 78px !important;
   height: auto !important;
-  padding: 0 24px !important;
+  padding: 0 16px !important;
   display: grid !important;
-  grid-template-columns: minmax(32px, 0.7fr) auto minmax(300px, 1fr);
+  grid-template-columns: minmax(140px, 170px) minmax(0, 1fr) max-content;
   align-items: center !important;
   gap: 14px !important;
   position: sticky !important;
@@ -15039,7 +15039,14 @@ body,
   display: none !important;
 }
 
-.ps-navbar-repaired .nav-spacer {
+.ps-navbar-repaired.is-guest {
+  grid-template-columns: minmax(0, 0.15fr) minmax(0, 1fr) max-content;
+}
+
+.ps-navbar-repaired .nav-user-slot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   min-width: 0;
 }
 
@@ -15050,9 +15057,11 @@ body,
   gap: 7px !important;
   min-width: 0 !important;
   white-space: nowrap !important;
+  overflow: hidden !important;
 }
 
 .ps-navbar-repaired .nav-right-actions,
+.ps-navbar-repaired .nav-actions,
 .ps-navbar-repaired .ps-admin-actions {
   display: flex !important;
   align-items: center !important;
@@ -15060,6 +15069,16 @@ body,
   gap: 7px !important;
   min-width: 0 !important;
   white-space: nowrap !important;
+}
+
+.ps-navbar-repaired .nav-actions {
+  max-width: 100% !important;
+  flex-wrap: nowrap !important;
+}
+
+.ps-navbar-repaired .nav-actions button,
+.ps-navbar-repaired .nav-actions a {
+  flex: 0 0 auto !important;
 }
 
 .ps-navbar-repaired .nav-text-link,
@@ -15139,15 +15158,23 @@ body,
   transform: translateY(-1px) !important;
 }
 
-.ps-navbar-repaired .user-greeting {
-  max-width: 96px !important;
+.ps-navbar-repaired .nav-user-pill {
+  box-sizing: border-box !important;
+  max-width: 170px !important;
   min-width: 0 !important;
+  padding: 10px 14px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(15, 118, 110, 0.18) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  color: #083f3d !important;
+  font-weight: 900 !important;
+  font-size: 0.82rem !important;
+  line-height: 1 !important;
+  display: inline-block !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
-  color: #063438 !important;
-  font-size: 0.82rem !important;
-  font-weight: 900 !important;
+  flex: 0 1 170px !important;
 }
 
 .ps-navbar-repaired .mobile-menu-toggle,
@@ -15168,7 +15195,7 @@ body.dark .ps-navbar-repaired .theme-btn,
 body.dark .ps-navbar-repaired .nav-admin-link,
 body.dark .ps-navbar-repaired .btn-exit-admin,
 body.dark .ps-navbar-repaired .btn-logout,
-body.dark .ps-navbar-repaired .user-greeting {
+body.dark .ps-navbar-repaired .nav-user-pill {
   color: #eaffff !important;
 }
 
@@ -15177,7 +15204,8 @@ body.dark .ps-navbar-repaired .nav-text-link.active,
 body.dark .ps-navbar-repaired .theme-btn,
 body.dark .ps-navbar-repaired .nav-admin-link,
 body.dark .ps-navbar-repaired .btn-exit-admin,
-body.dark .ps-navbar-repaired .btn-logout {
+body.dark .ps-navbar-repaired .btn-logout,
+body.dark .ps-navbar-repaired .nav-user-pill {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(178, 255, 255, 0.16) !important;
 }
@@ -15209,17 +15237,29 @@ body.dark .ps-hero-wordmark-img {
   filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.28)) !important;
 }
 
-@media (max-width: 1220px) and (min-width: 1051px) {
+@media (max-width: 1450px) and (min-width: 1051px) {
   .navbar.ps-navbar-repaired {
     padding: 0 14px !important;
-    grid-template-columns: minmax(12px, 0.35fr) auto minmax(270px, 1fr);
+    grid-template-columns: minmax(118px, 140px) minmax(0, 1fr) max-content;
     gap: 8px !important;
+  }
+
+  .navbar.ps-navbar-repaired.is-guest {
+    grid-template-columns: minmax(12px, 0.35fr) minmax(0, 1fr) max-content;
   }
 
   .ps-navbar-repaired .nav-center-links,
   .ps-navbar-repaired .nav-right-actions,
+  .ps-navbar-repaired .nav-actions,
   .ps-navbar-repaired .ps-admin-actions {
     gap: 5px !important;
+  }
+
+  .ps-navbar-repaired .nav-user-pill {
+    max-width: 140px !important;
+    flex-basis: 140px !important;
+    padding-left: 11px !important;
+    padding-right: 11px !important;
   }
 
   .ps-navbar-repaired .nav-text-link,
@@ -15243,7 +15283,7 @@ body.dark .ps-hero-wordmark-img {
     align-items: center !important;
   }
 
-  .ps-navbar-repaired .nav-spacer,
+  .ps-navbar-repaired .nav-user-slot,
   .ps-navbar-repaired > .nav-center-links,
   .ps-navbar-repaired > .nav-right-actions {
     display: none !important;
@@ -15318,16 +15358,27 @@ body.dark .ps-hero-wordmark-img {
     width: 100% !important;
   }
 
+  .ps-navbar-repaired .mobile-nav-panel .nav-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    justify-content: stretch !important;
+    white-space: normal !important;
+  }
+
   .ps-navbar-repaired .mobile-nav-divider {
     height: 1px;
     background: rgba(8, 115, 115, 0.16);
     margin: 2px 0;
   }
 
-  .ps-navbar-repaired .mobile-nav-panel .user-greeting {
+  .ps-navbar-repaired .mobile-nav-panel .nav-user-pill {
     max-width: 100% !important;
-    text-align: center !important;
-    padding: 4px 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    text-align: left !important;
+    padding: 14px !important;
   }
 
   body.dark .ps-navbar-repaired .mobile-menu-toggle {

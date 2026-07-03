@@ -348,6 +348,14 @@ function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast 
 
   const closeMenu = () => setMenuOpen(false);
 
+  const userLabel =
+    user?.name ||
+    user?.username ||
+    user?.email ||
+    user?.rollNumber ||
+    user?.id ||
+    'User';
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
@@ -384,7 +392,7 @@ function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast 
   );
 
   const navActions = (
-    <>
+    <div className="nav-actions">
       <button className="theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
         {theme === 'light' ? 'Dark' : 'Light'}
       </button>
@@ -417,7 +425,6 @@ function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast 
 
       {user ? (
         <>
-          <span className="user-greeting">{user.username}</span>
           <button className="btn-logout" onClick={logout}>
             Logout
           </button>
@@ -427,12 +434,18 @@ function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast 
           Login
         </Link>
       )}
-    </>
+    </div>
   );
 
   return (
-    <nav className="navbar ps-navbar-repaired">
-      <div className="nav-spacer" aria-hidden="true" />
+    <nav className={`navbar ps-navbar-repaired ${user ? 'has-user' : 'is-guest'}`}>
+      <div className="nav-user-slot">
+        {user && (
+          <span className="nav-user-pill" title={userLabel}>
+            {userLabel}
+          </span>
+        )}
+      </div>
 
       <div className="nav-center-links">{navLinks}</div>
 
@@ -451,6 +464,11 @@ function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast 
       </button>
 
       <div className={`mobile-nav-panel ${menuOpen ? 'is-open' : ''}`}>
+        {user && (
+          <span className="nav-user-pill" title={userLabel}>
+            {userLabel}
+          </span>
+        )}
         {navLinks}
         <div className="mobile-nav-divider" />
         {navActions}
@@ -3341,15 +3359,25 @@ function AnalyticsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin,
 }
 
 // V2 Page: Admin Contribution Hub
-function AdminContributionsPage({ toast }) {
+function AdminContributionsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const fetchContributions = useCallback(() => {
     setLoading(true);
+    setAccessDenied(false);
     axios.get(`${API_URL}/api/admin/contributions`, { headers: adminHeader() })
       .then(res => setContributions(res.data))
-      .catch(() => toast('Failed to load contributions', 'error'))
+      .catch((err) => {
+        const status = err.response?.status;
+        if (status === 401 || status === 403) {
+          setAccessDenied(true);
+          setContributions([]);
+          return;
+        }
+        toast('Failed to load contributions', 'error');
+      })
       .finally(() => setLoading(false));
   }, [toast]);
 
@@ -3382,7 +3410,7 @@ function AdminContributionsPage({ toast }) {
 
   return (
     <div className="app-container">
-      <Navbar user={null} setUser={() => {}} theme="light" toggleTheme={() => {}} isAdmin={true} setIsAdmin={() => {}} toast={toast} />
+      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
       <main className="page-shell">
         <Link to="/" className="page-back-link">Back to papers</Link>
         
@@ -3393,6 +3421,10 @@ function AdminContributionsPage({ toast }) {
 
         {loading ? (
           <div className="analytics-state">Loading contributions...</div>
+        ) : accessDenied ? (
+          <div className="analytics-state admin-access-required">
+            Admin access required. Please sign in through the admin panel to review contributions.
+          </div>
         ) : (
           <div className="admin-contributions-list">
             {contributions.map(item => (
@@ -3427,7 +3459,7 @@ function AdminContributionsPage({ toast }) {
 }
 
 // V2 Page: Admin Reports panel page
-function AdminReportsPage({ toast }) {
+function AdminReportsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -3455,7 +3487,7 @@ function AdminReportsPage({ toast }) {
 
   return (
     <div className="app-container">
-      <Navbar user={null} setUser={() => {}} theme="light" toggleTheme={() => {}} isAdmin={true} setIsAdmin={() => {}} toast={toast} />
+      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
       <main className="page-shell">
         <Link to="/" className="page-back-link">Back to papers</Link>
 
@@ -3531,7 +3563,7 @@ function AdminAccessRequired({ setIsAdmin, toast, theme, toggleTheme }) {
   );
 }
 
-function AdminUploadCenter({ isAdmin, setIsAdmin, toast, theme, toggleTheme }) {
+function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast, theme, toggleTheme }) {
   const [uploadMode, setUploadMode] = useState('single');
   const [singleForm, setSingleForm] = useState(ADMIN_UPLOAD_INITIAL_FORM);
   const [paperFile, setPaperFile] = useState(null);
@@ -3694,7 +3726,7 @@ function AdminUploadCenter({ isAdmin, setIsAdmin, toast, theme, toggleTheme }) {
         <title>Admin Upload Center - PaperStack</title>
         <meta name="description" content="Admin upload center for PaperStack question papers." />
       </Helmet>
-      <Navbar user={null} setUser={() => {}} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
 
       <main className="admin-upload-page">
         <Link to="/" className="page-back-link">Back to papers</Link>
@@ -3958,7 +3990,7 @@ export default function App() {
           path="/admin/upload"
           element={
             isAdmin ? (
-              <AdminUploadCenter isAdmin={isAdmin} setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
+              <AdminUploadCenter user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
             ) : (
               <AdminAccessRequired setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
             )
@@ -3968,7 +4000,7 @@ export default function App() {
           path="/admin/contributions"
           element={
             isAdmin ? (
-              <AdminContributionsPage toast={toast} />
+              <AdminContributionsPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
             ) : (
               <AdminAccessRequired setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
             )
@@ -3978,7 +4010,7 @@ export default function App() {
           path="/admin/reports"
           element={
             isAdmin ? (
-              <AdminReportsPage toast={toast} />
+              <AdminReportsPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
             ) : (
               <AdminAccessRequired setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
             )
