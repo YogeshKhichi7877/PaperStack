@@ -4,7 +4,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { HelmetProvider } from 'react-helmet-async';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-
+import { inject } from '@vercel/analytics';
 const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 function isValidGoogleClientId(id) {
@@ -47,6 +47,9 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+inject();
+
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
