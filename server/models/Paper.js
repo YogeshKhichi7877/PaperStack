@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const paperResourceSyncPlugin = require('../plugins/paperResourceSync');
 
 const paperSchema = new mongoose.Schema({
     title: { type: String, required: true },
@@ -46,5 +47,7 @@ paperSchema.index({ branch: 1, semester: 1, normalizedSubject: 1, year: 1, examT
 paperSchema.pre('save', function setUpdatedAt() {
     this.updatedAt = new Date();
 });
+
+paperSchema.plugin(paperResourceSyncPlugin);
 
 module.exports = mongoose.model('Paper', paperSchema, 'paper');

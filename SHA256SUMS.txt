@@ -1,0 +1,5 @@
+bf4bf081bea4cb01f916eec4ca13471da0a50d84dc0de3bff15a68a3f7c3f8e0  /mnt/data/paperstack-01.1-mongodb-dns-hotfix/server/scripts/backfillResources.js
+5f9791408224f6623f12f9ec2b82dab291252f5e2af2bf08b8d995bdc1117f01  /mnt/data/paperstack-01.1-mongodb-dns-hotfix/apply-hotfix-01-1.js
+6b416945d55bc2c0e5cfa24fe59d3dcbbbcf6d74a00e1fd3985772d21a92d226  /mnt/data/paperstack-01.1-mongodb-dns-hotfix/apply-hotfix-01-1.ps1
+2723c9ab3de6df7dfb59944c9f2b3b6183b14cf4a16e31fdbfc632a0434e0224  /mnt/data/paperstack-01.1-mongodb-dns-hotfix/verify-hotfix-01-1.js
+1501215556b6df9a1af7636c8a94dae1ffe3d16999770a5081040c41ae9c0263  /mnt/data/paperstack-01.1-mongodb-dns-hotfix/README.md

@@ -39,6 +39,13 @@ const Contribution = require('./models/Contribution');
 const Report = require('./models/Report');
 const PaperRequest = require('./models/PaperRequest');
 const PaperVote = require('./models/PaperVote');
+const { createAuthMiddleware } = require('./middleware/auth');
+const { parseCsvLine } = require('./utils/csv');
+const { findHardestSubject } = require('./utils/analytics');
+const { buildSemesterPackQuery } = require('./utils/paperQuery');
+const catalogRoutes = require('./routes/catalogRoutes');
+const resourceRoutes = require('./routes/resourceRoutes');
+const { incrementResourceStatForPaper } = require('./services/resourceService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -50,6 +57,7 @@ const CLOUDINARY_FOLDER = cloudinaryFolder;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const SALT_ROUNDS = Number(process.env.SALT_ROUNDS || process.env.saltrounds || 10);
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+const { authenticate, authenticateAdmin } = createAuthMiddleware(JWT_SECRET);
 const ALLOWED_EMAIL_DOMAIN = 'iiitsurat.ac.in';
 
 function maskValue(value) {
@@ -278,6 +286,8 @@ app.use('/api/', rateLimit({
   legacyHeaders: false,
 }));
 app.use(compression());
+app.use('/api/catalog', catalogRoutes);
+app.use('/api/resources', resourceRoutes);
 
 if (!JWT_SECRET) {
   console.warn('JWT_SECRET is not configured. Auth routes will fail until it is set.');
@@ -384,11 +394,6 @@ function titleCase(value) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function getBearerToken(req) {
-  const header = req.header('Authorization') || '';
-  return header.startsWith('Bearer ') ? header.slice(7) : header;
-}
-
 function buildUserResponse(user) {
   return {
     id: user._id,
@@ -429,30 +434,6 @@ async function makeUniqueUsername(baseValue) {
     suffix += 1;
   }
   return candidate;
-}
-
-function authenticate(req, res, next) {
-  const token = getBearerToken(req);
-  if (!token) return res.status(401).json({ error: 'Access denied: no token' });
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-}
-
-function authenticateAdmin(req, res, next) {
-  const token = getBearerToken(req);
-  if (!token) return res.status(401).json({ error: 'Admin token required' });
-  try {
-    const verified = jwt.verify(token, JWT_SECRET);
-    if (verified.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-    req.admin = verified;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid or expired admin token' });
-  }
 }
 
 function hashBuffer(buffer) {
@@ -882,29 +863,6 @@ function validateAdminUploadBody(body, requireFileName = false) {
   const year = Number(body.year);
   if (!Number.isInteger(year) || year < 2000 || year > 2100) errors.push('Missing required field: year');
   return errors;
-}
-
-function parseCsvLine(line) {
-  const values = [];
-  let current = '';
-  let quoted = false;
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const next = line[index + 1];
-    if (char === '"' && quoted && next === '"') {
-      current += '"';
-      index += 1;
-    } else if (char === '"') {
-      quoted = !quoted;
-    } else if (char === ',' && !quoted) {
-      values.push(current);
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  values.push(current);
-  return values.map((value) => value.trim());
 }
 
 function parseAdminUploadCsv(buffer) {
@@ -1412,32 +1370,6 @@ app.post('/api/admin/confirm-bulk-upload', authenticateAdmin, adminUploadFields,
   }
 });
 
-function parseCsvLine(line) {
-  const values = [];
-  let current = '';
-  let quoted = false;
-
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const next = line[index + 1];
-
-    if (char === '"' && quoted && next === '"') {
-      current += '"';
-      index += 1;
-    } else if (char === '"') {
-      quoted = !quoted;
-    } else if (char === ',' && !quoted) {
-      values.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-
-  values.push(current.trim());
-  return values;
-}
-
 function parseBulkCsv(buffer) {
   const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -1622,6 +1554,9 @@ if (process.env.NODE_ENV !== 'production') {
 app.post('/api/papers/:id/view', async (req, res) => {
   try {
     await Paper.findByIdAndUpdate(req.params.id, { $inc: { views: 1 }, updatedAt: new Date() });
+    incrementResourceStatForPaper(req.params.id, 'views').catch((error) => {
+      console.warn('[PaperStack Resource Sync] view counter sync failed:', error.message);
+    });
     res.status(200).json({ message: 'View counted' });
   } catch (err) {
     res.status(500).json({ error: 'Could not count view' });
@@ -1631,6 +1566,9 @@ app.post('/api/papers/:id/view', async (req, res) => {
 app.post('/api/papers/:id/download', async (req, res) => {
   try {
     await Paper.findByIdAndUpdate(req.params.id, { $inc: { downloads: 1 }, updatedAt: new Date() });
+    incrementResourceStatForPaper(req.params.id, 'downloads').catch((error) => {
+      console.warn('[PaperStack Resource Sync] download counter sync failed:', error.message);
+    });
     res.status(200).json({ message: 'Download counted' });
   } catch (err) {
     res.status(500).json({ error: 'Error counting download' });
@@ -1672,6 +1610,8 @@ app.get('/api/analytics', async (req, res) => {
     const totalDownloads = papers.reduce((sum, p) => sum + (p.downloads || 0), 0);
     const totalContributors = await Contribution.distinct('contributorUserId', { status: 'approved' });
     const totalApprovedContributions = await Contribution.countDocuments({ status: 'approved' });
+    const difficultyVotes = await PaperVote.find().select('paperId difficulty').lean();
+    const hardestSubject = findHardestSubject(papers, difficultyVotes);
 
     const combos = [];
     const comboMap = new Set();
@@ -1707,8 +1647,9 @@ app.get('/api/analytics', async (req, res) => {
       totalPapers: papers.length,
       totalViews,
       totalDownloads,
-      totalContributors: totalContributors.length || 5,
-      hardestSubject: subjects[0]?.subject || '',
+      totalContributors: totalContributors.length,
+      mostActiveSubject: subjects[0]?.subject || '',
+      hardestSubject,
       mostViewed: mostViewed ? { subject: mostViewed.subject, title: mostViewed.title, views: mostViewed.views || 0 } : null,
       mostDownloaded: mostDownloaded ? { subject: mostDownloaded.subject, title: mostDownloaded.title, downloads: mostDownloaded.downloads || 0 } : null,
       subjects,
@@ -2395,19 +2336,7 @@ async function streamSemesterPack(req, res) {
     });
   }
 
-  const branchValue = String(branch || '').trim();
-  const normalizedBranch = branchValue.toUpperCase();
-  const escapedBranch = branchValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const branchRegex = normalizedBranch === 'CSE & ECE'
-    ? /CSE\s*&\s*ECE|CSE|ECE/i
-    : new RegExp(escapedBranch, 'i');
-
-  const query = {
-    semester: Number(semester),
-    examType,
-    title: branchRegex,
-    filePath: { $exists: true, $ne: '' }
-  };
+  const query = buildSemesterPackQuery({ branch, semester, examType });
 
   const papers = await Paper.find(query).sort({ subject: 1, year: -1, examType: 1 }).lean();
 

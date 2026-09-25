@@ -1,0 +1,6 @@
+PaperStack Feature #1 prerequisite:
+- Feature #0 (Foundation Refactor + Critical Fixes) must already be applied and passing.
+- Audited upstream repository: YogeshKhichi7877/PaperStack
+- Original audited main commit before Feature #0: ff04ad5f0f27dfd93d682b51a7f9f9fe89b7af5e
+
+Feature #1 is designed to layer on top of the successfully applied Feature #0 local state.
