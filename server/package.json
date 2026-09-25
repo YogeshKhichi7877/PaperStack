@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --test middleware/auth.test.js utils/csv.test.js utils/analytics.test.js utils/paperQuery.test.js services/subjectService.test.js services/resourceMapper.test.js",
+    "test": "node --test middleware/auth.test.js utils/csv.test.js utils/analytics.test.js utils/paperQuery.test.js services/subjectService.test.js services/resourceMapper.test.js services/subjectPageService.test.js services/smartContributionService.test.js services/freeAiMetadataService.test.js utils/contributorXp.test.js",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "migrate:resources:dry": "node scripts/backfillResources.js --dry-run",

@@ -1,7 +1,8 @@
 const express = require('express');
 const Resource = require('../models/Resource');
+const Paper = require('../models/Paper');
 const { RESOURCE_TYPES, isValidResourceType } = require('../data/resourceTypes');
-const { normalizeSubjectKey } = require('../services/subjectService');
+const { resolveResourceSubjectKey } = require('../services/subjectPageService');
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.get('/types', (req, res) => {
 
 router.get('/subject/:subjectKey/summary', async (req, res) => {
   try {
-    const subjectKey = normalizeSubjectKey(req.params.subjectKey);
+    const subjectKey = resolveResourceSubjectKey(req.params.subjectKey);
     const resources = await Resource.find({ subjectKey, status: 'active' })
       .select('kind subjectKey subjectCode subjectShortCode subjectName branches semesters examType year views downloads updatedAt')
       .lean();
@@ -83,7 +84,7 @@ router.get('/', async (req, res) => {
       }
       query.kind = req.query.kind;
     }
-    if (req.query.subjectKey) query.subjectKey = normalizeSubjectKey(req.query.subjectKey);
+    if (req.query.subjectKey) query.subjectKey = resolveResourceSubjectKey(req.query.subjectKey);
     if (req.query.branch) query.branches = String(req.query.branch).trim().toUpperCase();
     if (req.query.semester) query.semesters = Number(req.query.semester);
     if (req.query.examType) query.examType = String(req.query.examType).trim();
@@ -122,6 +123,42 @@ router.get('/', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Failed to load resources' });
   }
+});
+
+async function incrementPublicResourceStat(req, res, field) {
+  try {
+    const resource = await Resource.findOneAndUpdate(
+      { _id: req.params.id, status: 'active' },
+      { $inc: { [field]: 1 } },
+      { new: true }
+    ).lean();
+
+    if (!resource) return res.status(404).json({ error: 'Resource not found' });
+
+    if (resource.kind === 'question_paper' && resource.legacyPaperId) {
+      await Paper.findByIdAndUpdate(resource.legacyPaperId, {
+        $inc: { [field]: 1 },
+        updatedAt: new Date(),
+      });
+    }
+
+    return res.json({
+      success: true,
+      resourceId: resource._id,
+      [field]: Number(resource[field] || 0),
+    });
+  } catch (error) {
+    if (error?.name === 'CastError') return res.status(400).json({ error: 'Invalid resource id' });
+    return res.status(500).json({ error: `Failed to record resource ${field}` });
+  }
+}
+
+router.post('/:id/view', async (req, res) => {
+  await incrementPublicResourceStat(req, res, 'views');
+});
+
+router.post('/:id/download', async (req, res) => {
+  await incrementPublicResourceStat(req, res, 'downloads');
 });
 
 router.get('/:id', async (req, res) => {

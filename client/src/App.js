@@ -11,6 +11,12 @@ import paperstackWordmark from './assets/Paperstack_auth_wordmark.png';
 import paperstackOwl from './assets/Paperstack_auth_owl.png';
 import iiitSuratLogo from './assets/iiit_surat.png';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import ContributorLeaderboardPage from './pages/ContributorLeaderboardPage';
+import ContributorProfilePage from './pages/ContributorProfilePage';
+import SubjectPage from './pages/SubjectPage';
+import { getSubjectHubPath } from './utils/subjectRoute';
+import SmartPaperUpload from './components/SmartPaperUpload';
+import { analyzeContributionPdf } from './services/contributionApi';
 import {
   API_URL,
   FRONTEND_URL,
@@ -825,6 +831,17 @@ function PaperModal({ paper, user, onClose, toast, navigate }) {
             </div>
             <div className="modal-actions-v2">
               <button onClick={handleDownload} className="btn-download">Download Paper</button>
+              <button
+                type="button"
+                className="subject-hub-open-button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClose();
+                  navigate(getSubjectHubPath(paper));
+                }}
+              >
+                Subject Hub
+              </button>
               {paper.solutionPath && <a href={paper.solutionPath} target="_blank" rel="noopener noreferrer" className="btn-solution">View Solution</a>}
               <button onClick={handleShareWhatsApp} className="btn-share-wa">Share on WhatsApp</button>
               <button onClick={handleCopyLink} className="btn-copy-link">Copy Link</button>
@@ -1247,6 +1264,16 @@ function Home({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast })
                   </div>
                   <div className="card-actions-v2">
                     <button className="btn-view-pdf" onClick={() => handleView(paper)}>View</button>
+                    <button
+                      type="button"
+                      className="subject-hub-open-button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(getSubjectHubPath(paper));
+                      }}
+                    >
+                      Subject Hub
+                    </button>
                     
                     <div className="card-sharing-row">
                       {paper.solutionPath && <button className="btn-icon solution-icon" onClick={(e) => handleSolution(e, paper)} title="Solution">Sol</button>}
@@ -1479,138 +1506,6 @@ function NotFoundPage() {
   );
 }
 
-function RankBadge({ rank }) {
-  const badges = {
-    1: { label: '1st', className: 'gold', icon: 'M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.3 7.2 17.9l.9-5.4-3.9-3.8 5.4-.8L12 3z' },
-    2: { label: '2nd', className: 'silver', icon: 'M7 3h10v4a5 5 0 1 1-10 0V3zm2 2v2a3 3 0 1 0 6 0V5H9zm3 8l3 6H9l3-6z' },
-    3: { label: '3rd', className: 'bronze', icon: 'M12 4a5 5 0 0 1 5 5c0 3.8-5 9-5 9s-5-5.2-5-9a5 5 0 0 1 5-5zm0 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4z' }
-  };
-  const badge = badges[rank] || { label: `#${rank}`, className: 'standard', icon: 'M12 4l7 4v8l-7 4-7-4V8l7-4z' };
-  return (
-    <span className={`rank-badge rank-badge-${badge.className}`}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d={badge.icon} />
-      </svg>
-      {badge.label}
-    </span>
-  );
-}
-
-// V2 Page: Contributors Leaderboard page
-function ContributorsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    axios.get(`${API_URL}/api/contributors/leaderboard`)
-      .then(res => setLeaderboard(res.data))
-      .catch(() => toast('Failed to load leaderboard', 'error'))
-      .finally(() => setLoading(false));
-  }, [toast]);
-
-  return (
-    <div className="app-container">
-      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
-      <main className="page-shell">
-        <Link to="/" className="page-back-link">Back to papers</Link>
-        <div className="contributors-container">
-          <div className="contributors-header">
-            <h1>Contributors Leaderboard</h1>
-            <p className="page-lead">Earn points by contributing approved papers. Top contributors get featured for helping the IIIT Surat community prepare smarter.</p>
-          </div>
-          {loading ? (
-            <div className="analytics-state">
-              <PaperStackLoader label="Loading leaderboard..." />
-            </div>
-          ) : leaderboard.length === 0 ? (
-            <div className="leaderboard-empty-state">
-              <div className="leaderboard-empty-icon">
-                <RankBadge rank={1} />
-              </div>
-              <h2>No contributions published yet. Be the first contributor.</h2>
-              <p>Upload verified question papers, get approved by the admin, and start climbing the PaperStack leaderboard.</p>
-              <Link to="/contribute" className="btn-primary-teal">Contribute Papers</Link>
-            </div>
-          ) : (
-            <div className="leaderboard-grid">
-              <div className="top-podium">
-                {leaderboard.slice(0, 3).map((item, idx) => (
-                  <div key={item.userId} className={`podium-card rank-${idx + 1}`}>
-                    <RankBadge rank={idx + 1} />
-                    <div className="podium-name">{item.name}</div>
-                    <div className="podium-points">{item.points} pts</div>
-                    <div className="podium-stats">{item.approvedCount} papers approved</div>
-                  </div>
-                ))}
-              </div>
-              
-              <table className="leaderboard-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Contributor</th>
-                    <th>Approved Papers</th>
-                    <th>Approved Solutions</th>
-                    <th>Total Points</th>
-                    <th>Earned Badges</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((item, idx) => (
-                    <tr key={item.userId} className={idx < 3 ? 'top-row' : ''}>
-                      <td><RankBadge rank={idx + 1} /></td>
-                      <td>
-                        <div className="contributor-name-cell">
-                          <strong>{item.name}</strong>
-                          <span className="contributor-email-sub">{item.email}</span>
-                        </div>
-                      </td>
-                      <td>{item.approvedCount}</td>
-                      <td>{item.solutionCount || 0}</td>
-                      <td>{item.points}</td>
-                      <td>
-                        <div className="badges-list">
-                          {(item.badges || []).map(b => (
-                            <span key={b} className="badge-pill">{b}</span>
-                          ))}
-                          {(!item.badges || item.badges.length === 0) && <span className="badge-pill">New Contributor</span>}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="leaderboard-mobile-cards">
-                {leaderboard.map((item, idx) => (
-                  <article key={item.userId} className={`leaderboard-mobile-card ${idx < 3 ? 'top-row' : ''}`}>
-                    <div className="leaderboard-mobile-top">
-                      <RankBadge rank={idx + 1} />
-                      <strong>{item.name}</strong>
-                    </div>
-                    <span className="contributor-email-sub">{item.email}</span>
-                    <div className="leaderboard-mobile-stats">
-                      <span>{item.approvedCount} papers</span>
-                      <span>{item.solutionCount || 0} solutions</span>
-                      <span>{item.points} pts</span>
-                    </div>
-                    <div className="badges-list">
-                      {(item.badges || []).map(b => (
-                        <span key={b} className="badge-pill">{b}</span>
-                      ))}
-                      {(!item.badges || item.badges.length === 0) && <span className="badge-pill">New Contributor</span>}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-      <Footer />
-    </div>
-  );
-}
-
 // V2 Page: Interactive Contribution Form with Cloudinary Upload
 function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
   const navigate = useNavigate();
@@ -1624,8 +1519,10 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
   }, [user, navigate, location, toast]);
 
   const queryParams = new URLSearchParams(location.search);
+  const [uploadMode, setUploadMode] = useState('smart');
   const [formData, setFormData] = useState({
     subject: queryParams.get('subject') || '',
+    subjectCode: queryParams.get('subjectCode') || '',
     title: queryParams.get('title') || '',
     branch: queryParams.get('branch') || 'CSE',
     semester: queryParams.get('semester') || '1',
@@ -1638,9 +1535,96 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
   const [solutionFile, setSolutionFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [analyzingPaper, setAnalyzingPaper] = useState(false);
+  const [paperAnalysis, setPaperAnalysis] = useState(null);
+  const [analysisError, setAnalysisError] = useState('');
+
+  const validatePaperFile = useCallback((selectedFile) => {
+    if (!selectedFile) return false;
+    const isPdf = selectedFile.type === 'application/pdf' || /\.pdf$/i.test(selectedFile.name || '');
+    if (!isPdf) {
+      toast('Please select a PDF question paper.', 'warning');
+      return false;
+    }
+    if (selectedFile.size > 30 * 1024 * 1024) {
+      toast('Paper PDF must be 30 MB or smaller.', 'warning');
+      return false;
+    }
+    return true;
+  }, [toast]);
+
+  const applyDetectedMetadata = useCallback((analysis) => {
+    const metadata = analysis?.metadata || {};
+    setFormData((current) => ({
+      ...current,
+      subject: metadata.subjectName || current.subject,
+      subjectCode: metadata.subjectCode || current.subjectCode,
+      branch: metadata.branch || current.branch,
+      semester: metadata.semester ? String(metadata.semester) : current.semester,
+      year: metadata.year ? String(metadata.year) : current.year,
+      examType: metadata.examType || current.examType,
+      title: current.title?.trim() ? current.title : (metadata.title || current.title),
+    }));
+  }, []);
+
+  const analyzeSelectedPaper = useCallback(async (selectedFile) => {
+    if (!selectedFile) return;
+    setAnalyzingPaper(true);
+    setAnalysisError('');
+    setPaperAnalysis(null);
+    try {
+      const analysis = await analyzeContributionPdf(selectedFile);
+      setPaperAnalysis(analysis);
+      applyDetectedMetadata(analysis);
+      if (analysis?.status === 'ready') {
+        toast('Paper details detected. Review them and submit.', 'success');
+      } else {
+        toast('Paper analyzed. Please review the uncertain fields.', 'info');
+      }
+    } catch (error) {
+      console.error('Smart contribution analysis failed:', error.response?.data || error.message);
+      setAnalysisError(error.response?.data?.error || 'Automatic metadata detection failed.');
+      toast('Automatic detection could not finish. You can edit the fields manually.', 'warning');
+    } finally {
+      setAnalyzingPaper(false);
+    }
+  }, [applyDetectedMetadata, toast]);
+
+  const handleSmartPaperSelection = useCallback((selectedFile) => {
+    if (!validatePaperFile(selectedFile)) return;
+    setPaperFile(selectedFile);
+    setPaperAnalysis(null);
+    setAnalysisError('');
+    setUploadProgress(0);
+    analyzeSelectedPaper(selectedFile);
+  }, [analyzeSelectedPaper, validatePaperFile]);
+
+  const handleManualPaperSelection = useCallback((selectedFile) => {
+    if (!validatePaperFile(selectedFile)) return;
+    setPaperFile(selectedFile);
+    setPaperAnalysis(null);
+    setAnalysisError('');
+    setUploadProgress(0);
+  }, [validatePaperFile]);
+
+  const handleAnalyzeAgain = useCallback(() => {
+    if (paperFile) analyzeSelectedPaper(paperFile);
+  }, [paperFile, analyzeSelectedPaper]);
+
+  const changeUploadMode = useCallback((nextMode) => {
+    setUploadMode(nextMode);
+    setUploadProgress(0);
+    if (nextMode === 'smart' && paperFile && !paperAnalysis && !analyzingPaper) {
+      analyzeSelectedPaper(paperFile);
+    }
+  }, [paperFile, paperAnalysis, analyzingPaper, analyzeSelectedPaper]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (analyzingPaper) {
+      toast('Please wait for paper analysis to finish.', 'info');
+      return;
+    }
     if (!formData.confirmChecked) {
       toast('Please confirm the paper information is correct.', 'warning');
       return;
@@ -1649,6 +1633,11 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
       toast('Paper PDF file is required.', 'warning');
       return;
     }
+    if (!formData.subject.trim() || !formData.title.trim() || !formData.semester || !formData.year || !formData.examType) {
+      toast('Please complete all required paper details.', 'warning');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setUploadProgress(10);
@@ -1676,7 +1665,6 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
     } catch (err) {
       console.error('Contribution upload failed:', err.response?.data || err.message);
       const serverError = err.response?.data;
-
       toast(
         serverError?.error ||
         serverError?.message ||
@@ -1692,106 +1680,186 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
 
   if (!user) return null;
 
+  const showDetails = uploadMode === 'manual' || Boolean(paperFile && !analyzingPaper && (paperAnalysis || analysisError));
+
   return (
     <div className="app-container">
       <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
-      
-      <main className="page-shell">
-        <Link to="/" className="page-back-link">Back to papers</Link>
-        <div className="contribute-form-container contribute-v2">
-          <div className="contribute-hero-panel">
-            <span className="page-eyebrow">Community Archive</span>
-            <h1>Contribute Papers to PaperStack</h1>
-            <p className="page-lead">Help IIIT Surat students prepare smarter by sharing verified previous year question papers and solutions.</p>
+
+      <main className="smart-contribution-page">
+        <Link to="/" className="page-back-link">← Back to papers</Link>
+
+        <section className="smart-contribution-hero">
+          <span className="page-eyebrow">Community Archive</span>
+          <h1>Contribute to PaperStack</h1>
+          <p>Upload a question paper and let PaperStack fill the details for you. You can always correct anything before submitting.</p>
+        </section>
+
+        <section className="smart-contribution-shell">
+          <div className="contribution-mode-switch" role="tablist" aria-label="Contribution upload mode">
+            <button
+              type="button"
+              className={`contribution-mode-btn ${uploadMode === 'smart' ? 'active' : ''}`}
+              onClick={() => changeUploadMode('smart')}
+            >
+              Smart Upload
+              <span>Upload PDF → auto-detect details</span>
+            </button>
+            <button
+              type="button"
+              className={`contribution-mode-btn ${uploadMode === 'manual' ? 'active' : ''}`}
+              onClick={() => changeUploadMode('manual')}
+            >
+              Manual Upload
+              <span>Enter every field yourself</span>
+            </button>
           </div>
 
-          <div className="contribute-layout">
-            <aside className="contribute-side-card">
-              <span className="side-card-label">Before you upload</span>
-              <h2>Keep the archive clean and useful.</h2>
-              <ul>
-                <li>Upload only clear PDF files for IIIT Surat papers.</li>
-                <li>Check subject, semester, year, branch, and exam type carefully.</li>
-                <li>Solutions are optional but highly useful for students.</li>
-                <li>Earn leaderboard points after admin approval.</li>
-              </ul>
-            </aside>
+          <form onSubmit={handleSubmit} className="contrib-form">
+            {uploadMode === 'smart' ? (
+              <>
+                <div className="contribution-step-head">
+                  <div>
+                    <span className="contribution-step-number">Step 1</span>
+                    <h2>Upload the question paper</h2>
+                    <p>Initially, this is all you need to provide.</p>
+                  </div>
+                </div>
 
-            <form onSubmit={handleSubmit} className="contrib-form contribution-form-card">
-              <div className="contrib-grid">
-                <div className="form-group">
-                  <label>Subject Name <span>*</span></label>
-                  <input type="text" placeholder="e.g. Data Structures" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Subject Code / Title Details <span>*</span></label>
-                  <input type="text" placeholder="e.g. CSE-201 / Mid-Sem Paper" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Branch <span>*</span></label>
-                  <select value={formData.branch} onChange={(e) => setFormData({ ...formData, branch: e.target.value })}>
-                    <option>CSE</option>
-                    <option>ECE</option>
-                    <option>AI</option>
-                    <option>AIML</option>
-                    <option>IT</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Semester <span>*</span></label>
-                  <select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(s => <option key={s} value={s}>Semester {s}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Exam Year <span>*</span></label>
-                  <input type="number" placeholder="2025" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Exam Type <span>*</span></label>
-                  <select value={formData.examType} onChange={(e) => setFormData({ ...formData, examType: e.target.value })}>
-                    <option>Mid-Sem</option>
-                    <option>End-Sem</option>
-                  </select>
-                </div>
-              </div>
+                <SmartPaperUpload
+                  file={paperFile}
+                  analyzing={analyzingPaper}
+                  analysis={paperAnalysis}
+                  analysisError={analysisError}
+                  onFileSelected={handleSmartPaperSelection}
+                  onAnalyzeAgain={handleAnalyzeAgain}
+                />
 
-              <div className="contrib-grid">
-                <div className="form-group">
+                {!paperFile && (
+                  <p className="contribution-smart-hint">No form to fill yet — upload the PDF first and PaperStack will do the first pass.</p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="contribution-step-head">
+                  <div>
+                    <span className="contribution-step-number">Manual</span>
+                    <h2>Enter paper details yourself</h2>
+                    <p>Use this when automatic detection is unnecessary or you already know the metadata.</p>
+                  </div>
+                </div>
+
+                <div className="contribution-manual-file form-group">
                   <label>Paper PDF File <span>*</span></label>
-                  <input type="file" accept="application/pdf" onChange={(e) => setPaperFile(e.target.files[0])} required />
-                  {paperFile && <p className="file-size-preview">Size: {(paperFile.size / (1024 * 1024)).toFixed(2)} MB</p>}
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={(event) => handleManualPaperSelection(event.target.files?.[0])}
+                  />
+                  {paperFile && <p className="file-size-preview">Selected: {paperFile.name} • {(paperFile.size / (1024 * 1024)).toFixed(2)} MB</p>}
                 </div>
-                <div className="form-group">
-                  <label>Optional Solution PDF</label>
-                  <input type="file" accept="application/pdf" onChange={(e) => setSolutionFile(e.target.files[0])} />
-                  {solutionFile && <p className="file-size-preview">Size: {(solutionFile.size / (1024 * 1024)).toFixed(2)} MB</p>}
+              </>
+            )}
+
+            {showDetails && (
+              <section className="contribution-details-panel">
+                <div className="contribution-step-head">
+                  <div>
+                    <span className="contribution-step-number">{uploadMode === 'smart' ? 'Step 2' : 'Details'}</span>
+                    <h2>{uploadMode === 'smart' ? 'Review detected details' : 'Paper information'}</h2>
+                    <p>{uploadMode === 'smart' ? 'Correct any field that PaperStack did not identify perfectly.' : 'Complete the required metadata before submitting.'}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label>Notes / Message to Reviewer</label>
-                <textarea rows={3} placeholder="Add any details about questions or code..." value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
-              </div>
+                {uploadMode === 'smart' && paperAnalysis && (
+                  <div className="contribution-detected-banner">
+                    ✓ PaperStack pre-filled these values. You have final control over every field.
+                  </div>
+                )}
 
-              <div className="checkbox-confirm-row">
-                <input type="checkbox" id="confirm" checked={formData.confirmChecked} onChange={(e) => setFormData({ ...formData, confirmChecked: e.target.checked })} />
-                <label htmlFor="confirm">I confirm that this paper information is correct and the PDF is clear.</label>
-              </div>
+                <div className="contribution-field-grid">
+                  <div className="form-group">
+                    <label>Subject Name <span>*</span></label>
+                    <input type="text" placeholder="e.g. Computer Graphics" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required />
+                  </div>
 
-              {uploadProgress > 0 && (
-                <div className="progress-bar-wrap">
-                  <div className="progress-bar-fill" style={{ width: `${uploadProgress}%` }} />
-                  <span>Uploading: {uploadProgress}%</span>
+                  <div className="form-group">
+                    <label>Subject Code</label>
+                    <input type="text" placeholder="e.g. CS502" value={formData.subjectCode || ''} onChange={(e) => setFormData({ ...formData, subjectCode: e.target.value.toUpperCase() })} />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Paper Title <span>*</span></label>
+                    <input type="text" placeholder="e.g. Computer Graphics Mid-Sem 2026" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Branch <span>*</span></label>
+                    <select value={formData.branch} onChange={(e) => setFormData({ ...formData, branch: e.target.value })}>
+                      <option>CSE</option>
+                      <option>ECE</option>
+                      <option>CSE &amp; ECE</option>
+                      <option>AI</option>
+                      <option>AIML</option>
+                      <option>IT</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Semester <span>*</span></label>
+                    <select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })}>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((semester) => <option key={semester} value={semester}>Semester {semester}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Exam Year <span>*</span></label>
+                    <input type="number" min="2000" max="2100" placeholder="2026" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} required />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Exam Type <span>*</span></label>
+                    <select value={formData.examType} onChange={(e) => setFormData({ ...formData, examType: e.target.value })}>
+                      <option>Mid-Sem</option>
+                      <option>End-Sem</option>
+                    </select>
+                  </div>
                 </div>
-              )}
 
-              <button type="submit" className="login-btn-gradient" disabled={submitting}>
-                {submitting ? <PaperStackLoader label="Uploading paper..." compact /> : 'Submit Contribution'}
-              </button>
-            </form>
-          </div>
-        </div>
+                <div className="contribution-extra-grid">
+                  <div className="form-group">
+                    <label>Optional Solution PDF</label>
+                    <input type="file" accept="application/pdf,.pdf" onChange={(e) => setSolutionFile(e.target.files?.[0] || null)} />
+                    {solutionFile && <p className="file-size-preview">Selected: {solutionFile.name}</p>}
+                  </div>
+
+                  <div className="form-group notes-field">
+                    <label>Notes / Message to Reviewer</label>
+                    <textarea rows={3} placeholder="Anything the reviewer should know?" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="smart-contribution-submit-area">
+                  <div className="checkbox-confirm-row">
+                    <input type="checkbox" id="confirm" checked={formData.confirmChecked} onChange={(e) => setFormData({ ...formData, confirmChecked: e.target.checked })} />
+                    <label htmlFor="confirm">I checked the detected information and confirm that the paper details are correct.</label>
+                  </div>
+
+                  {uploadProgress > 0 && (
+                    <div className="progress-bar-wrap">
+                      <div className="progress-bar-fill" style={{ width: `${uploadProgress}%` }} />
+                      <span>Uploading: {uploadProgress}%</span>
+                    </div>
+                  )}
+
+                  <button type="submit" className="login-btn-gradient" disabled={submitting || analyzingPaper}>
+                    {submitting ? <PaperStackLoader label="Uploading paper..." compact /> : 'Submit Contribution'}
+                  </button>
+                </div>
+              </section>
+            )}
+          </form>
+        </section>
       </main>
       <Footer />
     </div>
@@ -1804,12 +1872,14 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
   const CURRENT_YEAR = new Date().getFullYear();
   const EXPECTED_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3, CURRENT_YEAR - 4, CURRENT_YEAR - 5];
   const navigate = useNavigate();
+  const location = useLocation();
+  const examModeParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   const [papers, setPapers] = useState([]);
-  const [branch, setBranch] = useState('ECE');
-  const [semester, setSemester] = useState('4');
-  const [subject, setSubject] = useState('');
-  const [examType, setExamType] = useState('Mid-Sem');
+  const [branch, setBranch] = useState(() => examModeParams.get('branch') || 'ECE');
+  const [semester, setSemester] = useState(() => examModeParams.get('semester') || '4');
+  const [subject, setSubject] = useState(() => examModeParams.get('subject') || '');
+  const [examType, setExamType] = useState(() => examModeParams.get('examType') || 'Mid-Sem');
   const [loading, setLoading] = useState(true);
   const [searched, setSearched] = useState(false);
 
@@ -3959,10 +4029,39 @@ export default function App() {
         <Route path="/disclaimer" element={<DisclaimerPage />} />
         <Route path="/copyright" element={<CopyrightPage />} />
         <Route path="/paper/:id" element={<PaperSharePage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+              <Route
+                path="/subject/:subjectKey"
+                element={
+                  <div className="app-container">
+                    <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <SubjectPage user={user} toast={toast} />
+                    <Footer />
+                  </div>
+                }
+              />
         
         {/* Interactive V2 routes */}
         <Route path="/contribute" element={<ContributePageNew user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
-        <Route path="/contributors" element={<ContributorsPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        <Route
+                path="/contributors"
+                element={
+                  <div className="app-container">
+                    <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <ContributorLeaderboardPage user={user} toast={toast} />
+                    <Footer />
+                  </div>
+                }
+              />
+              <Route
+                path="/contributors/:contributorId"
+                element={
+                  <div className="app-container">
+                    <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <ContributorProfilePage user={user} toast={toast} />
+                    <Footer />
+                  </div>
+                }
+              />
         <Route path="/exam-mode" element={<ExamModePage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
         <Route path="/missing-papers" element={<MissingPapersPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
         <Route path="/analytics" element={<AnalyticsPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />

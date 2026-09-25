@@ -68,6 +68,26 @@ function flattenSubjectCatalog() {
 
 const FLAT_SUBJECT_CATALOG = flattenSubjectCatalog();
 
+function descriptiveAliases(candidate) {
+  const code = normalizeSubjectText(candidate.code);
+  const shortCode = normalizeSubjectText(candidate.shortCode);
+
+  return [candidate.name, ...(candidate.aliases || [])]
+    .filter(Boolean)
+    .map(normalizeSubjectText)
+    .filter(Boolean)
+    // Codes such as IC, AI, DS and CG are useful for exact matching, but must
+    // never participate in substring matching (e.g. "graphics" contains "ic").
+    .filter((value) => value !== code && value !== shortCode);
+}
+
+function phraseIncludes(haystack, needle) {
+  if (!haystack || !needle) return false;
+  // Do not use partial matching for very short tokens/codes.
+  if (needle.length < 4) return false;
+  return haystack === needle || haystack.includes(needle);
+}
+
 function scoreSubjectCandidate(candidate, input) {
   const normalizedCode = String(input.subjectCode || '').trim().toUpperCase();
   const normalizedShortCode = String(input.shortCode || '').trim().toUpperCase();
@@ -76,16 +96,33 @@ function scoreSubjectCandidate(candidate, input) {
   const semester = Number(input.semester || input.semesters?.[0]) || null;
 
   let score = 0;
-  if (normalizedCode && candidate.code === normalizedCode) score += 100;
-  if (normalizedShortCode && candidate.shortCode === normalizedShortCode) score += 85;
+
+  // Explicit structured metadata is strongest.
+  if (normalizedCode && candidate.code === normalizedCode) score += 120;
+  if (normalizedShortCode && candidate.shortCode === normalizedShortCode) score += 110;
 
   if (normalizedSubject) {
-    const names = [candidate.name, candidate.code, candidate.shortCode, ...candidate.aliases]
-      .filter(Boolean)
-      .map(normalizeSubjectText);
+    const candidateCode = normalizeSubjectText(candidate.code);
+    const candidateShortCode = normalizeSubjectText(candidate.shortCode);
+    const names = descriptiveAliases(candidate);
 
-    if (names.includes(normalizedSubject)) score += 70;
-    else if (names.some((name) => name.includes(normalizedSubject) || normalizedSubject.includes(name))) score += 35;
+    // A subject field may itself contain only CS502 or CG.
+    if (candidateCode && normalizedSubject === candidateCode) score += 100;
+    if (candidateShortCode && normalizedSubject === candidateShortCode) score += 95;
+
+    // Exact descriptive names/aliases are preferred.
+    if (names.includes(normalizedSubject)) {
+      score += 80;
+    } else if (
+      names.some((name) =>
+        phraseIncludes(normalizedSubject, name) ||
+        (normalizedSubject.length >= 4 && phraseIncludes(name, normalizedSubject))
+      )
+    ) {
+      // Handles legacy labels such as "Computer Graphics (CG)" after
+      // normalization, without allowing short-code collisions.
+      score += 40;
+    }
   }
 
   if (branches.length && branches.some((branch) => candidate.branches.includes(branch))) score += 10;

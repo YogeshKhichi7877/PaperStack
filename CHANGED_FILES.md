@@ -1,26 +1,22 @@
-# Feature #1 file changes
+# Feature #4 changed files
 
-## New
+## Added
 
-- `server/data/resourceTypes.js`
-- `server/models/Resource.js`
-- `server/plugins/paperResourceSync.js`
-- `server/routes/resourceRoutes.js`
-- `server/scripts/backfillResources.js`
-- `server/services/resourceMapper.js`
-- `server/services/resourceMapper.test.js`
-- `server/services/resourceService.js`
-- `server/services/subjectService.js`
-- `server/services/subjectService.test.js`
+- `server/utils/contributorXp.js`
+- `server/utils/contributorXp.test.js`
+- `server/services/contributorProfileService.js`
+- `server/routes/contributorProfileRoutes.js`
+- `client/src/services/contributorApi.js`
+- `client/src/pages/ContributorLeaderboardPage.js`
+- `client/src/pages/ContributorProfilePage.js`
+- `client/src/pages/ContributorPages.css`
 
-## Modified by installer
+## Patched by installer
 
 - `server/index.js`
-- `server/models/Paper.js`
 - `server/package.json`
+- `client/src/App.js`
 
 ## Database
 
-Adds a new MongoDB collection named `resources` after you run `npm run migrate:resources` or when new Paper documents are saved.
-
-No existing collection is deleted or renamed.
+No migration and no destructive database changes.

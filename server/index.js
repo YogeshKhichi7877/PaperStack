@@ -39,12 +39,14 @@ const Contribution = require('./models/Contribution');
 const Report = require('./models/Report');
 const PaperRequest = require('./models/PaperRequest');
 const PaperVote = require('./models/PaperVote');
+const { createContributorProfileRoutes } = require('./routes/contributorProfileRoutes');
 const { createAuthMiddleware } = require('./middleware/auth');
 const { parseCsvLine } = require('./utils/csv');
 const { findHardestSubject } = require('./utils/analytics');
 const { buildSemesterPackQuery } = require('./utils/paperQuery');
 const catalogRoutes = require('./routes/catalogRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
+const createSmartContributionRouter = require('./routes/smartContributionRoutes');
 const { incrementResourceStatForPaper } = require('./services/resourceService');
 
 const app = express();
@@ -286,8 +288,10 @@ app.use('/api/', rateLimit({
   legacyHeaders: false,
 }));
 app.use(compression());
+app.use('/api/contributors', createContributorProfileRoutes({ authenticate }));
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/contributions', createSmartContributionRouter({ authenticate }));
 
 if (!JWT_SECRET) {
   console.warn('JWT_SECRET is not configured. Auth routes will fail until it is set.');

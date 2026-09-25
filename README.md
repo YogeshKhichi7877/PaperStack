@@ -1,46 +1,45 @@
-# PaperStack Feature #1.1 — MongoDB DNS Migration Hotfix
+# PaperStack Feature #2.2 — Subject Resolution Collision Hotfix
 
-This hotfix fixes `npm run migrate:resources:dry` failures such as:
+This fixes the failing regression where `Computer Graphics (CG)` resolved to `HM107` (Indian Constitution).
 
-`querySrv ECONNREFUSED _mongodb._tcp...`
+## Root cause
 
-It does not alter PaperStack data or resource mappings.
+The shared subject matcher allowed very short subject codes such as `IC` to participate in substring matching. The word `graphics` contains the letters `ic`, so the wrong catalog subject could tie with Computer Graphics and win based on catalog order.
 
-## Apply
+## Fix
 
-Extract/copy this package into the PaperStack repository root so you can see `apply-hotfix-01-1.js` beside `client/` and `server/`.
+- short codes/codes are now exact-match only;
+- partial matching is limited to descriptive subject names/aliases;
+- legacy `(CG)`, `(DS)`, `(CC)` suffixes are stripped before Subject Hub resolution;
+- regression tests protect this behavior.
 
-From `D:\PaperStack>` run:
+## Install
 
-```powershell
-node .\apply-hotfix-01-1.js
-```
-
-Then verify:
-
-```powershell
-node .\verify-hotfix-01-1.js
-```
-
-Then retry:
+From `D:\PaperStack`:
 
 ```powershell
+node .\apply-hotfix-02-2.js
+node .\verify-hotfix-02-2.js
 cd server
-npm run migrate:resources:dry
+npm test
 ```
 
-The migration now tries, in order:
+All tests must pass before continuing.
 
-1. `MONGODB_URI_STANDARD` when configured (no SRV lookup).
-2. Your normal `MONGODB_URI` with system DNS.
-3. Your normal `MONGODB_URI` again with `8.8.8.8` and `1.1.1.1` as DNS fallback.
+## Important: repair already-migrated resources
 
-If all three fail, the script prints a targeted message. In that uncommon case, add `MONGODB_URI_STANDARD` to `server/.env` using a standard/non-SRV Atlas connection string, or retry from a different network/hotspot.
+Because Feature #1 used the shared subject resolver during resource backfill, a few existing Resource documents may already have the wrong `subjectKey`. After the tests pass, rerun the migration. It is idempotent and updates existing resources by `legacySourceKey` rather than creating duplicates:
 
-## Safety
+```powershell
+npm run migrate:resources:dry
+npm run migrate:resources
+```
 
-The previous migration script is backed up to:
+Then restart backend/frontend and verify:
 
-`.paperstack-backups/feature-01.1/backfillResources.js`
+- `/subject/CS502`
+- `/subject/Computer%20Graphics%20(CG)`
+- `/subject/CS501`
+- `/subject/Data%20Science%20(DS)`
 
-No MongoDB data is changed by applying this hotfix. Only the migration connection logic is replaced.
+No destructive database migration is performed.
