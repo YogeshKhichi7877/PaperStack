@@ -11,24 +11,16 @@ import paperstackWordmark from './assets/Paperstack_auth_wordmark.png';
 import paperstackOwl from './assets/Paperstack_auth_owl.png';
 import iiitSuratLogo from './assets/iiit_surat.png';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import {
+  API_URL,
+  FRONTEND_URL,
+  CONTRIBUTION_EMAIL,
+  GOOGLE_CLIENT_ID,
+  GOOGLE_AUTH_CONFIGURED,
+} from './config/appConfig';
+import { authHeader, adminHeader } from './services/authHeaders';
 
 import './App.css';
-
-const API_URL = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000';
-const CONTRIBUTION_EMAIL = process.env.REACT_APP_CONTRIBUTION_EMAIL || 'paperstack@example.com';
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
-
-function isValidGoogleClientId(id) {
-  return Boolean(
-    id &&
-    id === id.trim() &&
-    id.includes('.apps.googleusercontent.com') &&
-    !/["'\s]/.test(id)
-  );
-}
-
-const GOOGLE_AUTH_CONFIGURED = isValidGoogleClientId(GOOGLE_CLIENT_ID);
 
 function getPaperShareUrl(paper) {
   const baseUrl = FRONTEND_URL.replace(/\/$/, '');
@@ -40,16 +32,6 @@ function getPaperShareText(paper) {
   const examType = paper?.examType || 'Exam';
   const year = paper?.year || '';
   return `Check this IIIT Surat paper on PaperStack: ${subject} (${examType}${year ? ` - ${year}` : ''}) ${getPaperShareUrl(paper)}`;
-}
-
-function authHeader() {
-  const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-function adminHeader() {
-  const token = localStorage.getItem('adminToken');
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function ToastStack({ toasts, dismissToast }) {
@@ -3139,7 +3121,7 @@ function AnalyticsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin,
     papers.reduce((sum, paper) => sum + Number(paper.downloads || 0), 0);
 
   const mostActiveSubject =
-    analyticsData.hardestSubject ||
+    analyticsData.mostActiveSubject ||
     subjectChartData?.[0]?.subject ||
     'No data yet';
 
