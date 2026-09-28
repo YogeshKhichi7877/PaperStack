@@ -1,0 +1,2460 @@
+/* =========================================================
+   PAPERSTACK — RESOURCE CONTRIBUTION
+
+   Design idea:
+   academic submission desk / upload workshop
+
+   This page should NOT look like:
+   - analytics dashboard
+   - SaaS landing page
+   - AI-generated card collection
+   - another hero + four cards clone
+========================================================= */
+
+.rc-page {
+  --rc-primary: #07858d;
+  --rc-primary-dark: #075e65;
+  --rc-primary-soft: #e2f4f3;
+
+  --rc-ink: #153448;
+  --rc-text: #465f6d;
+  --rc-muted: #748994;
+
+  --rc-border: #d5e5e7;
+  --rc-border-dark: #bdd9dc;
+
+  --rc-paper: #ffffff;
+  --rc-paper-soft: #fbfdfd;
+
+  --rc-warm: #fff7e8;
+  --rc-warm-border: #ead8af;
+
+  min-height: 78vh;
+
+  padding:
+    22px
+    clamp(14px, 2.1vw, 32px)
+    72px;
+
+  color:
+    var(--rc-ink);
+
+  background:
+    linear-gradient(
+      180deg,
+      #f7fdfd 0%,
+      #eef9f9 52%,
+      #edf8f8 100%
+    );
+}
+
+.rc-page * {
+  box-sizing: border-box;
+}
+
+.rc-shell {
+  width:
+    min(
+      1480px,
+      100%
+    );
+
+  margin:
+    0 auto;
+}
+
+.rc-page button,
+.rc-page input,
+.rc-page select,
+.rc-page textarea {
+  font: inherit;
+}
+
+.rc-page a {
+  text-decoration: none;
+}
+
+/* =========================================================
+   HEADER
+
+   Intentionally NOT a giant full-width hero.
+   Looks more like an editorial page heading.
+========================================================= */
+
+.rc-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 420px);
+  align-items: center;
+  gap: 24px;
+  min-height: 265px;
+  padding: 20px 25px 22px;
+  border-bottom: 2px solid #9ccfd1;
+  background-color: #f3fbfa;
+  background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(10, 116, 124, .045) 32px 33px);
+}
+
+.rc-header-copy {
+  max-width:
+    850px;
+}
+
+.rc-kicker {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap: 7px;
+
+  color:
+    var(--rc-primary);
+
+  font-size: 10px;
+
+  font-weight: 900;
+
+  letter-spacing:
+    .1em;
+
+  text-transform:
+    uppercase;
+}
+
+.rc-header h1 {
+  margin:
+    12px 0 0;
+
+  color:
+    var(--rc-ink);
+
+  font-size:
+    clamp(
+      40px,
+      5vw,
+      66px
+    );
+
+  font-weight: 900;
+
+  line-height:
+    .96;
+
+  letter-spacing:
+    -.048em;
+}
+
+.rc-header h1 span {
+  color:
+    var(--rc-primary);
+}
+
+.rc-header-copy > p {
+  max-width:
+    700px;
+
+  margin:
+    15px 0 0;
+
+  color:
+    var(--rc-text);
+
+  font-size: 16px;
+
+  line-height:
+    1.6;
+}
+
+/* =========================================================
+   HEADER JOURNEY
+========================================================= */
+
+.rc-header-aside {
+  display: grid;
+  justify-items: end;
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rc-header-aside > img {
+  display: block;
+  width: min(65%, 270px);
+  max-height: 175px;
+  object-fit: contain;
+  object-position: right bottom;
+  opacity: .72;
+}
+
+.rc-header-note {
+  display: flex;
+
+  align-items:
+    center;
+
+  gap: 7px;
+
+  padding-bottom:
+    4px;
+}
+
+.rc-header-note
+  > span {
+  margin-right:
+    5px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 11px;
+
+  font-weight: 850;
+
+  text-transform:
+    uppercase;
+}
+
+.rc-header-note
+  > div {
+  display: flex;
+
+  align-items:
+    center;
+
+  gap: 5px;
+
+  color:
+    var(--rc-text);
+
+  font-size: 12px;
+
+  font-weight: 750;
+
+  white-space:
+    nowrap;
+}
+
+.rc-header-note b {
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 29px;
+  height: 29px;
+
+  border:
+    1px solid
+    var(--rc-border-dark);
+
+  border-radius:
+    50%;
+
+  background:
+    white;
+
+  color:
+    var(--rc-primary);
+
+  font-size: 10px;
+}
+
+.rc-header-note i {
+  width: 14px;
+  height: 1px;
+
+  background:
+    var(--rc-border);
+}
+
+/* =========================================================
+   RESOURCE TYPE BOARD
+========================================================= */
+
+.rc-type-section {
+  margin-top: 27px;
+}
+
+.rc-type-section
+  > header {
+  display: flex;
+
+  align-items:
+    flex-end;
+
+  justify-content:
+    space-between;
+
+  gap: 20px;
+}
+
+.rc-type-section
+  > header
+  > div:first-child
+  > span {
+  color:
+    var(--rc-primary);
+
+  font-size: 8px;
+
+  font-weight: 900;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    .08em;
+}
+
+.rc-type-section h2 {
+  margin:
+    5px 0 0;
+
+  color:
+    var(--rc-ink);
+
+  font-size:
+    clamp(
+      24px,
+      2.5vw,
+      34px
+    );
+
+  font-weight: 900;
+
+  letter-spacing:
+    -.035em;
+}
+
+.rc-type-section
+  > header p {
+  max-width:
+    640px;
+
+  margin:
+    6px 0 0;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 9px;
+
+  line-height:
+    1.5;
+}
+
+/* =========================================================
+   CURRENT REWARD
+========================================================= */
+
+.rc-current-reward {
+  display: grid;
+
+  grid-template-columns:
+    auto auto;
+
+  align-items:
+    center;
+
+  gap:
+    2px 7px;
+
+  min-width:
+    165px;
+
+  padding:
+    10px 12px;
+
+  border-left:
+    3px solid
+    var(--rc-primary);
+
+  background:
+    #f4fbfa;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-current-reward svg {
+  grid-row:
+    1 / span 2;
+}
+
+.rc-current-reward span {
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+
+  text-transform:
+    uppercase;
+}
+
+.rc-current-reward strong {
+  font-size:
+    19px;
+
+  font-weight:
+    900;
+}
+
+.rc-current-reward small {
+  grid-column: 2;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+/* =========================================================
+   RESOURCE TYPE GRID
+
+   Compact catalog rather than giant cards.
+========================================================= */
+
+.rc-type-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0,1fr)
+    );
+
+  gap: 6px;
+
+  margin-top: 12px;
+}
+
+.rc-type-grid button {
+  position:
+    relative;
+
+  display: grid;
+
+  grid-template-columns:
+    37px
+    minmax(0,1fr)
+    auto;
+
+  gap: 8px;
+
+  align-items:
+    center;
+
+  min-width: 0;
+
+  min-height: 68px;
+
+  padding:
+    9px 10px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  border-radius:
+    6px;
+
+  background:
+    var(--rc-paper);
+
+  color:
+    var(--rc-ink);
+
+  cursor:
+    pointer;
+
+  text-align:
+    left;
+
+  transition:
+    border-color
+      130ms ease,
+    background
+      130ms ease;
+}
+
+.rc-type-grid
+  button:hover {
+  border-color:
+    #9dd0d2;
+
+  background:
+    #fbffff;
+}
+
+.rc-type-grid
+  button.active {
+  border-color:
+    var(--rc-primary);
+
+  background:
+    #f0faf9;
+}
+
+.rc-type-icon {
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 36px;
+  height: 36px;
+
+  border-radius:
+    6px;
+
+  background:
+    #edf7f6;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-type-copy {
+  min-width: 0;
+}
+
+.rc-type-copy strong,
+.rc-type-copy small {
+  display: block;
+}
+
+.rc-type-copy strong {
+  color:
+    var(--rc-ink);
+
+  font-size: 9px;
+}
+
+.rc-type-copy small {
+  display:
+    -webkit-box;
+
+  overflow:
+    hidden;
+
+  margin-top:
+    3px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+
+  line-height:
+    1.35;
+
+  -webkit-line-clamp:
+    2;
+
+  -webkit-box-orient:
+    vertical;
+}
+
+.rc-type-grid
+  button > b {
+  color:
+    var(--rc-primary);
+
+  font-size: 8px;
+
+  white-space:
+    nowrap;
+}
+
+.rc-type-grid
+  button > svg {
+  position:
+    absolute;
+
+  right: 6px;
+  top: 6px;
+
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 16px;
+  height: 16px;
+
+  padding: 3px;
+
+  border-radius:
+    50%;
+
+  background:
+    var(--rc-primary);
+
+  color:
+    white;
+}
+
+/* =========================================================
+   WORKSPACE
+========================================================= */
+
+.rc-workspace {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    300px;
+
+  gap: 18px;
+
+  align-items:
+    start;
+
+  margin-top: 30px;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.rc-form {
+  min-width: 0;
+
+  border-top:
+    3px solid
+    var(--rc-primary);
+
+  background:
+    var(--rc-paper);
+
+  box-shadow:
+    0 10px 26px
+    rgba(
+      18,
+      76,
+      82,
+      .035
+    );
+}
+
+.rc-form-head {
+  display: flex;
+
+  align-items:
+    flex-end;
+
+  justify-content:
+    space-between;
+
+  gap: 18px;
+
+  padding:
+    18px 20px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  border-top: 0;
+}
+
+.rc-form-head
+  > div:first-child
+  > span {
+  color:
+    var(--rc-primary);
+
+  font-size: 8px;
+
+  font-weight: 900;
+
+  letter-spacing:
+    .07em;
+
+  text-transform:
+    uppercase;
+}
+
+.rc-form-head h2 {
+  margin:
+    5px 0 0;
+
+  color:
+    var(--rc-ink);
+
+  font-size: 24px;
+
+  font-weight: 900;
+
+  letter-spacing:
+    -.03em;
+}
+
+.rc-form-head p {
+  margin:
+    5px 0 0;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 8px;
+}
+
+/* =========================================================
+   FORM PROGRESS
+========================================================= */
+
+.rc-progress {
+  width: 170px;
+
+  flex: none;
+}
+
+.rc-progress
+  > span {
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+
+  text-transform:
+    uppercase;
+}
+
+.rc-progress
+  > strong {
+  display: block;
+
+  margin-top: 2px;
+
+  color:
+    var(--rc-primary);
+
+  font-size: 18px;
+
+  font-weight: 900;
+}
+
+.rc-progress
+  > div {
+  height: 5px;
+
+  margin-top: 5px;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    999px;
+
+  background:
+    #e5eeee;
+}
+
+.rc-progress i {
+  display: block;
+
+  height: 100%;
+
+  border-radius:
+    inherit;
+
+  background:
+    var(--rc-primary);
+}
+
+/* =========================================================
+   SELECTED TYPE
+========================================================= */
+
+.rc-selected-type {
+  display: grid;
+
+  grid-template-columns:
+    39px
+    minmax(0,1fr)
+    auto;
+
+  gap: 9px;
+
+  align-items:
+    center;
+
+  padding:
+    10px 20px;
+
+  border-left:
+    1px solid
+    var(--rc-border);
+
+  border-right:
+    1px solid
+    var(--rc-border);
+
+  border-bottom:
+    1px solid
+    var(--rc-border);
+
+  background:
+    #f5fbfa;
+}
+
+.rc-selected-type
+  > span {
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 38px;
+  height: 38px;
+
+  border-radius:
+    6px;
+
+  background:
+    white;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-selected-type
+  > div {
+  min-width: 0;
+}
+
+.rc-selected-type strong {
+  display: block;
+
+  color:
+    var(--rc-ink);
+
+  font-size: 9px;
+}
+
+.rc-selected-type p {
+  margin:
+    2px 0 0;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+.rc-selected-type
+  > b {
+  color:
+    var(--rc-primary);
+
+  font-size: 10px;
+}
+
+/* =========================================================
+   FORM SECTIONS
+
+   These feel like sections of a physical form,
+   not separate floating cards.
+========================================================= */
+
+.rc-form-section {
+  display: grid;
+
+  grid-template-columns:
+    44px
+    minmax(0,1fr);
+
+  border-left:
+    1px solid
+    var(--rc-border);
+
+  border-right:
+    1px solid
+    var(--rc-border);
+
+  border-bottom:
+    1px solid
+    var(--rc-border);
+}
+
+.rc-form-section-number {
+  padding-top:
+    21px;
+
+  border-right:
+    1px solid
+    var(--rc-border);
+
+  color:
+    var(--rc-primary);
+
+  font-size: 9px;
+
+  font-weight: 900;
+
+  text-align:
+    center;
+}
+
+.rc-form-section-content {
+  padding:
+    18px 20px;
+}
+
+.rc-form-section-content
+  > header strong {
+  display: block;
+
+  color:
+    var(--rc-ink);
+
+  font-size: 11px;
+}
+
+.rc-form-section-content
+  > header span {
+  display: block;
+
+  margin-top: 2px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+/* =========================================================
+   FORM GRID
+========================================================= */
+
+.rc-form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0,1fr)
+    );
+
+  gap: 10px;
+
+  margin-top: 13px;
+}
+
+.rc-grid-4 {
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0,1fr)
+    );
+}
+
+.rc-field-wide {
+  grid-column:
+    1 / -1;
+}
+
+.rc-form label {
+  min-width: 0;
+}
+
+.rc-form label
+  > span:first-child {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color:
+    #536d7a;
+
+  font-size: 7px;
+
+  font-weight: 850;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    .025em;
+}
+
+.rc-form input,
+.rc-form select,
+.rc-form textarea {
+  width: 100%;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  border-radius:
+    5px;
+
+  background:
+    white;
+
+  color:
+    var(--rc-ink);
+
+  outline:
+    none;
+}
+
+.rc-form input,
+.rc-form select {
+  min-height:
+    40px;
+
+  padding:
+    0 9px;
+
+  font-size:
+    9px;
+}
+
+.rc-form textarea {
+  min-height:
+    98px;
+
+  padding:
+    10px;
+
+  resize:
+    vertical;
+
+  font-size:
+    9px;
+
+  line-height:
+    1.5;
+}
+
+.rc-form input:focus,
+.rc-form select:focus,
+.rc-form textarea:focus {
+  border-color:
+    var(--rc-primary);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      7,
+      133,
+      141,
+      .055
+    );
+}
+
+.rc-form label
+  > small {
+  display: block;
+
+  margin-top: 4px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 6.5px;
+}
+
+.rc-character-count {
+  text-align: right;
+}
+
+/* =========================================================
+   UPLOAD AREA
+========================================================= */
+
+.rc-upload {
+  margin-top: 12px;
+
+  border:
+    1px dashed
+    #9fcfd1;
+
+  background:
+    #f8fcfc;
+}
+
+.rc-upload input {
+  position:
+    absolute;
+
+  width: 1px;
+  height: 1px;
+
+  opacity: 0;
+
+  pointer-events:
+    none;
+}
+
+.rc-upload > label {
+  display: grid;
+
+  justify-items:
+    center;
+
+  min-height:
+    150px;
+
+  padding:
+    22px;
+
+  cursor:
+    pointer;
+
+  text-align:
+    center;
+}
+
+.rc-upload-icon {
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 50px;
+  height: 50px;
+
+  margin-bottom:
+    9px;
+
+  border:
+    1px solid
+    #bee0e1;
+
+  border-radius:
+    50%;
+
+  background:
+    white;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-upload label
+  > strong {
+  color:
+    var(--rc-ink);
+
+  font-size: 11px;
+}
+
+.rc-upload label
+  > p {
+  margin:
+    4px 0 0;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+.rc-upload label
+  > b {
+  margin-top: 11px;
+
+  padding:
+    6px 9px;
+
+  border:
+    1px solid
+    var(--rc-border-dark);
+
+  border-radius:
+    5px;
+
+  background:
+    white;
+
+  color:
+    var(--rc-primary);
+
+  font-size: 7px;
+}
+
+/* =========================================================
+   FILE SELECTED
+========================================================= */
+
+.rc-upload.has-file {
+  border-style:
+    solid;
+
+  border-color:
+    #a8d5d5;
+
+  background:
+    #f3faf9;
+}
+
+.rc-file-selected {
+  display: grid;
+
+  grid-template-columns:
+    42px
+    minmax(0,1fr)
+    auto;
+
+  gap: 10px;
+
+  align-items:
+    center;
+
+  min-height:
+    82px;
+
+  padding:
+    12px;
+}
+
+.rc-file-icon {
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 41px;
+  height: 41px;
+
+  border-radius:
+    6px;
+
+  background:
+    white;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-file-selected
+  > div {
+  min-width: 0;
+}
+
+.rc-file-selected strong,
+.rc-file-selected span {
+  display: block;
+}
+
+.rc-file-selected strong {
+  overflow:
+    hidden;
+
+  color:
+    var(--rc-ink);
+
+  font-size: 9px;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+.rc-file-selected
+  > div
+  > span {
+  margin-top: 3px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+.rc-file-selected button {
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 31px;
+  height: 31px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  border-radius:
+    5px;
+
+  background:
+    white;
+
+  color:
+    var(--rc-muted);
+
+  cursor:
+    pointer;
+}
+
+/* =========================================================
+   SUBMIT AREA
+========================================================= */
+
+.rc-submit-area {
+  padding:
+    17px 20px 20px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  border-top: 0;
+
+  background:
+    #fbfdfd;
+}
+
+.rc-confirm {
+  display: grid;
+
+  grid-template-columns:
+    auto
+    18px
+    minmax(0,1fr);
+
+  gap: 7px;
+
+  align-items:
+    flex-start;
+
+  cursor:
+    pointer;
+}
+
+.rc-confirm
+  > input {
+  position:
+    absolute;
+
+  opacity: 0;
+
+  pointer-events:
+    none;
+}
+
+.rc-confirm-box {
+  display: grid !important;
+
+  place-items:
+    center;
+
+  width: 17px;
+  height: 17px;
+
+  margin-top: 1px;
+
+  border:
+    1px solid
+    var(--rc-border-dark);
+
+  border-radius:
+    4px;
+
+  background:
+    white;
+
+  color:
+    white;
+}
+
+.rc-confirm
+  input:checked
+  + .rc-confirm-box {
+  border-color:
+    var(--rc-primary);
+
+  background:
+    var(--rc-primary);
+}
+
+.rc-confirm
+  > span:last-child {
+  color:
+    var(--rc-muted);
+
+  font-size: 8px;
+
+  line-height:
+    1.45;
+}
+
+.rc-confirm
+  > span:last-child
+  strong {
+  display: block;
+
+  margin-bottom:
+    2px;
+
+  color:
+    var(--rc-ink);
+
+  font-size: 8px;
+}
+
+
+
+.rc-login-note {
+  display: flex;
+
+  align-items:
+    center;
+
+  gap: 7px;
+
+  margin-top:
+    10px;
+
+  padding:
+    9px 10px;
+
+  border-left:
+    3px solid
+    #cf8a50;
+
+  background:
+    #fff7ef;
+
+  color:
+    #805e43;
+
+  font-size: 7px;
+}
+
+.rc-submit {
+  display: inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap: 7px;
+
+  width: 100%;
+
+  min-height:
+    43px;
+
+  margin-top:
+    12px;
+
+  border: 0;
+
+  border-radius:
+    5px;
+
+  background:
+    var(--rc-primary);
+
+  color:
+    white;
+
+  cursor:
+    pointer;
+
+  font-size: 9px;
+
+  font-weight: 900;
+}
+
+.rc-submit:hover:not(:disabled) {
+  background:
+    #06767d;
+}
+
+.rc-submit:disabled {
+  opacity: .55;
+
+  cursor:
+    not-allowed;
+}
+
+.rc-submit-note {
+  margin:
+    6px 0 0;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 6.5px;
+
+  text-align:
+    center;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.rc-sidebar {
+  position: sticky;
+
+  top: 14px;
+
+  display: grid;
+
+  gap: 9px;
+
+  align-content:
+    start;
+}
+
+/* =========================================================
+   REWARD SLIP
+
+   Looks like a receipt rather than a card.
+========================================================= */
+
+.rc-reward-slip {
+  padding:
+    14px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  border-top:
+    3px solid
+    var(--rc-primary);
+
+  background:
+    white;
+}
+
+.rc-reward-slip
+  > header {
+  display: flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-reward-slip
+  > header
+  span {
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+
+  font-weight: 850;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    .06em;
+}
+
+.rc-reward-slip
+  > strong {
+  display: block;
+
+  margin-top: 11px;
+
+  color:
+    var(--rc-primary);
+
+  font-size: 36px;
+
+  font-weight: 900;
+
+  line-height: 1;
+}
+
+.rc-reward-slip
+  > strong
+  small {
+  margin-left: 3px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 8px;
+}
+
+.rc-reward-slip
+  > p {
+  margin:
+    5px 0 12px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+.rc-reward-line {
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  gap: 10px;
+
+  padding:
+    7px 0;
+
+  border-top:
+    1px dashed
+    #dce7e8;
+}
+
+.rc-reward-line span {
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+.rc-reward-line b {
+  color:
+    var(--rc-ink);
+
+  font-size: 7px;
+
+  text-align:
+    right;
+}
+
+.rc-reward-total {
+  display: flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap: 10px;
+
+  margin-top:
+    4px;
+
+  padding:
+    9px 0;
+
+  border-top:
+    2px solid
+    #d7e6e7;
+}
+
+.rc-reward-total span {
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+.rc-reward-total strong {
+  color:
+    var(--rc-primary);
+
+  font-size: 11px;
+}
+
+.rc-reward-slip
+  > small {
+  display: block;
+
+  margin-top: 5px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 6.5px;
+
+  line-height:
+    1.4;
+}
+
+/* =========================================================
+   CHECKLIST
+========================================================= */
+
+.rc-checklist {
+  padding: 13px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  background: white;
+}
+
+.rc-checklist
+  > header {
+  display: flex;
+
+  align-items:
+    center;
+
+  gap: 8px;
+
+  padding-bottom: 9px;
+
+  border-bottom:
+    1px solid
+    #e8eeee;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-checklist
+  header strong,
+.rc-checklist
+  header span {
+  display: block;
+}
+
+.rc-checklist
+  header strong {
+  color:
+    var(--rc-ink);
+
+  font-size: 8px;
+}
+
+.rc-checklist
+  header span {
+  margin-top: 1px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 6.5px;
+}
+
+.rc-checklist
+  > div {
+  display: grid;
+
+  gap: 6px;
+
+  margin-top: 9px;
+}
+
+.rc-checklist
+  > div
+  > span {
+  display: flex;
+
+  align-items:
+    center;
+
+  gap: 6px;
+
+  color:
+    #8b9ba2;
+
+  font-size: 7px;
+}
+
+.rc-checklist
+  > div
+  > span.done {
+  color:
+    #28755e;
+}
+
+.rc-checklist
+  > div
+  > span
+  svg {
+  flex: none;
+}
+
+/* =========================================================
+   IMPACT
+========================================================= */
+
+.rc-impact {
+  display: grid;
+
+  grid-template-columns:
+    auto
+    minmax(0,1fr);
+
+  gap: 9px;
+
+  padding: 13px;
+
+  border:
+    1px solid
+    var(--rc-warm-border);
+
+  background:
+    var(--rc-warm);
+
+  color:
+    #a3722c;
+}
+
+.rc-impact
+  > div
+  > span {
+  color:
+    #9a6a27;
+
+  font-size: 7px;
+
+  font-weight: 850;
+
+  text-transform:
+    uppercase;
+}
+
+.rc-impact strong {
+  display: block;
+
+  margin-top: 3px;
+
+  color:
+    #574a35;
+
+  font-size: 9px;
+
+  line-height:
+    1.35;
+}
+
+.rc-impact p {
+  margin:
+    5px 0 0;
+
+  color:
+    #79694f;
+
+  font-size: 7px;
+
+  line-height:
+    1.5;
+}
+
+/* =========================================================
+   HISTORY
+========================================================= */
+
+.rc-history-section {
+  padding: 13px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  background: white;
+}
+
+.rc-history-section
+  > header {
+  display: flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap: 10px;
+
+  padding-bottom:
+    9px;
+
+  border-bottom:
+    1px solid
+    #e8eeee;
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-history-section
+  > header span,
+.rc-history-section
+  > header strong {
+  display: block;
+}
+
+.rc-history-section
+  > header span {
+  color:
+    var(--rc-muted);
+
+  font-size: 6.5px;
+
+  text-transform:
+    uppercase;
+}
+
+.rc-history-section
+  > header strong {
+  margin-top: 2px;
+
+  color:
+    var(--rc-ink);
+
+  font-size: 9px;
+}
+
+.rc-history {
+  display: grid;
+
+  margin-top: 7px;
+}
+
+.rc-history > div {
+  position: relative;
+
+  display: grid;
+
+  grid-template-columns:
+    12px
+    minmax(0,1fr)
+    auto;
+
+  gap: 7px;
+
+  align-items:
+    center;
+
+  min-width: 0;
+
+  padding:
+    8px 0;
+
+  border-bottom:
+    1px solid
+    #edf2f2;
+}
+
+.rc-history
+  > div:last-child {
+  border-bottom: 0;
+}
+
+.rc-history-marker {
+  width: 7px;
+  height: 7px;
+
+  border-radius:
+    50%;
+
+  background:
+    var(--rc-border-dark);
+}
+
+.rc-history
+  > div
+  > div {
+  min-width: 0;
+}
+
+.rc-history strong {
+  display: block;
+
+  overflow: hidden;
+
+  color:
+    var(--rc-ink);
+
+  font-size: 7.5px;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+.rc-history small {
+  display: block;
+
+  margin-top: 2px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 6.5px;
+}
+
+.rc-history b {
+  padding:
+    3px 5px;
+
+  border-radius:
+    3px;
+
+  font-size: 6px;
+
+  text-transform:
+    uppercase;
+
+  white-space:
+    nowrap;
+}
+
+.rc-history
+  .status-approved {
+  background:
+    #e4f5ed;
+
+  color:
+    #287459;
+}
+
+.rc-history
+  .status-pending {
+  background:
+    #fff4df;
+
+  color:
+    #9d6a1f;
+}
+
+.rc-history
+  .status-needs_correction {
+  background:
+    #fff0df;
+
+  color:
+    #a26123;
+}
+
+.rc-history
+  .status-rejected,
+.rc-history
+  .status-duplicate {
+  background:
+    #fff0ed;
+
+  color:
+    #ad554a;
+}
+
+.rc-history-loading {
+  display: flex;
+
+  align-items:
+    center;
+
+  gap: 6px;
+
+  padding:
+    12px 0;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 7px;
+}
+
+.rc-no-history {
+  display: grid;
+
+  justify-items:
+    center;
+
+  gap: 5px;
+
+  padding:
+    22px 10px;
+
+  color:
+    var(--rc-muted);
+
+  text-align:
+    center;
+}
+
+.rc-no-history p {
+  margin: 0;
+
+  font-size: 7px;
+}
+
+/* =========================================================
+   PAPER CONTRIBUTION LINK
+========================================================= */
+
+.rc-paper-link {
+  display: grid;
+
+  grid-template-columns:
+    38px
+    minmax(0,1fr)
+    auto;
+
+  gap: 8px;
+
+  align-items:
+    center;
+
+  padding: 11px;
+
+  border:
+    1px solid
+    var(--rc-border);
+
+  background:
+    #f9fcfc;
+
+  color:
+    var(--rc-ink);
+}
+
+.rc-paper-link
+  > span {
+  display: grid;
+
+  place-items:
+    center;
+
+  width: 37px;
+  height: 37px;
+
+  border-radius:
+    6px;
+
+  background:
+    var(--rc-primary-soft);
+
+  color:
+    var(--rc-primary);
+}
+
+.rc-paper-link
+  > div {
+  min-width: 0;
+}
+
+.rc-paper-link strong,
+.rc-paper-link small {
+  display: block;
+}
+
+.rc-paper-link strong {
+  color:
+    var(--rc-ink);
+
+  font-size: 8px;
+}
+
+.rc-paper-link small {
+  margin-top: 2px;
+
+  color:
+    var(--rc-muted);
+
+  font-size: 6.5px;
+}
+
+.rc-paper-link
+  > svg {
+  color:
+    var(--rc-primary);
+}
+
+/* =========================================================
+   SPINNER
+========================================================= */
+
+.rc-spin {
+  animation:
+    rcSpin
+    .8s
+    linear
+    infinite;
+}
+
+@keyframes rcSpin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+/* =========================================================
+   LAPTOP
+========================================================= */
+
+@media (
+  max-width: 1180px
+) {
+  .rc-type-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0,1fr)
+      );
+  }
+
+  .rc-grid-4 {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0,1fr)
+      );
+  }
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (
+  max-width: 900px
+) {
+  .rc-page {
+    padding:
+      16px 12px
+      55px;
+  }
+
+  .rc-header {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 12px;
+  }
+
+  .rc-header-aside {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 15px;
+  }
+
+  .rc-header-aside > img { width: 130px; max-height: 105px; }
+
+  .rc-header-note {
+    flex-wrap: wrap;
+  }
+
+  .rc-type-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0,1fr)
+      );
+  }
+
+  .rc-workspace {
+    grid-template-columns:
+      1fr;
+  }
+
+  .rc-sidebar {
+    position: static;
+
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .rc-paper-link {
+    grid-column:
+      1 / -1;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (
+  max-width: 620px
+) {
+  .rc-page {
+    padding:
+      10px 9px
+      45px;
+  }
+
+  .rc-header h1 {
+    font-size:
+      clamp(
+        36px,
+        12vw,
+        48px
+      );
+  }
+
+  .rc-header-copy > p {
+    font-size: 15px;
+  }
+
+  .rc-header { padding: 18px 14px; }
+
+  .rc-header-aside { align-items: center; }
+
+  .rc-header-aside > img { width: 100px; max-height: 90px; }
+
+  .rc-header-note {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .rc-header-note > span { flex: 1 1 100%; font-size: 11px; }
+  .rc-header-note > div { font-size: 11px; }
+  .rc-header-note b { width: 25px; height: 25px; }
+
+  .rc-header-note i {
+    display: none;
+  }
+
+  .rc-type-section
+    > header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .rc-current-reward {
+    width: 100%;
+  }
+
+  .rc-type-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .rc-form-head {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .rc-progress {
+    width: 100%;
+  }
+
+  .rc-form-section {
+    grid-template-columns:
+      32px
+      minmax(0,1fr);
+  }
+
+  .rc-form-section-content {
+    padding:
+      15px 12px;
+  }
+
+  .rc-form-grid,
+  .rc-grid-4 {
+    grid-template-columns:
+      1fr;
+  }
+
+  .rc-field-wide {
+    grid-column: auto;
+  }
+
+  .rc-selected-type {
+    grid-template-columns:
+      36px
+      minmax(0,1fr);
+  }
+
+  .rc-selected-type
+    > b {
+    grid-column: 2;
+  }
+
+  .rc-sidebar {
+    grid-template-columns:
+      1fr;
+  }
+
+  .rc-paper-link {
+    grid-column: auto;
+  }
+}
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (
+  max-width: 390px
+) {
+  .rc-header-note
+    > span {
+    grid-column:
+      1 / -1;
+  }
+
+  .rc-confirm {
+    grid-template-columns:
+      18px
+      minmax(0,1fr);
+  }
+
+  .rc-confirm
+    > input {
+    display: none;
+  }
+
+  .rc-confirm-box {
+    grid-column: 1;
+  }
+
+  .rc-confirm
+    > span:last-child {
+    grid-column: 2;
+  }
+
+  .rc-file-selected {
+    grid-template-columns:
+      35px
+      minmax(0,1fr)
+      auto;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (
+  prefers-reduced-motion:
+    reduce
+) {
+  .rc-spin {
+    animation-duration: 2s;
+  }
+
+  .rc-type-grid button {
+    transition: none;
+  }
+}
+
+.rc-submit-area .rc-confirm{display:flex;align-items:flex-start;gap:12px;width:100%;min-width:0}
+.rc-submit-area .rc-confirm-box{flex:0 0 20px;width:20px;height:20px}
+.rc-submit-area .rc-confirm>span:last-child{flex:1;min-width:0;font-size:14px;line-height:1.5;overflow-wrap:normal}
+.rc-submit-area .rc-confirm>span:last-child strong{font-size:15px}
+.rc-submit-area .rc-confirm input:focus-visible+.rc-confirm-box{outline:3px solid #62c7ca;outline-offset:2px}
+.rc-submit-area .rc-confirm>input{width:20px;height:20px;margin:0}

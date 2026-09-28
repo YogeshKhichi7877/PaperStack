@@ -28,6 +28,15 @@ const paperSchema = new mongoose.Schema({
     uploadMode: { type: String, enum: ['legacy', 'normal', 'bulk', 'admin', 'contribution'], default: 'legacy' },
     topics: [String],
     units: [Number],
+    questionCount: { type: Number, default: 0, min: 0 },
+    questionExtractionStatus: {
+      type: String,
+      enum: ['not_started', 'processing', 'complete', 'partial', 'failed'],
+      default: 'not_started',
+      index: true
+    },
+    questionExtractionVersion: { type: String, default: '' },
+    questionsUpdatedAt: { type: Date, default: null },
     reportedIssuesCount: { type: Number, default: 0 },
     contributedBy: String,
     contributedByName: String,

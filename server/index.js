@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const crypto = require('crypto');
+const { notifyAdminUpload } = require('./services/adminUploadNotification');
 const dns = require('dns');
 const pdfParse = require('pdf-parse');
 const { OAuth2Client } = require('google-auth-library');
@@ -15,21 +16,21 @@ const nodemailer = require('nodemailer');
 const archiver = require('archiver');
 const axios = require('axios');
 require('dotenv').config();
+mongoose.set('bufferCommands', false);
 
 const {
   SUBJECT_CATALOG,
   EXPECTED_YEARS,
   EXPECTED_EXAM_TYPES
 } = require('./data/subjectCatalog');
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-  console.log('Using custom DNS servers for MongoDB SRV lookup');
-} catch (error) {
-  console.warn('Could not set custom DNS servers:', error.message);
+if (process.env.MONGODB_DNS_SERVERS) {
+  try {
+    dns.setServers(process.env.MONGODB_DNS_SERVERS.split(',').map((value) => value.trim()).filter(Boolean));
+    console.log('Using configured DNS servers for MongoDB SRV lookup');
+  } catch (error) {
+    console.warn('Could not use MONGODB_DNS_SERVERS:', error.message);
+  }
 }
-
-// If mongodb+srv DNS still fails on some networks, use MONGODB_URI_STANDARD
-// with the non-SRV Atlas connection string.
 
 const { cloudinary, folder: cloudinaryFolder } = require('./cloudConfig');
 const Paper = require('./models/Paper');
@@ -39,15 +40,48 @@ const Contribution = require('./models/Contribution');
 const Report = require('./models/Report');
 const PaperRequest = require('./models/PaperRequest');
 const PaperVote = require('./models/PaperVote');
+const { getPaperBounty, getBountyPriority } = require('./utils/paperBounty');
+const archiveCompletionRoutes = require('./routes/archiveCompletionRoutes');
+const createVerificationRoutes = require('./routes/verificationRoutes');
+const questionRoutes = require('./routes/questionRoutes');
+const createQuestionExtractionRouter = require('./routes/questionExtractionRoutes');
+const questionBrowserRoutes = require('./routes/questionBrowserRoutes');
+const pyqIntelligenceRoutes = require('./routes/pyqIntelligenceRoutes');
+const importantTopicsRoutes = require('./routes/importantTopicsRoutes');
+const revisionSheetRoutes = require('./routes/revisionSheetRoutes');
+const examWarRoomRoutes = require('./routes/examWarRoomRoutes');
+const askPaperStackRoutes = require('./routes/askPaperStackRoutes');
+const questionAssistantRoutes = require('./routes/questionAssistantRoutes');
+const mockExamRoutes = require('./routes/mockExamRoutes');
+const mockEvaluationRoutes = require('./routes/mockEvaluationRoutes');
+const semesterSurvivalRoutes = require('./routes/semesterSurvivalRoutes');
+const { createPersonalDashboardRoutes } = require('./routes/personalDashboardRoutes');
+const { createNotificationRoutes } = require('./routes/notificationRoutes');
+const { createStreakRoutes } = require('./routes/streakRoutes');
+const branchCompetitionRoutes = require('./routes/branchCompetitionRoutes');
+const trendingRoutes = require('./routes/trendingRoutes');
+const searchV2Routes = require('./routes/searchV2Routes');
+const createAdminModerationRoutes = require('./routes/adminModerationRoutes');
+const productEventRoutes = require('./routes/productEventRoutes');
+const createProductAnalyticsRoutes = require('./routes/productAnalyticsRoutes');
+const createResourceContributionRoutes = require('./routes/resourceContributionRoutes');
+const createAdminResourceContributionRoutes = require('./routes/adminResourceContributionRoutes');
+const { recordPaperEngagement } = require('./services/trendingService');
+const createQuestionSolutionRoutes = require('./routes/questionSolutionRoutes');
+const createAdminQuestionSolutionRoutes = require('./routes/adminQuestionSolutionRoutes');
 const { createContributorProfileRoutes } = require('./routes/contributorProfileRoutes');
 const { createAuthMiddleware } = require('./middleware/auth');
+const { PHOTO_TYPES, normalizeDisplayName, validDisplayName, validPhoto } = require('./services/profileValidation');
 const { parseCsvLine } = require('./utils/csv');
 const { findHardestSubject } = require('./utils/analytics');
 const { buildSemesterPackQuery } = require('./utils/paperQuery');
 const catalogRoutes = require('./routes/catalogRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const createSmartContributionRouter = require('./routes/smartContributionRoutes');
+const createFeedbackRoutes = require('./routes/feedbackRoutes');
+const { OFFICIAL_BRANCHES, normalizeBranch, normalizeBranchList } = require('./utils/branches');
 const { incrementResourceStatForPaper } = require('./services/resourceService');
+const { connectDatabase, requireDatabase } = require('./services/databaseConnection');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -57,7 +91,11 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.admin_password;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://paper-stack-beryl.vercel.app';
 const CLOUDINARY_FOLDER = cloudinaryFolder;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const SALT_ROUNDS = Number(process.env.SALT_ROUNDS || process.env.saltrounds || 10);
+if (process.env.NODE_ENV === 'production') {
+  if (!JWT_SECRET || JWT_SECRET.length < 32) throw new Error('Production JWT_SECRET must contain at least 32 characters.');
+  if (!ADMIN_PASSWORD || ADMIN_PASSWORD.length < 16) throw new Error('Production ADMIN_PASSWORD must contain at least 16 characters.');
+  if (!GOOGLE_CLIENT_ID) throw new Error('Production GOOGLE_CLIENT_ID is required for verified student signup.');
+}
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 const { authenticate, authenticateAdmin } = createAuthMiddleware(JWT_SECRET);
 const ALLOWED_EMAIL_DOMAIN = 'iiitsurat.ac.in';
@@ -138,21 +176,6 @@ Contributor: ${contribution.contributorName || contribution.contributedByName ||
 Paper PDF: ${contribution.paperUrl || ''}
 Solution PDF: ${contribution.solutionUrl || ''}
 Admin Review Hub: ${FRONTEND_URL}/admin/contributions
-    `,
-    html: `
-      <h3>New Paper Contribution Received</h3>
-      <p><strong>Contributor Name:</strong> ${contribution.contributorName || ''}</p>
-      <p><strong>Contributor Email:</strong> ${contribution.contributorEmail || ''}</p>
-      <p><strong>Branch:</strong> ${contribution.branch || ''}</p>
-      <p><strong>Semester:</strong> Sem ${contribution.semester || ''}</p>
-      <p><strong>Subject:</strong> ${contribution.subject || ''}</p>
-      <p><strong>Paper Title:</strong> ${contribution.title || ''}</p>
-      <p><strong>Year:</strong> ${contribution.year || ''}</p>
-      <p><strong>Exam Type:</strong> ${contribution.examType || ''}</p>
-      <p><strong>Notes:</strong> ${contribution.notes || 'None'}</p>
-      <p><strong>Paper PDF Link:</strong> <a href="${contribution.paperUrl || ''}" target="_blank">View Paper PDF</a></p>
-      ${contribution.solutionUrl ? `<p><strong>Solution PDF Link:</strong> <a href="${contribution.solutionUrl}" target="_blank">View Solution PDF</a></p>` : ''}
-      <p><strong>Admin Review Hub:</strong> <a href="${FRONTEND_URL}/admin/contributions" target="_blank">${FRONTEND_URL}/admin/contributions</a></p>
     `
   };
 
@@ -287,11 +310,43 @@ app.use('/api/', rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }));
+const aiRequestLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'AI request limit reached. Please try again later.' } });
+app.use(['/api/ask-paperstack/query', '/api/question-assistant/:questionId/query', '/api/mock-exams/generate', '/api/mock-exams/regenerate-question', '/api/mock-evaluation/evaluate'], (req, res, next) => req.method === 'POST' ? authenticate(req, res, () => aiRequestLimit(req, res, next)) : next());
+app.use(['/api/important-topics/cache/clear', '/api/pyq-intelligence/cache/clear', '/api/revision-sheets/cache/clear', '/api/exam-war-room/cache/clear'], authenticateAdmin);
 app.use(compression());
+app.use('/api', requireDatabase(mongoose.connection));
+app.use('/api/archive-completion', archiveCompletionRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/admin/question-extraction', createQuestionExtractionRouter({ authenticateAdmin }));
+app.use('/api/question-browser', questionBrowserRoutes);
+app.use('/api/pyq-intelligence', pyqIntelligenceRoutes);
+app.use('/api/important-topics', importantTopicsRoutes);
+app.use('/api/revision-sheets', revisionSheetRoutes);
+app.use('/api/exam-war-room', examWarRoomRoutes);
+app.use('/api/ask-paperstack', askPaperStackRoutes);
+app.use('/api/question-assistant', questionAssistantRoutes);
+app.use('/api/mock-exams', mockExamRoutes);
+app.use('/api/mock-evaluation', mockEvaluationRoutes);
+app.use('/api/semester-survival', semesterSurvivalRoutes);
+app.use('/api/dashboard', createPersonalDashboardRoutes({ authenticate }));
+app.use('/api/notifications', createNotificationRoutes({ authenticate }));
+app.use('/api/streaks', createStreakRoutes({ authenticate }));
+app.use('/api/branch-competition', branchCompetitionRoutes);
+app.use('/api/trending', trendingRoutes);
+app.use('/api/search/v2', searchV2Routes);
+app.use('/api/admin/moderation', createAdminModerationRoutes({ authenticateAdmin }));
+app.use('/api/product-events', productEventRoutes);
+app.use('/api/admin/product-analytics', createProductAnalyticsRoutes({ authenticateAdmin }));
+app.use('/api/resource-contributions', createResourceContributionRoutes({ authenticate }));
+app.use('/api/admin/resource-contributions', createAdminResourceContributionRoutes({ authenticateAdmin }));
+app.use('/api/question-solutions', createQuestionSolutionRoutes({ authenticate }));
+app.use('/api/admin/question-solutions', createAdminQuestionSolutionRoutes({ authenticateAdmin }));
+app.use('/api/verification', createVerificationRoutes({ authenticate }));
 app.use('/api/contributors', createContributorProfileRoutes({ authenticate }));
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/contributions', createSmartContributionRouter({ authenticate }));
+app.use('/api', createFeedbackRoutes({ authenticate, authenticateAdmin }));
 
 if (!JWT_SECRET) {
   console.warn('JWT_SECRET is not configured. Auth routes will fail until it is set.');
@@ -311,41 +366,61 @@ function logMongoTroubleshooting(err) {
   const message = err?.message || 'Unknown MongoDB connection error';
   console.error(`MongoDB connection failed: ${message}`);
   if (/querySrv|ECONNREFUSED|ENOTFOUND|ETIMEOUT/i.test(message)) {
-    console.error('MongoDB Atlas troubleshooting hints:');
-    console.error('1. Check MongoDB Atlas Network Access IP allowlist.');
-    console.error('2. Add current IP or 0.0.0.0/0 for development only.');
-    console.error('3. Check database username/password.');
-    console.error('4. Check connection string cluster hostname.');
-    console.error('5. Try changing DNS to 8.8.8.8 or 1.1.1.1.');
-    console.error('6. Try MongoDB Atlas standard connection string if SRV DNS fails.');
+    console.error('MongoDB DNS lookup failed. Check local DNS/network access to Atlas.');
+    console.error('For SRV DNS failures, configure MONGODB_URI_STANDARD with the Atlas standard connection string.');
+    console.error('MONGODB_DNS_SERVERS is optional when your network provides a reachable resolver.');
+  } else if (/authentication|not authorized/i.test(message)) {
+    console.error('Check the Atlas database username and password in the connection string.');
+  } else {
+    console.error('Check Atlas Network Access, cluster availability, and connection settings.');
   }
 }
 
-if (!MONGODB_URI) {
-  console.warn('MONGODB_URI is not configured. Database connection will fail until it is set.');
-} else {
-  console.log('Connecting to MongoDB Atlas...');
-  mongoose.connect(MONGODB_URI, { dbName: 'PaperStack', serverSelectionTimeoutMS: 10000 })
-    .then(() => {
-      databaseStatus = 'connected';
-      console.log('MongoDB connected successfully');
-    })
-    .catch((err) => {
-      databaseStatus = 'disconnected';
-      logMongoTroubleshooting(err);
-    });
+let mongoConnectionPending = false;
+let mongoRetryTimer = null;
+
+function scheduleMongoRetry() {
+  if (mongoRetryTimer || mongoConnectionPending || mongoose.connection.readyState === 1) return;
+  mongoRetryTimer = setTimeout(() => {
+    mongoRetryTimer = null;
+    startMongoConnection();
+  }, 30000);
 }
+
+async function startMongoConnection() {
+  if (mongoConnectionPending || mongoose.connection.readyState === 1) return;
+  mongoConnectionPending = true;
+  databaseStatus = 'connecting';
+  try {
+    const source = await connectDatabase(mongoose, MONGODB_URI, process.env.MONGODB_URI_STANDARD, {
+      dbName: 'PaperStack', serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000,
+    });
+    databaseStatus = 'connected';
+    console.log(`MongoDB connected successfully (${source} URI)`);
+  } catch (error) {
+    databaseStatus = 'disconnected';
+    logMongoTroubleshooting(error);
+  } finally {
+    mongoConnectionPending = false;
+    if (mongoose.connection.readyState !== 1) scheduleMongoRetry();
+  }
+}
+
+startMongoConnection();
 
 mongoose.connection.on('disconnected', () => {
   databaseStatus = 'disconnected';
+  scheduleMongoRetry();
 });
 
 mongoose.connection.on('connected', () => {
   databaseStatus = 'connected';
+  if (mongoRetryTimer) clearTimeout(mongoRetryTimer);
+  mongoRetryTimer = null;
 });
 
 function getDatabaseStatus() {
-  return mongoose.connection.readyState === 1 ? 'connected' : databaseStatus;
+  return mongoose.connection.readyState === 1 ? 'connected' : databaseStatus === 'connecting' ? 'connecting' : 'disconnected';
 }
 
 const pdfUpload = multer({
@@ -370,7 +445,6 @@ const SUBJECT_ALIASES = {
   CN: 'Computer Networks',
 };
 
-const BRANCH_ALIASES = ['CSE', 'ECE', 'AI', 'AIML', 'IT'];
 const ROMAN_SEMESTERS = {
   I: 1,
   II: 2,
@@ -402,6 +476,8 @@ function buildUserResponse(user) {
   return {
     id: user._id,
     username: user.username,
+    name: user.displayName || user.username,
+    displayName: user.displayName || user.username,
     email: user.email,
     semester: user.semester ?? user.currentSemester ?? null,
     currentSemester: user.currentSemester ?? user.semester ?? null,
@@ -420,6 +496,7 @@ function signUserToken(user) {
       username: user.username,
       email: user.email,
       role: user.role || 'student',
+      tokenType: 'student',
       semester: user.semester ?? user.currentSemester ?? null,
     },
     JWT_SECRET,
@@ -477,7 +554,11 @@ function publicPaperRequest(request) {
     requestCount: request.requestCount || 0,
     status: request.status,
     createdAt: request.createdAt,
-    updatedAt: request.updatedAt
+    updatedAt: request.updatedAt,
+    ...getPaperBounty({
+      requestCount: request.requestCount || 0,
+      priority: getBountyPriority(request.year)
+    })
   };
 }
 
@@ -561,9 +642,11 @@ function detectSemester(source) {
 }
 
 function detectBranch(source) {
-  const upper = source.toUpperCase();
-  const branch = BRANCH_ALIASES.find((item) => new RegExp(`\\b${item}\\b`, 'i').test(upper));
-  return branch || 'CSE';
+  const upper = String(source || '').toUpperCase();
+  if (/\bCSE\b/.test(upper) && /\bECE\b/.test(upper)) return 'CSE & ECE';
+  const candidates = ['CSE (AI-ML)', 'CYBER SECURITY', 'MATHEMATICS AND COMPUTING', 'AIML', 'MNC', 'CYBER', 'ECE', 'CSE'];
+  const branch = candidates.find((item) => upper.includes(item));
+  return normalizeBranch(branch) || 'CSE';
 }
 
 function normalizeSubject(source, existingSubjects = []) {
@@ -820,7 +903,7 @@ function adminUploadCenterFields(req, res, next) {
   });
 }
 
-const ADMIN_UPLOAD_BRANCHES = ['CSE', 'ECE', 'CSE & ECE'];
+const ADMIN_UPLOAD_BRANCHES = OFFICIAL_BRANCHES;
 const ADMIN_UPLOAD_EXAM_TYPES = ['Mid-Sem', 'End-Sem'];
 
 function isUploadedPdf(file) {
@@ -839,7 +922,7 @@ function parseSemesterValue(value) {
 }
 
 function buildAdminUploadPaperBody(body) {
-  const branch = String(body.branch || '').trim();
+  const branch = normalizeBranch(body.branch) || String(body.branch || '').trim();
   const subject = normalizeAdminUploadSubject(body.subject, body.subjectCode);
   return {
     title: String(body.title || '').trim() || `Branch : ${branch}`,
@@ -860,7 +943,7 @@ function validateAdminUploadBody(body, requireFileName = false) {
   const errors = [];
   if (requireFileName && !String(body.fileName || '').trim()) errors.push('Missing required field: fileName');
   if (!String(body.subject || '').trim()) errors.push('Missing required field: subject');
-  if (!ADMIN_UPLOAD_BRANCHES.includes(String(body.branch || '').trim())) errors.push('Invalid branch');
+  if (!ADMIN_UPLOAD_BRANCHES.includes(normalizeBranch(body.branch))) errors.push('Invalid branch');
   const semester = parseSemesterValue(body.semester);
   if (!Number.isInteger(semester) || semester < 1 || semester > 8) errors.push('Invalid semester');
   if (!ADMIN_UPLOAD_EXAM_TYPES.includes(String(body.examType || '').trim())) errors.push('Invalid exam type');
@@ -1123,65 +1206,13 @@ Allow: /
 Sitemap: ${FRONTEND_URL}/sitemap.xml`);
 });
 
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    if (!JWT_SECRET) {
-      return res.status(500).json({ success: false, message: 'Authentication is not configured.' });
-    }
+const accountAttemptLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: 'draft-8', legacyHeaders: false, message: { success: false, message: 'Too many account attempts. Try again later.' } });
 
-    const username = String(req.body.username || '').trim();
-    const email = normalizeEmail(req.body.email);
-    const password = String(req.body.password || '');
-    const semester = req.body.semester || req.body.currentSemester || 1;
-
-    if (!username) return res.status(400).json({ success: false, message: 'Username is required.' });
-    if (!email) return res.status(400).json({ success: false, message: 'Email is required.' });
-    if (!password) return res.status(400).json({ success: false, message: 'Password is required.' });
-    if (!isAllowedInstituteEmail(email)) {
-      return res.status(403).json({ success: false, message: 'Only iiitsurat.ac.in emails are allowed.' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
-    }
-
-    const existingUser = await User.findOne({ email }).lean();
-    if (existingUser) {
-      return res.status(409).json({ success: false, message: 'Account already exists. Please login.' });
-    }
-
-    const existingUsername = await User.findOne({ username }).lean();
-    if (existingUsername) {
-      return res.status(409).json({ success: false, message: 'Username already exists. Please choose another.' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = await new User({
-      username,
-      email,
-      password: hashedPassword,
-      semester: Number(semester) || 1,
-      currentSemester: Number(semester) || 1,
-      role: 'student',
-      authProvider: 'local',
-      emailVerified: true,
-    }).save();
-
-    const token = signUserToken(user);
-    res.status(201).json({ success: true, message: 'User registered successfully', token, user: buildUserResponse(user) });
-  } catch (err) {
-    if (err.code === 11000) {
-      const duplicateField = Object.keys(err.keyPattern || {})[0];
-      const message = duplicateField === 'email'
-        ? 'Account already exists. Please login.'
-        : 'Account already exists with these details.';
-      return res.status(409).json({ success: false, message });
-    }
-    console.error('Registration failed:', err.message);
-    res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
-  }
+app.post('/api/auth/register', accountAttemptLimit, async (req, res) => {
+  return res.status(403).json({ success: false, message: 'New accounts require a verified IIIT Surat Google sign-in. Existing password accounts can still log in.' });
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', accountAttemptLimit, async (req, res) => {
   try {
     if (!JWT_SECRET) {
       return res.status(500).json({ success: false, message: 'Authentication is not configured.' });
@@ -1212,7 +1243,17 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/google', async (req, res) => {
+async function verifiedGooglePayload(credential) {
+  if (!credential) throw new Error('Google credential is required');
+  const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+  const payload = ticket.getPayload();
+  if (!payload?.sub || !payload?.email || payload.email_verified !== true) {
+    throw new Error('Verified Google identity is required');
+  }
+  return payload;
+}
+
+app.post('/api/auth/google', accountAttemptLimit, async (req, res) => {
   try {
     if (!JWT_SECRET) {
       return res.status(500).json({ success: false, message: 'Authentication is not configured.' });
@@ -1226,21 +1267,12 @@ app.post('/api/auth/google', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Google credential is required.' });
     }
 
-    let ticket;
+    let payload;
     try {
-      ticket = await googleClient.verifyIdToken({
-        idToken: credential,
-        audience: GOOGLE_CLIENT_ID,
-      });
+      payload = await verifiedGooglePayload(credential);
     } catch (verifyErr) {
       console.error('Google credential verification failed:', verifyErr.message);
-      return res.status(401).json({ success: false, message: 'Google login could not be verified. Please check Google configuration.' });
-    }
-
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email || payload.email_verified !== true) {
-      console.error('Google credential verification failed: missing verified email');
-      return res.status(401).json({ success: false, message: 'Google login could not be verified. Please check Google configuration.' });
+      return res.status(401).json({ success: false, message: 'Google sign-in could not be verified.' });
     }
 
     const email = normalizeEmail(payload.email);
@@ -1249,12 +1281,27 @@ app.post('/api/auth/google', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only IIIT Surat email accounts are allowed.' });
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
     if (!user) {
-      return res.status(403).json({
-        success: false,
-        message: 'Please create a manual account first, then use Google login.'
+      const username = await makeUniqueUsername(email.split('@')[0]);
+      user = await User.create({
+        username,
+        email,
+        displayName: validDisplayName(normalizeDisplayName(payload.name))
+          ? normalizeDisplayName(payload.name).slice(0, 60)
+          : username,
+        googleId: payload.sub,
+        authProvider: 'google',
+        emailVerified: true,
+        avatar: payload.picture || '',
+        role: 'student',
       });
+    }
+    if (user.authProvider === 'local' && !user.googleId) {
+      return res.status(409).json({ success: false, message: 'Sign in with your password, then link Google from your dashboard.' });
+    }
+    if (user.googleId && user.googleId !== payload.sub) {
+      return res.status(409).json({ success: false, message: 'This account is linked to another Google identity.' });
     }
 
     let changed = false;
@@ -1289,9 +1336,36 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
+app.post('/api/auth/google/link', authenticate, async (req, res) => {
+  try {
+    if (!GOOGLE_CLIENT_ID || !googleClient || !isValidGoogleClientId(GOOGLE_CLIENT_ID)) {
+      return res.status(503).json({ error: 'Google sign-in is unavailable.' });
+    }
+    const payload = await verifiedGooglePayload(req.body?.credential);
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (normalizeEmail(payload.email) !== normalizeEmail(user.email)) {
+      return res.status(403).json({ error: 'Google email must match your PaperStack account.' });
+    }
+    if (user.googleId && user.googleId !== payload.sub) {
+      return res.status(409).json({ error: 'This account is linked to another Google identity.' });
+    }
+    user.googleId = payload.sub;
+    user.authProvider = user.password ? 'linked' : 'google';
+    user.emailVerified = true;
+    if (!user.avatar && payload.picture) user.avatar = payload.picture;
+    await user.save();
+    return res.json({ user: buildUserResponse(user) });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ error: 'This Google identity is linked to another account.' });
+    console.warn('Google account link failed:', error.message);
+    return res.status(401).json({ error: 'Google account could not be linked.' });
+  }
+});
+
 app.get('/api/user/me', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('username email semester currentSemester role bookmarks avatar authProvider').lean();
+    const user = await User.findById(req.user._id).select('username displayName email semester currentSemester role bookmarks avatar authProvider').lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(buildUserResponse(user));
   } catch (err) {
@@ -1299,12 +1373,68 @@ app.get('/api/user/me', authenticate, async (req, res) => {
   }
 });
 
-app.post('/api/admin/verify', (req, res) => {
-  if (!ADMIN_PASSWORD || !JWT_SECRET) return res.status(500).json({ error: 'Admin authentication is not configured' });
-  if (req.body.password !== ADMIN_PASSWORD) return res.status(401).json({ success: false, error: 'Wrong password' });
-  const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '4h' });
-  res.json({ success: true, token, expiresIn: '4h' });
+const profilePhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = Boolean(PHOTO_TYPES[file.mimetype]?.test(file.originalname || ''));
+    cb(allowed ? null : new Error('Choose a JPEG, PNG, or WebP image.'), allowed);
+  },
 });
+
+app.patch('/api/user/profile', authenticate, async (req, res) => {
+  const displayName = normalizeDisplayName(req.body?.displayName);
+  if (!validDisplayName(displayName)) {
+    return res.status(400).json({ error: 'Display name must be 2 to 60 characters and cannot contain markup.' });
+  }
+  try {
+    const user = await User.findByIdAndUpdate(req.user._id, { $set: { displayName } }, { new: true, runValidators: true });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.json({ user: buildUserResponse(user) });
+  } catch (error) {
+    console.error('Profile update failed:', error.message);
+    return res.status(500).json({ error: 'Could not update profile.' });
+  }
+});
+
+app.post('/api/user/profile/photo', authenticate, (req, res) => {
+  profilePhotoUpload.single('photo')(req, res, async (uploadError) => {
+    if (uploadError) return res.status(400).json({ error: uploadError.message });
+    if (!validPhoto(req.file)) {
+      return res.status(400).json({ error: 'Choose a valid JPEG, PNG, or WebP image.' });
+    }
+    let uploaded;
+    try {
+      const user = await User.findById(req.user._id);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      uploaded = await uploadBufferToCloudinary(req.file, `${CLOUDINARY_FOLDER}/avatars`);
+      const previousPublicId = user.avatarPublicId;
+      user.avatar = uploaded.secure_url;
+      user.avatarPublicId = uploaded.public_id;
+      await user.save();
+      if (previousPublicId) destroyCloudinary(previousPublicId);
+      return res.json({ user: buildUserResponse(user) });
+    } catch (error) {
+      if (uploaded?.public_id) destroyCloudinary(uploaded.public_id);
+      console.error('Profile photo update failed:', error.message);
+      return res.status(500).json({ error: 'Could not update profile photo.' });
+    }
+  });
+});
+
+const adminLoginLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many admin login attempts. Try again later.' } });
+
+app.post('/api/admin/verify', adminLoginLimit, (req, res) => {
+  if (!ADMIN_PASSWORD || !JWT_SECRET) return res.status(500).json({ error: 'Admin authentication is not configured' });
+  const supplied = String(req.body?.password || '');
+  const expectedHash = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest();
+  const suppliedHash = crypto.createHash('sha256').update(supplied).digest();
+  if (!crypto.timingSafeEqual(expectedHash, suppliedHash)) return res.status(401).json({ success: false, error: 'Wrong password' });
+  const token = jwt.sign({ role: 'admin', tokenType: 'admin' }, JWT_SECRET, { expiresIn: '2h', algorithm: 'HS256' });
+  res.json({ success: true, token, expiresIn: '2h' });
+});
+
+app.get('/api/admin/session', authenticateAdmin, (req, res) => res.json({ valid: true }));
 
 app.post('/api/admin/extract-paper', authenticateAdmin, adminUploadFields, async (req, res) => {
   try {
@@ -1558,7 +1688,8 @@ if (process.env.NODE_ENV !== 'production') {
 app.post('/api/papers/:id/view', async (req, res) => {
   try {
     await Paper.findByIdAndUpdate(req.params.id, { $inc: { views: 1 }, updatedAt: new Date() });
-    incrementResourceStatForPaper(req.params.id, 'views').catch((error) => {
+        recordPaperEngagement(req.params.id, 'view');
+incrementResourceStatForPaper(req.params.id, 'views').catch((error) => {
       console.warn('[PaperStack Resource Sync] view counter sync failed:', error.message);
     });
     res.status(200).json({ message: 'View counted' });
@@ -1570,7 +1701,8 @@ app.post('/api/papers/:id/view', async (req, res) => {
 app.post('/api/papers/:id/download', async (req, res) => {
   try {
     await Paper.findByIdAndUpdate(req.params.id, { $inc: { downloads: 1 }, updatedAt: new Date() });
-    incrementResourceStatForPaper(req.params.id, 'downloads').catch((error) => {
+        recordPaperEngagement(req.params.id, 'download');
+incrementResourceStatForPaper(req.params.id, 'downloads').catch((error) => {
       console.warn('[PaperStack Resource Sync] download counter sync failed:', error.message);
     });
     res.status(200).json({ message: 'Download counted' });
@@ -1938,12 +2070,14 @@ app.post('/api/contributions', authenticate, adminUploadFields, async (req, res)
     const existingSubjects = await Paper.distinct('subject');
     const file = req.files?.file?.[0];
     if (!file) return res.status(400).json({ error: 'Paper PDF file is required' });
+    if (req.body.branch && !normalizeBranch(req.body.branch)) return res.status(400).json({ error: 'Invalid branch' });
     const solutionFile = req.files?.solution?.[0] || null;
 
     const extraction = await buildExtraction(file, existingSubjects);
+    const contributionBranch = normalizeBranch(req.body.branch) || normalizeBranch(extraction.branch) || 'CSE';
 
     const duplicateKey = createDuplicateKey({
-      branch: req.body.branch || extraction.branch || 'CSE',
+      branch: contributionBranch,
       semester: Number(req.body.semester || extraction.semester),
       normalizedSubject: String(req.body.subject || extraction.subject).toLowerCase(),
       subject: req.body.subject || extraction.subject,
@@ -1970,7 +2104,7 @@ app.post('/api/contributions', authenticate, adminUploadFields, async (req, res)
       contributorUserId: req.user._id,
       contributorName: req.user.username,
       contributorEmail: req.user.email || `${req.user.username}@iiitsurat.ac.in`,
-      branch: req.body.branch || extraction.branch || 'CSE',
+      branch: contributionBranch,
       semester: Number(req.body.semester || extraction.semester),
       subject: req.body.subject || extraction.subject,
       normalizedSubject: String(req.body.subject || extraction.subject).toLowerCase(),
@@ -1994,7 +2128,7 @@ app.post('/api/contributions', authenticate, adminUploadFields, async (req, res)
       contribution
     });
 
-    sendNtfyContributionNotification(contribution).catch((notifyError) => {
+    notifyAdminUpload({ kind: 'paper', title: contribution.subject || contribution.title, contributor: contribution.contributorName }).catch((notifyError) => {
       console.warn('Contribution ntfy notification failed:', notifyError.message);
     });
 
@@ -2194,7 +2328,7 @@ app.get('/api/admin/reports', authenticateAdmin, async (req, res) => {
 app.patch('/api/admin/reports/:id', authenticateAdmin, async (req, res) => {
   try {
     const { status, adminNote } = req.body;
-    if (!['open', 'reviewed', 'resolved'].includes(status)) {
+    if (!['open', 'reviewed', 'investigating', 'resolved', 'dismissed'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
@@ -2208,6 +2342,16 @@ app.patch('/api/admin/reports/:id', authenticateAdmin, async (req, res) => {
     res.json({ message: 'Report status updated successfully', report });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/reports/:id', authenticateAdmin, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid report ID' });
+  try {
+    const removed = await Report.findByIdAndDelete(req.params.id);
+    return removed ? res.json({ message: 'Report deleted' }) : res.status(404).json({ error: 'Report not found' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to delete report' });
   }
 });
 
@@ -2226,7 +2370,8 @@ app.post('/api/paper-requests', authenticate, async (req, res) => {
       subject: String(req.body.subject || '').trim(),
       subjectCode: String(req.body.subjectCode || '').trim(),
       shortCode: String(req.body.shortCode || '').trim(),
-      branch: String(req.body.branch || 'CSE').trim().toUpperCase(),
+      branch: normalizeBranch(req.body.branch) ||
+        (String(req.body.branch || '').trim().toUpperCase() === 'CSE & ECE' ? 'CSE & ECE' : null),
       semester: Number(req.body.semester),
       year: Number(req.body.year),
       examType: String(req.body.examType || '').trim()
@@ -2547,6 +2692,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     server: 'running',
     database: getDatabaseStatus(),
+    ready: getDatabaseStatus() === 'connected',
   });
 });
 
@@ -2587,32 +2733,15 @@ function normalizeMissingSubject(value) {
 }
 
 function parseBranchFromPaper(paper) {
-  const raw = `${paper.branch || ''} ${paper.title || ''}`.toUpperCase();
-
-  const hasCSE = raw.includes('CSE');
-  const hasECE = raw.includes('ECE');
-
-  if (hasCSE && hasECE) return 'CSE & ECE';
-  if (hasCSE) return 'CSE';
-  if (hasECE) return 'ECE';
-
-  return '';
+  const direct = normalizeBranchList(paper.branch);
+  if (direct.length) return direct.join(' & ');
+  return detectBranch(paper.title || '');
 }
 
 function branchMatchesExpected(expectedBranch, paperBranch) {
   if (!expectedBranch || !paperBranch) return false;
-
-  const expected = String(expectedBranch).toUpperCase().trim();
-  const paper = String(paperBranch).toUpperCase().trim();
-
-  if (expected === paper) return true;
-
-  // A common paper should count for both CSE and ECE.
-  if (paper === 'CSE & ECE' && (expected === 'CSE' || expected === 'ECE')) {
-    return true;
-  }
-
-  return false;
+  const expected = normalizeBranch(expectedBranch);
+  return Boolean(expected && normalizeBranchList(paperBranch).includes(expected));
 }
 
 function getPaperSemester(paper) {
@@ -2795,6 +2924,10 @@ app.get('/api/missing-papers', async (req, res) => {
       item.requestKey = buildPaperRequestKey(item);
       item.requestCount = request?.requestCount || 0;
       item.requestStatus = request?.status || 'open';
+      Object.assign(item, getPaperBounty({
+        requestCount: item.requestCount,
+        priority: item.priority
+      }));
     });
 
     const summary = {
@@ -2804,7 +2937,10 @@ app.get('/api/missing-papers', async (req, res) => {
       lowPriority: missingPapers.filter((item) => item.priority === 'Low').length,
       yearsTracked: EXPECTED_YEARS,
       examTypesTracked: EXPECTED_EXAM_TYPES,
-      uploadedPapersChecked: papers.length
+      uploadedPapersChecked: papers.length,
+      totalRequests: missingPapers.reduce((sum, item) => sum + Number(item.requestCount || 0), 0),
+      hotBounties: missingPapers.filter((item) => item.demandLevel === 'hot' || item.demandLevel === 'high').length,
+      maxRewardXp: Math.max(0, ...missingPapers.map((item) => Number(item.rewardXp || 0)))
     };
 
     res.json({

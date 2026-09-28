@@ -1,0 +1,94 @@
+/* The longer signup form uses the shared login canvas and scrolls when needed. */
+.auth-page-register {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.auth-page-register .auth-shell {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.auth-page-register .auth-card.auth-form-card {
+  max-height: none;
+}
+
+.auth-page-register .auth-form > label,
+.auth-page-register .sem-select-container > label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  color: var(--auth-strong);
+  font-size: 0.85rem;
+  font-weight: 750;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.auth-page-register .sem-select-container {
+  gap: 6px;
+}
+
+@media (max-width: 900px) {
+  .auth-page-register .auth-shell {
+    width: min(100% - 28px, 560px);
+    grid-template-columns: 1fr;
+    padding: 18px 0 34px;
+  }
+
+  .auth-page-register .auth-brand-panel {
+    display: none;
+  }
+
+  .auth-page-register .auth-form-panel {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .auth-page-register .auth-card.auth-form-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .auth-shell {
+    display: flex;
+    flex-direction: column;
+    width: calc(100% - 24px);
+    max-width: 480px;
+  }
+
+  .auth-brand-panel {
+    display: none;
+  }
+
+  .auth-form-panel {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .auth-page .auth-card.auth-form-card {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 16px;
+  }
+
+  .auth-page .google-auth-wrap,
+  .auth-page .google-login-wrapper {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-page-register .auth-shell {
+    width: calc(100% - 20px);
+    padding-top: 10px;
+  }
+}

@@ -2,6 +2,9 @@ const Contribution = require('../models/Contribution');
 const Paper = require('../models/Paper');
 const User = require('../models/User');
 const PaperRequest = require('../models/PaperRequest');
+const ResourceContribution = require('../models/ResourceContribution');
+const QuestionSolution = require('../models/QuestionSolution');
+const { resourcePointRules } = require('../utils/resourceContributionPoints');
 const {
   XP_RULES,
   calculateContributorXp,
@@ -51,19 +54,29 @@ function publicRecentContribution(contribution, paper) {
 }
 
 async function buildContributorProfiles() {
-  const contributions = await Contribution.find({ status: 'approved' })
-    .sort({ approvedAt: -1, createdAt: -1 })
-    .lean();
+  const [contributions, resourceContributions, questionSolutions] = await Promise.all([
+    Contribution.find({ status: 'approved' })
+      .sort({ approvedAt: -1, createdAt: -1 })
+      .lean(),
+    ResourceContribution.find({ status: 'approved' })
+      .sort({ approvedAt: -1, createdAt: -1 })
+      .lean(),
+    QuestionSolution.find({ status: 'approved' }).select('authorUserId authorName approvedAt').lean(),
+  ]);
 
-  if (!contributions.length) return [];
+  if (!contributions.length && !resourceContributions.length && !questionSolutions.length) return [];
 
-  const userIds = Array.from(new Set(contributions.map((item) => stringId(item.contributorUserId)).filter(Boolean)));
+  const userIds = Array.from(new Set([
+    ...contributions.map((item) => stringId(item.contributorUserId)),
+    ...resourceContributions.map((item) => stringId(item.contributorUserId)),
+    ...questionSolutions.map((item) => stringId(item.authorUserId)),
+  ].filter(Boolean)));
   const approvedPaperIds = Array.from(new Set(contributions.map((item) => stringId(item.approvedPaperId)).filter(Boolean)));
   const contributionIds = contributions.map((item) => item._id);
 
   const [users, papers] = await Promise.all([
     userIds.length
-      ? User.find({ _id: { $in: userIds } }).select('username avatar semester currentSemester').lean()
+      ? User.find({ _id: { $in: userIds } }).select('username displayName avatar semester currentSemester').lean()
       : [],
     Paper.find({
       $or: [
@@ -99,16 +112,20 @@ async function buildContributorProfiles() {
     if (!grouped.has(userId)) {
       grouped.set(userId, {
         userId,
-        name: user?.username || contribution.contributorName || 'Contributor',
+        name: user?.displayName || user?.username || contribution.contributorName || 'Contributor',
         avatar: user?.avatar || '',
         semester: user?.semester ?? user?.currentSemester ?? null,
         approvedPapers: 0,
         approvedSolutions: 0,
+        approvedResources: 0,
+        resourceXp: 0,
+        resourceBreakdown: {},
         fulfilledRequests: 0,
         requestDemandServed: 0,
         impactViews: 0,
         impactDownloads: 0,
         recentContributions: [],
+        recentResources: [],
       });
     }
 
@@ -128,6 +145,75 @@ async function buildContributorProfiles() {
     profile.recentContributions.push(publicRecentContribution(contribution, paper));
   });
 
+
+  resourceContributions.forEach((contribution) => {
+    const userId = stringId(contribution.contributorUserId);
+    if (!userId) return;
+
+    const user = userMap.get(userId);
+
+    if (!grouped.has(userId)) {
+      grouped.set(userId, {
+        userId,
+        name: user?.displayName || user?.username || contribution.contributorName || 'Contributor',
+        avatar: user?.avatar || '',
+        semester: user?.semester ?? user?.currentSemester ?? null,
+        approvedPapers: 0,
+        approvedSolutions: 0,
+        approvedResources: 0,
+        resourceXp: 0,
+        resourceBreakdown: {},
+        fulfilledRequests: 0,
+        requestDemandServed: 0,
+        impactViews: 0,
+        impactDownloads: 0,
+        recentContributions: [],
+        recentResources: [],
+      });
+    }
+
+    const profile = grouped.get(userId);
+    const points = Number(contribution.pointsAwarded || contribution.basePoints || 0);
+
+    profile.approvedResources += 1;
+    profile.resourceXp += points;
+    profile.resourceBreakdown[contribution.kind] =
+      Number(profile.resourceBreakdown[contribution.kind] || 0) + 1;
+
+    profile.recentResources = profile.recentResources || [];
+    profile.recentResources.push({
+      contributionId: stringId(contribution._id),
+      resourceId: stringId(contribution.approvedResourceId),
+      title: contribution.title || 'Resource',
+      kind: contribution.kind || 'other',
+      subject: contribution.subjectName || '',
+      subjectKey: contribution.subjectKey || '',
+      subjectCode: contribution.subjectCode || '',
+      branch: (contribution.branches || []).join(' / '),
+      semester: contribution.semesters?.[0] || null,
+      year: contribution.year || null,
+      examType: contribution.examType || '',
+      pointsAwarded: points,
+      approvedAt: contribution.approvedAt || contribution.updatedAt,
+    });
+  });
+
+  questionSolutions.forEach((solution) => {
+    const userId = stringId(solution.authorUserId);
+    if (!userId) return;
+    if (!grouped.has(userId)) {
+      const user = userMap.get(userId);
+      grouped.set(userId, {
+        userId, name: user?.displayName || user?.username || solution.authorName || 'Contributor',
+        avatar: user?.avatar || '', semester: user?.semester ?? user?.currentSemester ?? null,
+        approvedPapers: 0, approvedSolutions: 0, approvedResources: 0, resourceXp: 0,
+        resourceBreakdown: {}, fulfilledRequests: 0, requestDemandServed: 0,
+        impactViews: 0, impactDownloads: 0, recentContributions: [], recentResources: [],
+      });
+    }
+    grouped.get(userId).approvedSolutions += 1;
+  });
+
   const profiles = Array.from(grouped.values()).map((profile) => ({
     ...profile,
     xp: calculateContributorXp(profile),
@@ -141,6 +227,9 @@ async function buildContributorProfiles() {
       ...profile,
       rank: index + 1,
       recentContributions: profile.recentContributions
+        .sort((a, b) => new Date(b.approvedAt || 0) - new Date(a.approvedAt || 0))
+        .slice(0, 12),
+      recentResources: (profile.recentResources || [])
         .sort((a, b) => new Date(b.approvedAt || 0) - new Date(a.approvedAt || 0))
         .slice(0, 12),
     };
@@ -167,6 +256,10 @@ function toLeaderboardItem(profile) {
     approvedCount: profile.approvedPapers,
     approvedSolutions: profile.approvedSolutions,
     solutionCount: profile.approvedSolutions,
+    approvedResources: profile.approvedResources || 0,
+    resourceCount: profile.approvedResources || 0,
+    resourceXp: profile.resourceXp || 0,
+    resourceBreakdown: profile.resourceBreakdown || {},
     fulfilledRequests: profile.fulfilledRequests,
     requestDemandServed: profile.requestDemandServed,
     impactViews: profile.impactViews,
@@ -198,6 +291,15 @@ async function getOwnContributorProfile(userId) {
   ]);
   const privateStats = Object.fromEntries(statusCounts.map((item) => [item._id, item.count]));
 
+  const resourceStatusCounts = await ResourceContribution.aggregate([
+    { $match: { contributorUserId: user._id } },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ]);
+
+  const privateResourceStats = Object.fromEntries(
+    resourceStatusCounts.map((item) => [item._id, item.count])
+  );
+
   if (profile) {
     return {
       ...profile,
@@ -207,13 +309,16 @@ async function getOwnContributorProfile(userId) {
         needsCorrection: Number(privateStats.needs_correction || 0),
         rejected: Number(privateStats.rejected || 0),
         duplicate: Number(privateStats.duplicate || 0),
+        resourcePending: Number(privateResourceStats.pending || 0),
+        resourceNeedsCorrection: Number(privateResourceStats.needs_correction || 0),
+        resourceRejected: Number(privateResourceStats.rejected || 0),
       },
     };
   }
 
   const empty = {
     userId: stringId(user._id),
-    name: user.username || 'Contributor',
+    name: user.displayName || user.username || 'Contributor',
     avatar: user.avatar || '',
     semester: user.semester ?? user.currentSemester ?? null,
     rank: null,
@@ -221,12 +326,16 @@ async function getOwnContributorProfile(userId) {
     totalImpact: 0,
     approvedPapers: 0,
     approvedSolutions: 0,
+    approvedResources: 0,
+    resourceXp: 0,
+    resourceBreakdown: {},
     fulfilledRequests: 0,
     requestDemandServed: 0,
     impactViews: 0,
     impactDownloads: 0,
     badges: [],
     recentContributions: [],
+    recentResources: [],
     nextXpMilestone: 100,
   };
 
@@ -238,6 +347,9 @@ async function getOwnContributorProfile(userId) {
       needsCorrection: Number(privateStats.needs_correction || 0),
       rejected: Number(privateStats.rejected || 0),
       duplicate: Number(privateStats.duplicate || 0),
+      resourcePending: Number(privateResourceStats.pending || 0),
+      resourceNeedsCorrection: Number(privateResourceStats.needs_correction || 0),
+      resourceRejected: Number(privateResourceStats.rejected || 0),
     },
   };
 }
@@ -245,10 +357,12 @@ async function getOwnContributorProfile(userId) {
 function getXpRules() {
   return {
     rules: XP_RULES,
+    resourceRules: resourcePointRules(),
     labels: {
       APPROVED_PAPER: 'Approved question paper',
       APPROVED_SOLUTION: 'Solution included',
       FULFILLED_REQUEST: 'Requested/missing paper fulfilled',
+      RESOURCE_POINTS: 'Approved subject resource points',
     },
   };
 }

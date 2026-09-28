@@ -1,0 +1,341 @@
+const {
+  evaluateLocalBatch,
+  questionMarks,
+  questionTopics,
+  roundHalf,
+  summarizeEvaluations,
+} = require('./mockEvaluationService');
+
+const DEFAULT_MODEL =
+  'gemini-3.5-flash-lite';
+
+function evaluationAiModel() {
+  return (
+    process.env.MOCK_EVALUATION_AI_MODEL ||
+    process.env.MOCK_AI_MODEL ||
+    process.env.ASK_PAPERSTACK_GEMINI_MODEL ||
+    process.env.GEMINI_MODEL ||
+    DEFAULT_MODEL
+  );
+}
+
+function evaluationAiEnabled() {
+  if (!process.env.GEMINI_API_KEY) {
+    return false;
+  }
+
+  if (
+    process.env.MOCK_EVALUATION_AI_ENABLED === 'false'
+  ) {
+    return false;
+  }
+
+  return Boolean(
+    process.env.MOCK_EVALUATION_AI_ENABLED === 'true' ||
+    process.env.MOCK_AI_ENABLED === 'true' ||
+    process.env.ASK_PAPERSTACK_AI_ENABLED === 'true' ||
+    process.env.SMART_AI_ENABLED === 'true'
+  );
+}
+
+function sleep(ms) {
+  return new Promise(
+    (resolve) => setTimeout(resolve, ms)
+  );
+}
+
+async function fetchWithRetry(url, options) {
+  const delays = [0, 1200, 3000];
+  let lastError;
+
+  for (
+    let index = 0;
+    index < delays.length;
+    index += 1
+  ) {
+    if (delays[index]) {
+      await sleep(delays[index]);
+    }
+
+    try {
+      const response = await fetch(url, options);
+
+      if (response.ok) {
+        return response;
+      }
+
+      const body = await response.text();
+
+      if (
+        response.status !== 429 &&
+        response.status !== 503
+      ) {
+        throw new Error(
+          `Gemini request failed: ${response.status} ${body}`
+        );
+      }
+
+      lastError = new Error(
+        `Gemini temporarily unavailable: ${response.status}`
+      );
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Gemini request failed');
+}
+
+function parseJsonFromText(text = '') {
+  const raw = String(text || '').trim();
+
+  if (!raw) {
+    throw new Error('Gemini returned an empty evaluation');
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {}
+
+  const fenced = raw.match(
+    /```(?:json)?\s*([\s\S]*?)```/i
+  );
+
+  if (fenced?.[1]) {
+    return JSON.parse(fenced[1].trim());
+  }
+
+  const first = raw.indexOf('{');
+  const last = raw.lastIndexOf('}');
+
+  if (first !== -1 && last > first) {
+    return JSON.parse(
+      raw.slice(first, last + 1)
+    );
+  }
+
+  throw new Error('Gemini did not return valid JSON');
+}
+
+function promptItem(item = {}) {
+  const question = item.question || {};
+  const approvedSolutions = item.approvedSolutions || [];
+
+  return {
+    questionId: String(question._id || ''),
+    question: question.questionText || '',
+    marks: questionMarks(question),
+    questionType: question.questionType || '',
+    topics: questionTopics(question),
+    studentAnswer: String(item.answerText || '').slice(0, 8000),
+    approvedReferenceSolutions: approvedSolutions
+      .slice(0, 2)
+      .map((solution) => String(solution.answerText || '').slice(0, 5000)),
+  };
+}
+
+function validateAiEvaluations(payload, items, localFallback) {
+  const sourceItems = Array.isArray(payload?.items)
+    ? payload.items
+    : [];
+
+  const sourceById = new Map(
+    sourceItems.map((item) => [
+      String(item.questionId || ''),
+      item,
+    ])
+  );
+
+  const localById = new Map(
+    localFallback.items.map((item) => [
+      String(item.questionId),
+      item,
+    ])
+  );
+
+  const evaluations = items.map((entry) => {
+    const questionId = String(entry.question._id || '');
+    const local = localById.get(questionId);
+    const ai = sourceById.get(questionId);
+
+    if (!ai) {
+      return local;
+    }
+
+    const maxMarks = questionMarks(entry.question);
+
+    const rawScore = Number(ai.score);
+    const score = Number.isFinite(rawScore)
+      ? Math.max(0, Math.min(maxMarks, roundHalf(rawScore)))
+      : local.score;
+
+    const rawAccuracy = Number(ai.estimatedAccuracy);
+    const estimatedAccuracy = Number.isFinite(rawAccuracy)
+      ? Math.max(0, Math.min(100, Math.round(rawAccuracy)))
+      : Math.round((score / maxMarks) * 100);
+
+    return {
+      questionId,
+      score,
+      maxMarks,
+      estimatedAccuracy,
+      feedback:
+        String(ai.feedback || '').trim() ||
+        local.feedback,
+      strengths:
+        Array.isArray(ai.strengths)
+          ? ai.strengths.map(String).slice(0, 5)
+          : local.strengths,
+      missingPoints:
+        Array.isArray(ai.missingPoints)
+          ? ai.missingPoints.map(String).slice(0, 6)
+          : local.missingPoints,
+      nextStep:
+        String(ai.nextStep || '').trim() ||
+        local.nextStep,
+      confidence:
+        ['low', 'medium', 'high'].includes(ai.confidence)
+          ? ai.confidence
+          : (
+              entry.approvedSolutions?.length
+                ? 'medium'
+                : 'low'
+            ),
+      referenceBasis:
+        entry.approvedSolutions?.length
+          ? 'Gemini + approved student solution + question context'
+          : 'Gemini + question/topic context',
+      diagnostics: local.diagnostics,
+    };
+  });
+
+  return {
+    evaluations,
+    overallFeedback:
+      String(payload?.overallFeedback || '').trim(),
+  };
+}
+
+async function requestAiEvaluation(items = []) {
+  const model = evaluationAiModel();
+
+  const compact = items.map(promptItem);
+
+  const prompt = [
+    'You are a practice-exam evaluator for PaperStack.',
+    'Score each student answer fairly and conservatively.',
+    'This is NOT official grading. It is formative practice feedback.',
+    'Use approved reference solutions when provided. If none are provided, use your academic knowledge plus the question/topic context.',
+    'Do not reward length alone. Check correctness, reasoning, completeness, method, and whether the answer satisfies the command word.',
+    'Never assign more than the question marks.',
+    'estimatedAccuracy is a 0-100 estimate of correctness/completeness, not a probability.',
+    '',
+    'Return JSON only in this exact shape:',
+    '{"items":[{"questionId":"...","score":3.5,"estimatedAccuracy":70,"feedback":"...","strengths":["..."],"missingPoints":["..."],"nextStep":"...","confidence":"low|medium|high"}],"overallFeedback":"..."}',
+    '',
+    'Questions and answers:',
+    JSON.stringify(compact),
+  ].join('\n');
+
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
+
+  const response = await fetchWithRetry(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 5000,
+          responseMimeType: 'application/json',
+        },
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  const text =
+    data?.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text)
+      .join('\n') || '';
+
+  return {
+    model,
+    payload: parseJsonFromText(text),
+  };
+}
+
+async function evaluateBatchWithMode(
+  items = [],
+  mode = 'local'
+) {
+  const local = evaluateLocalBatch(items);
+
+  if (mode !== 'ai') {
+    return local;
+  }
+
+  if (!evaluationAiEnabled()) {
+    return {
+      ...local,
+      warnings: [
+        'AI evaluation was requested, but Gemini is not configured. PaperStack used the local evaluator.',
+      ],
+    };
+  }
+
+  try {
+    const ai = await requestAiEvaluation(items);
+
+    const validated = validateAiEvaluations(
+      ai.payload,
+      items,
+      local
+    );
+
+    const summary = summarizeEvaluations(
+      validated.evaluations
+    );
+
+    return {
+      mode: 'ai',
+      model: ai.model,
+      warnings: [],
+      items: validated.evaluations,
+      ...summary,
+      overallFeedback:
+        validated.overallFeedback ||
+        summary.overallFeedback,
+    };
+  } catch (error) {
+    return {
+      ...local,
+      warnings: [
+        `AI evaluation was unavailable, so PaperStack used local scoring. (${error.message})`,
+      ],
+    };
+  }
+}
+
+module.exports = {
+  DEFAULT_MODEL,
+  evaluateBatchWithMode,
+  evaluationAiEnabled,
+  evaluationAiModel,
+  fetchWithRetry,
+  parseJsonFromText,
+  promptItem,
+  requestAiEvaluation,
+  validateAiEvaluations,
+};

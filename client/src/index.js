@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import ErrorBoundary from './components/ErrorState';
 import reportWebVitals from './reportWebVitals';
 import { HelmetProvider } from 'react-helmet-async';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -20,7 +21,7 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 const app = (
   <>
     <HelmetProvider>
-      <App />
+      <ErrorBoundary><App /></ErrorBoundary>
     </HelmetProvider>
   </>
 );

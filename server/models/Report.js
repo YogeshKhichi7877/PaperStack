@@ -4,26 +4,21 @@ const reportSchema = new mongoose.Schema({
   paperId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Paper',
-    required: true,
     index: true
   },
   paperTitle: {
-    type: String,
-    required: true
+    type: String
   },
   reporterUserId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
     index: true
   },
   reporterName: {
-    type: String,
-    required: true
+    type: String
   },
   reporterEmail: {
-    type: String,
-    required: true
+    type: String
   },
   reason: {
     type: String,
@@ -36,8 +31,7 @@ const reportSchema = new mongoose.Schema({
       'Duplicate paper',
       'Solution missing',
       'Other'
-    ],
-    required: true
+    ]
   },
   message: {
     type: String,
@@ -45,14 +39,19 @@ const reportSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['open', 'reviewed', 'resolved'],
+    enum: ['open', 'reviewed', 'investigating', 'resolved', 'dismissed'],
     default: 'open',
     index: true
   },
   adminNote: {
     type: String,
     default: ''
-  }
+  },
+  category: { type: String, maxlength: 50, default: '' },
+  title: { type: String, maxlength: 120, default: '' },
+  page: { type: String, maxlength: 120, default: '' },
+  url: { type: String, maxlength: 300, default: '' },
+  relatedId: { type: String, maxlength: 80, default: '' }
 }, {
   timestamps: true
 });

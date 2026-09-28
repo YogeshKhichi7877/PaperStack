@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
     index: true
   },
   password: { type: String },
+  displayName: { type: String, trim: true, maxlength: 60 },
   currentSemester: {
     type: mongoose.Schema.Types.Mixed,
     default: null
@@ -35,6 +36,7 @@ const userSchema = new mongoose.Schema({
     default: 'local'
   },
   avatar: String,
+  avatarPublicId: String,
   emailVerified: {
     type: Boolean,
     default: false

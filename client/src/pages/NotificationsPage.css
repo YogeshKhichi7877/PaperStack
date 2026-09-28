@@ -1,0 +1,260 @@
+.nt-page {
+  min-height: 74vh;
+  padding: 38px 20px 72px;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(33,128,141,.10), transparent 28%),
+    radial-gradient(circle at 91% 12%, rgba(230,129,97,.06), transparent 28%);
+}
+
+.nt-shell {
+  width: min(1050px, 100%);
+  margin: 0 auto;
+}
+
+.nt-hero {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 230px;
+  gap: 20px;
+  padding: 29px;
+  border: 1px solid rgba(33,128,141,.18);
+  border-radius: 24px;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 18px 52px rgba(18,84,91,.07);
+}
+
+.nt-hero > div:first-child > span {
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.nt-hero h1 {
+  margin-top: 7px;
+  font-size: clamp(31px, 4.7vw, 50px);
+  line-height: 1.04;
+}
+
+.nt-hero p {
+  max-width: 690px;
+  margin-top: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.nt-unread {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 18px;
+  border-radius: 17px;
+  background: rgba(33,128,141,.08);
+}
+
+.nt-unread strong {
+  font-size: 42px;
+}
+
+.nt-unread span {
+  color: var(--color-primary);
+  font-weight: 850;
+}
+
+.nt-unread p {
+  margin: 5px 0 0;
+  font-size: 9px;
+}
+
+.nt-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 13px;
+  background: rgba(255,255,255,.78);
+}
+
+.nt-toolbar > div {
+  display: flex;
+  gap: 6px;
+}
+
+.nt-toolbar button {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.nt-toolbar button.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: white;
+}
+
+.nt-toolbar button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.nt-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.nt-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0,1fr);
+  gap: 11px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: rgba(255,255,255,.80);
+}
+
+.nt-item.unread {
+  border-color: rgba(33,128,141,.28);
+  box-shadow: 0 8px 26px rgba(18,84,91,.04);
+}
+
+.nt-item.read {
+  opacity: .68;
+}
+
+.nt-dot {
+  padding-top: 4px;
+}
+
+.nt-dot span {
+  width: 9px;
+  height: 9px;
+  display: block;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.nt-item.warning .nt-dot span {
+  background: #e68161;
+}
+
+.nt-item.info .nt-dot span {
+  background: #7a8d91;
+}
+
+.nt-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nt-meta span {
+  color: var(--color-primary);
+  font-size: 8px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.nt-meta time {
+  color: var(--color-text-secondary);
+  font-size: 8px;
+}
+
+.nt-content h2 {
+  margin-top: 5px;
+  font-size: 15px;
+}
+
+.nt-content > p {
+  margin: 5px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.nt-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.nt-actions a,
+.nt-actions button {
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.nt-actions a {
+  background: var(--color-primary);
+  color: white;
+}
+
+.nt-actions button {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.nt-state {
+  margin-top: 14px;
+  padding: 55px 20px;
+  border: 1px dashed var(--color-border);
+  border-radius: 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.nt-state p {
+  margin: 7px auto 13px;
+  max-width: 500px;
+}
+
+.nt-state a {
+  display: inline-block;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--color-primary);
+  color: white;
+  font-weight: 850;
+}
+
+.nt-footnote {
+  margin-top: 13px;
+  padding: 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.68);
+}
+
+.nt-footnote p {
+  margin: 5px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 680px) {
+  .nt-page {
+    padding: 22px 12px 56px;
+  }
+
+  .nt-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .nt-toolbar,
+  .nt-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

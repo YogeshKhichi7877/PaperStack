@@ -4,6 +4,6 @@ export function authHeader() {
 }
 
 export function adminHeader() {
-  const token = localStorage.getItem('adminToken');
+  const token = sessionStorage.getItem('adminToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

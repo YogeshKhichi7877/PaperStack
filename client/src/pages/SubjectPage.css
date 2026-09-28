@@ -35,13 +35,6 @@
   box-shadow: 0 24px 70px rgba(16, 24, 40, 0.08);
 }
 
-body.dark .subject-hub-hero {
-  background:
-    radial-gradient(circle at 86% 12%, rgba(56, 215, 212, 0.12), transparent 36%),
-    linear-gradient(135deg, rgba(15, 159, 159, 0.13), rgba(14, 20, 27, 0.96));
-  border-color: rgba(56, 215, 212, 0.19);
-}
-
 .subject-hub-eyebrow,
 .subject-hub-section-heading > div > span,
 .subject-hub-bottom-cta > div > span {
@@ -133,12 +126,6 @@ body.dark .subject-hub-hero {
   color: #087878;
 }
 
-body.dark .subject-hub-secondary-action,
-body.dark .subject-hub-error-card a {
-  background: rgba(255, 255, 255, 0.05);
-  color: #71e4e1;
-}
-
 .subject-hub-hero-actions a:hover,
 .subject-hub-bottom-cta > a:hover,
 .subject-hub-empty a:hover { transform: translateY(-2px); }
@@ -151,8 +138,6 @@ body.dark .subject-hub-error-card a {
   border: 1px solid rgba(15, 159, 159, 0.13);
   backdrop-filter: blur(12px);
 }
-
-body.dark .subject-hub-overview-card { background: rgba(7, 13, 18, 0.66); }
 
 .subject-hub-overview-card > span {
   color: var(--color-text-secondary, #667085);
@@ -492,17 +477,6 @@ body.dark .subject-hub-overview-card { background: rgba(7, 13, 18, 0.66); }
   color: #087878;
   font-weight: 800;
   cursor: pointer;
-}
-
-body.dark .subject-hub-page,
-body.dark .subject-hub-resource-card,
-body.dark .subject-hub-stat-strip > div,
-body.dark .subject-hub-intelligence-grid article,
-body.dark .subject-hub-tabs button,
-body.dark .subject-hub-filter-bar input,
-body.dark .subject-hub-filter-bar select,
-body.dark .subject-hub-filter-bar button {
-  color-scheme: dark;
 }
 
 @media (max-width: 980px) {

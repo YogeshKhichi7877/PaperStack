@@ -2,7 +2,7 @@
 /* eslint-env serviceworker */
 /* global self, caches, URL */
 
-const CACHE_NAME = 'paperstack-pwa-v2';
+const CACHE_NAME = 'paperstack-pwa-v3';
 
 const STATIC_ASSETS = [
   '/',
@@ -76,20 +76,20 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(request).then((response) => {
-        if (!response || !response.ok) return response;
-
-        const responseClone = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseClone).catch(() => {});
-        });
-
+    fetch(request)
+      .then((response) => {
+        if (response?.ok) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone).catch(() => {});
+          });
+        }
         return response;
-      });
-    })
+      })
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        throw new Error('Resource unavailable offline');
+      })
   );
 });

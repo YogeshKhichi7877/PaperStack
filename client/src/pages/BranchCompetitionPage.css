@@ -1,0 +1,2007 @@
+/* =========================================================
+   PAPERSTACK — IIIT SURAT ARCHIVE LEAGUE
+
+   Identity:
+   campus inter-branch league table / sports standings
+
+   Official branches represented:
+   - CSE
+   - CSE (AI-ML)
+   - Cyber Security
+   - Mathematics and Computing
+   - ECE
+
+   Deliberately avoids:
+   - generic SaaS cards
+   - giant rounded hero containers
+   - glassmorphism
+   - repetitive dashboard layout
+========================================================= */
+
+.bc-page {
+  --bc-primary: #0b8990;
+  --bc-primary-dark: #086169;
+  --bc-primary-soft: #e5f4f3;
+
+  --bc-ink: #143749;
+  --bc-text: #4c6875;
+  --bc-muted: #778b94;
+
+  --bc-border: #d4e5e6;
+  --bc-border-strong: #bad8da;
+
+  --bc-paper: #ffffff;
+  --bc-soft: #f7fbfb;
+
+  --bc-gold: #b88b2c;
+  --bc-gold-soft: #fff8e8;
+
+  min-height: 74vh;
+
+  padding:
+    24px
+    clamp(14px, 2.2vw, 34px)
+    75px;
+
+  background:
+    #f4fbfb;
+
+  color:
+    var(--bc-ink);
+}
+
+.bc-page * {
+  box-sizing: border-box;
+}
+
+.bc-shell {
+  width:
+    min(
+      1500px,
+      100%
+    );
+
+  margin: 0 auto;
+}
+
+.bc-page button,
+.bc-page input,
+.bc-page select {
+  font: inherit;
+}
+
+.bc-page a {
+  text-decoration: none;
+}
+
+/* =========================================================
+   LEAGUE HEADER
+
+   Editorial / tournament-poster feel.
+========================================================= */
+
+.bc-header {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.55fr)
+    330px;
+
+  gap: 52px;
+
+  align-items: end;
+
+  padding:
+    31px 4px
+    35px;
+
+  border-top:
+    1px solid
+    var(--bc-border);
+
+  border-bottom:
+    1px solid
+    var(--bc-border);
+}
+
+.bc-header-copy {
+  max-width: 920px;
+}
+
+.bc-kicker {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  color:
+    var(--bc-primary);
+
+  font-size: 10px;
+
+  font-weight: 900;
+
+  letter-spacing: .1em;
+
+  text-transform: uppercase;
+}
+
+.bc-header h1 {
+  margin:
+    13px 0 0;
+
+  color:
+    var(--bc-ink);
+
+  font-size:
+    clamp(
+      44px,
+      5.7vw,
+      74px
+    );
+
+  font-weight: 900;
+
+  line-height: .95;
+
+  letter-spacing:
+    -.053em;
+}
+
+.bc-header h1 span {
+  color:
+    var(--bc-primary);
+}
+
+.bc-header-copy > p {
+  max-width: 760px;
+
+  margin:
+    17px 0 0;
+
+  color:
+    var(--bc-text);
+
+  font-size: 14px;
+
+  line-height: 1.6;
+}
+
+/* =========================================================
+   BRANCH CHIPS
+
+   Small and restrained.
+========================================================= */
+
+.bc-official-branches {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  margin-top: 19px;
+}
+
+.bc-official-branches span {
+  display: inline-flex;
+
+  align-items: center;
+
+  min-height: 26px;
+
+  padding: 0 8px;
+
+  border:
+    1px solid
+    var(--bc-border-strong);
+
+  border-radius: 3px;
+
+  background:
+    #fbfefe;
+
+  color:
+    var(--bc-primary-dark);
+
+  font-size: 7px;
+
+  font-weight: 850;
+
+  letter-spacing: .025em;
+}
+
+/* =========================================================
+   SEASON BOARD
+========================================================= */
+
+.bc-season-board {
+  padding:
+    14px 15px 15px;
+
+  border-top:
+    3px solid
+    var(--bc-primary);
+
+  border-bottom:
+    1px solid
+    var(--bc-border);
+
+  background:
+    var(--bc-paper);
+}
+
+.bc-season-board > header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content:
+    space-between;
+
+  color:
+    var(--bc-primary);
+}
+
+.bc-season-board
+  > header
+  span {
+  color:
+    var(--bc-muted);
+
+  font-size: 7px;
+
+  font-weight: 900;
+
+  letter-spacing: .07em;
+
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   PERIOD
+========================================================= */
+
+.bc-season-period {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      1fr
+    );
+
+  margin-top: 12px;
+
+  border:
+    1px solid
+    var(--bc-border);
+}
+
+.bc-season-period button {
+  min-height: 33px;
+
+  padding: 0 7px;
+
+  border: 0;
+
+  border-right:
+    1px solid
+    var(--bc-border);
+
+  background:
+    white;
+
+  color:
+    var(--bc-muted);
+
+  cursor: pointer;
+
+  font-size: 7px;
+
+  font-weight: 800;
+}
+
+.bc-season-period
+  button:last-child {
+  border-right: 0;
+}
+
+.bc-season-period
+  button.active {
+  background:
+    var(--bc-primary);
+
+  color: white;
+}
+
+/* =========================================================
+   SEASON LEADER
+========================================================= */
+
+.bc-season-leader {
+  margin-top: 15px;
+
+  padding-bottom: 12px;
+
+  border-bottom:
+    1px dashed
+    var(--bc-border-strong);
+}
+
+.bc-season-leader
+  > span {
+  color:
+    var(--bc-muted);
+
+  font-size: 6.5px;
+
+  text-transform: uppercase;
+}
+
+.bc-season-leader
+  > strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color:
+    var(--bc-primary);
+
+  font-size: 36px;
+
+  font-weight: 900;
+
+  line-height: 1;
+}
+
+.bc-season-leader > p {
+  margin:
+    4px 0 0;
+
+  color:
+    var(--bc-text);
+
+  font-size: 7px;
+
+  line-height: 1.35;
+}
+
+.bc-season-total {
+  display: flex;
+
+  align-items: baseline;
+
+  justify-content:
+    space-between;
+
+  gap: 10px;
+
+  margin-top: 10px;
+}
+
+.bc-season-total span {
+  color:
+    var(--bc-muted);
+
+  font-size: 7px;
+}
+
+.bc-season-total strong {
+  color:
+    var(--bc-ink);
+
+  font-size: 17px;
+
+  font-weight: 900;
+}
+
+/* =========================================================
+   SCORING RULE STRIP
+========================================================= */
+
+.bc-rules {
+  display: grid;
+
+  grid-template-columns:
+    minmax(
+      220px,
+      .85fr
+    )
+    minmax(
+      0,
+      2.15fr
+    );
+
+  gap: 25px;
+
+  align-items: center;
+
+  margin-top: 17px;
+
+  padding:
+    11px 0;
+
+  border-top:
+    1px solid
+    var(--bc-border);
+
+  border-bottom:
+    1px solid
+    var(--bc-border);
+}
+
+.bc-rules-title span,
+.bc-rules-title strong {
+  display: block;
+}
+
+.bc-rules-title span {
+  color:
+    var(--bc-primary);
+
+  font-size: 7px;
+
+  font-weight: 900;
+
+  letter-spacing: .07em;
+
+  text-transform: uppercase;
+}
+
+.bc-rules-title strong {
+  margin-top: 3px;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 10px;
+}
+
+.bc-rule-items {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      1fr
+    );
+
+  border-left:
+    1px solid
+    var(--bc-border);
+}
+
+.bc-rule-items > div {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  min-height: 38px;
+
+  padding:
+    4px 14px;
+
+  border-right:
+    1px solid
+    var(--bc-border);
+
+  color:
+    var(--bc-primary);
+}
+
+.bc-rule-items span {
+  color:
+    var(--bc-muted);
+
+  font-size: 7px;
+}
+
+.bc-rule-items strong {
+  display: block;
+
+  margin-bottom: 1px;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 9px;
+}
+
+/* =========================================================
+   SUMMARY STRIP
+
+   One ledger instead of individual stat cards.
+========================================================= */
+
+.bc-summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      5,
+      1fr
+    );
+
+  margin-top: 18px;
+
+  border:
+    1px solid
+    var(--bc-border);
+
+  background:
+    var(--bc-paper);
+}
+
+.bc-summary > div {
+  min-width: 0;
+
+  padding:
+    11px 13px;
+
+  border-right:
+    1px solid
+    var(--bc-border);
+}
+
+.bc-summary
+  > div:last-child {
+  border-right: 0;
+}
+
+.bc-summary span {
+  display: block;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 6.5px;
+
+  font-weight: 850;
+
+  text-transform: uppercase;
+}
+
+.bc-summary strong {
+  display: block;
+
+  margin-top: 3px;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 21px;
+
+  font-weight: 900;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+/* =========================================================
+   SECTIONS
+========================================================= */
+
+.bc-league-section,
+.bc-squads {
+  margin-top: 42px;
+}
+
+.bc-section-heading {
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content:
+    space-between;
+
+  gap: 18px;
+
+  padding-bottom: 11px;
+
+  border-bottom:
+    1px solid
+    var(--bc-border);
+
+  color:
+    var(--bc-primary);
+}
+
+.bc-section-heading
+  > div
+  > span {
+  color:
+    var(--bc-primary);
+
+  font-size: 8px;
+
+  font-weight: 900;
+
+  letter-spacing: .08em;
+
+  text-transform: uppercase;
+}
+
+.bc-section-heading h2 {
+  margin:
+    5px 0 0;
+
+  color:
+    var(--bc-ink);
+
+  font-size:
+    clamp(
+      24px,
+      2.6vw,
+      34px
+    );
+
+  font-weight: 900;
+
+  letter-spacing:
+    -.035em;
+}
+
+.bc-section-heading p {
+  max-width: 650px;
+
+  margin:
+    5px 0 0;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 8px;
+
+  line-height: 1.45;
+}
+
+/* =========================================================
+   LEAGUE TABLE HEADER
+========================================================= */
+
+.bc-table-head {
+  display: grid;
+
+  grid-template-columns:
+    65px
+    minmax(
+      260px,
+      1.55fr
+    )
+    110px
+    85px
+    90px
+    85px
+    105px;
+
+  gap: 10px;
+
+  align-items: center;
+
+  min-height: 38px;
+
+  margin-top: 12px;
+
+  padding:
+    0 12px;
+
+  border:
+    1px solid
+    var(--bc-border);
+
+  border-bottom: 0;
+
+  background:
+    #f1f6f6;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 6.5px;
+
+  font-weight: 900;
+
+  letter-spacing: .05em;
+
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   LEAGUE
+========================================================= */
+
+.bc-league {
+  border:
+    1px solid
+    var(--bc-border);
+
+  background:
+    var(--bc-paper);
+}
+
+.bc-league-row {
+  position: relative;
+
+  display: grid;
+
+  grid-template-columns:
+    65px
+    minmax(
+      260px,
+      1.55fr
+    )
+    110px
+    85px
+    90px
+    85px
+    105px;
+
+  gap: 10px;
+
+  align-items: center;
+
+  min-height: 94px;
+
+  padding:
+    11px 12px;
+
+  border-bottom:
+    1px solid
+    #e7eeee;
+
+  transition:
+    background
+    120ms ease;
+}
+
+.bc-league-row:last-child {
+  border-bottom: 0;
+}
+
+.bc-league-row:hover {
+  background:
+    #fbfefe;
+}
+
+.bc-league-row::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 11px;
+  bottom: 11px;
+
+  width: 3px;
+
+  background:
+    var(--bc-primary);
+}
+
+/* subtle branch identity markers */
+
+.bc-league-row.cse::before {
+  background: #0b8990;
+}
+
+.bc-league-row.aiml::before {
+  background: #6078aa;
+}
+
+.bc-league-row.cyber::before {
+  background: #96735b;
+}
+
+.bc-league-row.mnc::before {
+  background: #687fa1;
+}
+
+.bc-league-row.ece::before {
+  background: #8f7850;
+}
+
+.bc-league-row.leader {
+  background:
+    linear-gradient(
+      90deg,
+      #fffaf0 0%,
+      #ffffff 48%
+    );
+}
+
+.bc-league-row.leader::before {
+  background:
+    var(--bc-gold);
+}
+
+/* =========================================================
+   POSITION
+========================================================= */
+
+.bc-position {
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  color:
+    var(--bc-muted);
+}
+
+.bc-position strong {
+  color:
+    var(--bc-ink);
+
+  font-size: 12px;
+
+  font-weight: 900;
+}
+
+.bc-league-row.leader
+  .bc-position {
+  color:
+    var(--bc-gold);
+}
+
+/* =========================================================
+   BRANCH
+========================================================= */
+
+.bc-branch {
+  display: grid;
+
+  grid-template-columns:
+    53px
+    minmax(0, 1fr);
+
+  gap: 10px;
+
+  align-items: center;
+
+  min-width: 0;
+}
+
+.bc-branch-code {
+  display: grid;
+
+  place-items: center;
+
+  width: 52px;
+  height: 52px;
+
+  border:
+    1px solid
+    var(--bc-border-strong);
+
+  background:
+    #f7fbfb;
+
+  color:
+    var(--bc-primary-dark);
+
+  font-size: 8px;
+
+  font-weight: 900;
+
+  letter-spacing: .02em;
+}
+
+.bc-league-row.leader
+  .bc-branch-code {
+  border-color:
+    #e2cd9a;
+
+  background:
+    var(--bc-gold-soft);
+
+  color:
+    #8f681d;
+}
+
+.bc-branch > div {
+  min-width: 0;
+}
+
+.bc-branch h3 {
+  overflow: hidden;
+
+  margin: 0;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 12px;
+
+  font-weight: 850;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.bc-branch p {
+  overflow: hidden;
+
+  margin:
+    3px 0 0;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 6.5px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+.bc-progress {
+  height: 4px;
+
+  margin-top: 8px;
+
+  overflow: hidden;
+
+  background:
+    #e7eeee;
+}
+
+.bc-progress i {
+  display: block;
+
+  height: 100%;
+
+  background:
+    var(--bc-primary);
+}
+
+.bc-league-row.leader
+  .bc-progress i {
+  background:
+    var(--bc-gold);
+}
+
+/* =========================================================
+   POINTS
+========================================================= */
+
+.bc-points strong {
+  display: block;
+
+  color:
+    var(--bc-primary);
+
+  font-size: 19px;
+
+  font-weight: 900;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+.bc-league-row.leader
+  .bc-points strong {
+  color:
+    #946c1f;
+}
+
+.bc-points span {
+  display: block;
+
+  margin-top: 1px;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 6px;
+
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   METRICS
+========================================================= */
+
+.bc-metric strong {
+  display: block;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 11px;
+
+  font-weight: 850;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+.bc-metric span {
+  display: block;
+
+  margin-top: 2px;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 6px;
+}
+
+/* =========================================================
+   SQUADS
+========================================================= */
+
+.bc-squad-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(0, 1fr)
+    );
+
+  gap: 7px;
+
+  margin-top: 12px;
+}
+
+.bc-squad {
+  min-width: 0;
+
+  border:
+    1px solid
+    var(--bc-border);
+
+  border-top:
+    3px solid
+    var(--bc-primary);
+
+  background:
+    white;
+}
+
+.bc-squad.aiml {
+  border-top-color:
+    #6078aa;
+}
+
+.bc-squad.cyber {
+  border-top-color:
+    #96735b;
+}
+
+.bc-squad.mnc {
+  border-top-color:
+    #687fa1;
+}
+
+.bc-squad.ece {
+  border-top-color:
+    #8f7850;
+}
+
+.bc-squad > header {
+  display: grid;
+
+  grid-template-columns:
+    39px
+    minmax(0, 1fr)
+    auto;
+
+  gap: 7px;
+
+  align-items: center;
+
+  padding:
+    10px;
+
+  border-bottom:
+    1px solid
+    var(--bc-border);
+}
+
+.bc-squad-code {
+  display: grid;
+
+  place-items: center;
+
+  width: 38px;
+  height: 38px;
+
+  border:
+    1px solid
+    var(--bc-border);
+
+  color:
+    var(--bc-primary-dark);
+
+  font-size: 7px;
+
+  font-weight: 900;
+}
+
+.bc-squad header > div {
+  min-width: 0;
+}
+
+.bc-squad header
+  > div strong,
+.bc-squad header
+  > div span {
+  display: block;
+}
+
+.bc-squad header
+  > div strong {
+  overflow: hidden;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 8px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.bc-squad header
+  > div span {
+  margin-top: 2px;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 6px;
+}
+
+.bc-squad header > b {
+  color:
+    var(--bc-primary);
+
+  font-size: 10px;
+
+  white-space: nowrap;
+}
+
+.bc-squad header
+  > b small {
+  margin-left: 2px;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 5.5px;
+}
+
+
+
+/* =========================================================
+   CONTRIBUTORS
+========================================================= */
+
+.bc-squad-contributors {
+  padding:
+    3px 9px 7px;
+}
+
+.bc-squad-contributors
+  > div:not(.bc-no-contributors) {
+  display: grid;
+
+  grid-template-columns:
+    24px
+    minmax(0, 1fr)
+    auto;
+
+  gap: 6px;
+
+  align-items: center;
+
+  min-height: 43px;
+
+  border-bottom:
+    1px solid
+    #edf2f2;
+}
+
+.bc-squad-contributors
+  > div:last-child {
+  border-bottom: 0;
+}
+
+.bc-squad-contributors
+  > div
+  > span {
+  display: grid;
+
+  place-items: center;
+
+  width: 22px;
+  height: 22px;
+
+  background:
+    #f1f7f7;
+
+  color:
+    var(--bc-primary);
+
+  font-size: 6px;
+
+  font-weight: 900;
+}
+
+.bc-squad-contributors
+  > div
+  > div {
+  min-width: 0;
+}
+
+.bc-squad-contributors
+  strong {
+  display: block;
+
+  overflow: hidden;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 7px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.bc-squad-contributors
+  small {
+  display: block;
+
+  margin-top: 1px;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 5.5px;
+}
+
+.bc-squad-contributors
+  > div
+  > b {
+  color:
+    var(--bc-primary);
+
+  font-size: 7px;
+}
+
+/* =========================================================
+   EMPTY CONTRIBUTORS
+========================================================= */
+
+.bc-no-contributors {
+  display: grid;
+
+  justify-items: center;
+
+  gap: 5px;
+
+  min-height: 100px;
+
+  padding:
+    23px 8px;
+
+  color:
+    var(--bc-muted);
+
+  text-align: center;
+}
+
+.bc-no-contributors span {
+  max-width: 130px;
+
+  font-size: 6.5px;
+
+  line-height: 1.4;
+}
+
+/* =========================================================
+   CTA
+========================================================= */
+
+.bc-cta {
+  display: grid;
+
+  grid-template-columns:
+    48px
+    minmax(0, 1fr)
+    auto;
+
+  gap: 14px;
+
+  align-items: center;
+
+  margin-top: 34px;
+
+  padding:
+    16px 0;
+
+  border-top:
+    1px solid
+    var(--bc-border);
+
+  border-bottom:
+    1px solid
+    var(--bc-border);
+}
+
+.bc-cta-mark {
+  display: grid;
+
+  place-items: center;
+
+  width: 47px;
+  height: 47px;
+
+  background:
+    var(--bc-primary);
+
+  color: white;
+}
+
+.bc-cta > div:nth-child(2)
+  > span {
+  color:
+    var(--bc-primary);
+
+  font-size: 7px;
+
+  font-weight: 900;
+
+  letter-spacing: .06em;
+
+  text-transform: uppercase;
+}
+
+.bc-cta h2 {
+  margin:
+    3px 0 0;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 18px;
+
+  font-weight: 900;
+
+  letter-spacing: -.02em;
+}
+
+.bc-cta p {
+  max-width: 700px;
+
+  margin:
+    4px 0 0;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 7px;
+
+  line-height: 1.45;
+}
+
+.bc-cta-actions {
+  display: flex;
+
+  gap: 6px;
+}
+
+.bc-cta-actions a {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 5px;
+
+  min-height: 34px;
+
+  padding: 0 9px;
+
+  border:
+    1px solid
+    var(--bc-border);
+
+  border-radius: 4px;
+
+  background: white;
+
+  color:
+    var(--bc-primary-dark);
+
+  font-size: 7px;
+
+  font-weight: 850;
+
+  white-space: nowrap;
+}
+
+.bc-cta-actions
+  a:first-child {
+  border-color:
+    var(--bc-primary);
+
+  background:
+    var(--bc-primary);
+
+  color: white;
+}
+
+/* =========================================================
+   METHODOLOGY
+========================================================= */
+
+.bc-method {
+  display: grid;
+
+  grid-template-columns:
+    auto
+    minmax(0, 1fr);
+
+  gap: 9px;
+
+  margin-top: 13px;
+
+  padding:
+    10px 12px;
+
+  border-left:
+    3px solid
+    var(--bc-primary);
+
+  background:
+    #eef8f7;
+
+  color:
+    var(--bc-primary);
+}
+
+.bc-method svg {
+  margin-top: 1px;
+}
+
+.bc-method strong {
+  display: block;
+
+  color:
+    var(--bc-ink);
+
+  font-size: 8px;
+}
+
+.bc-method p {
+  margin:
+    3px 0 0;
+
+  color:
+    var(--bc-text);
+
+  font-size: 7px;
+
+  line-height: 1.45;
+}
+
+.bc-method small {
+  display: block;
+
+  margin-top: 3px;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 6.5px;
+
+  line-height: 1.45;
+}
+
+/* =========================================================
+   COMMUNITY FOOT
+========================================================= */
+
+.bc-community-note {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 7px;
+
+  margin-top: 24px;
+
+  color:
+    var(--bc-primary);
+}
+
+.bc-community-note p {
+  margin: 0;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 7px;
+
+  font-weight: 700;
+
+  letter-spacing: .015em;
+
+  text-align: center;
+}
+
+/* =========================================================
+   LOADING STATE
+========================================================= */
+
+.bc-state {
+  display: grid;
+
+  justify-items: center;
+
+  gap: 7px;
+
+  margin-top: 12px;
+
+  padding:
+    52px 20px;
+
+  border:
+    1px dashed
+    var(--bc-border-strong);
+
+  background:
+    #f9fcfc;
+
+  text-align: center;
+}
+
+.bc-loader {
+  width: 28px;
+  height: 28px;
+
+  border:
+    3px solid
+    #d8e9e9;
+
+  border-top-color:
+    var(--bc-primary);
+
+  border-radius: 50%;
+
+  animation:
+    bcSpin
+    .8s
+    linear
+    infinite;
+}
+
+@keyframes bcSpin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+.bc-state strong {
+  color:
+    var(--bc-ink);
+
+  font-size: 10px;
+}
+
+.bc-state p {
+  margin: 0;
+
+  color:
+    var(--bc-muted);
+
+  font-size: 7px;
+}
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+/* =========================================================
+   LAPTOP
+========================================================= */
+
+@media (
+  max-width: 1180px
+) {
+  .bc-table-head,
+  .bc-league-row {
+    grid-template-columns:
+      58px
+      minmax(
+        220px,
+        1.4fr
+      )
+      95px
+      72px
+      80px
+      72px
+      90px;
+  }
+
+  .bc-squad-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+  }
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (
+  max-width: 930px
+) {
+  .bc-page {
+    padding:
+      18px 12px
+      58px;
+  }
+
+  .bc-header {
+    grid-template-columns:
+      1fr;
+
+    gap: 27px;
+  }
+
+  .bc-rules {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-rule-items {
+    border-left: 0;
+  }
+
+  .bc-summary {
+    grid-template-columns:
+      repeat(
+        3,
+        1fr
+      );
+  }
+
+  .bc-summary
+    > div:nth-child(3) {
+    border-right: 0;
+  }
+
+  .bc-summary
+    > div:nth-child(n+4) {
+    border-top:
+      1px solid
+      var(--bc-border);
+  }
+
+  .bc-table-head {
+    display: none;
+  }
+
+  .bc-league {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+
+    gap: 8px;
+
+    margin-top: 12px;
+
+    border: 0;
+
+    background:
+      transparent;
+  }
+
+  .bc-league-row {
+    display: grid;
+
+    grid-template-columns:
+      50px
+      minmax(0, 1fr)
+      auto;
+
+    gap: 10px;
+
+    min-height: 0;
+
+    padding: 13px;
+
+    border:
+      1px solid
+      var(--bc-border);
+
+    background:
+      var(--bc-paper);
+  }
+
+  .bc-league-row::before {
+    top: 0;
+    bottom: 0;
+  }
+
+  .bc-position {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .bc-branch {
+    grid-column:
+      1 / -1;
+
+    grid-row: 2;
+
+    padding-top: 9px;
+
+    border-top:
+      1px solid
+      var(--bc-border);
+  }
+
+  .bc-points {
+    grid-column: 3;
+    grid-row: 1;
+
+    text-align: right;
+  }
+
+  .bc-metric {
+    padding-top: 8px;
+
+    border-top:
+      1px solid
+      var(--bc-border);
+  }
+
+  .bc-league-row
+    .bc-metric:nth-of-type(1) {
+    grid-column: 1;
+  }
+
+  .bc-squad-grid {
+    grid-template-columns:
+      1fr 1fr;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (
+  max-width: 650px
+) {
+  .bc-page {
+    padding:
+      10px 9px
+      48px;
+  }
+
+  .bc-header {
+    padding:
+      21px 1px
+      25px;
+  }
+
+  .bc-header h1 {
+    font-size:
+      clamp(
+        38px,
+        12vw,
+        50px
+      );
+  }
+
+  .bc-header-copy > p {
+    font-size: 12px;
+  }
+
+  .bc-official-branches {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .bc-official-branches
+    span {
+    justify-content: center;
+  }
+
+  .bc-rule-items {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-rule-items > div {
+    border-right: 0;
+
+    border-bottom:
+      1px solid
+      var(--bc-border);
+  }
+
+  .bc-rule-items
+    > div:last-child {
+    border-bottom: 0;
+  }
+
+  .bc-summary {
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .bc-summary > div {
+    border-bottom:
+      1px solid
+      var(--bc-border);
+  }
+
+  .bc-summary
+    > div:nth-child(even) {
+    border-right: 0;
+  }
+
+  .bc-summary
+    > div:last-child {
+    grid-column:
+      1 / -1;
+  }
+
+  .bc-section-heading {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .bc-league {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-squad-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-cta {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-cta-actions {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (
+  max-width: 390px
+) {
+  .bc-official-branches {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-summary {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-summary > div {
+    border-right: 0;
+  }
+
+  .bc-summary
+    > div:last-child {
+    grid-column: auto;
+  }
+
+  .bc-season-period {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bc-season-period button {
+    border-right: 0;
+
+    border-bottom:
+      1px solid
+      var(--bc-border);
+  }
+
+  .bc-season-period
+    button:last-child {
+    border-bottom: 0;
+  }
+
+  .bc-branch {
+    grid-template-columns:
+      43px
+      minmax(0, 1fr);
+  }
+
+  .bc-branch-code {
+    width: 42px;
+    height: 42px;
+  }
+
+  .bc-cta-actions {
+    grid-template-columns:
+      1fr;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (
+  prefers-reduced-motion:
+    reduce
+) {
+  .bc-loader {
+    animation-duration:
+      2s;
+  }
+
+  .bc-league-row {
+    transition: none;
+  }
+}
+
+.bc-squad-grid{grid-template-columns:repeat(5,minmax(200px,1fr));gap:12px}
+.bc-squad>header{grid-template-columns:44px minmax(0,1fr) auto;gap:9px;padding:13px}
+.bc-squad-code{width:43px;height:43px;font-size:11px}
+.bc-squad header>div strong{font-size:13px;white-space:normal;line-height:1.25}
+.bc-squad header>div span,.bc-squad header>b small{font-size:11px}
+.bc-squad header>b{font-size:15px}
+.bc-squad-contributors{padding:8px 13px}
+.bc-squad-contributors>div:not(.bc-no-contributors){grid-template-columns:28px minmax(0,1fr) auto;min-height:56px}
+.bc-squad-contributors>div>span{width:26px;height:26px;font-size:10px}
+.bc-no-contributors{min-width:0;padding:20px 10px;font-size:13px;line-height:1.45;text-align:center;overflow-wrap:normal}
+@media(max-width:1250px){.bc-squad-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.bc-squad-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.bc-squad-grid{grid-template-columns:1fr}}
+.bc-no-contributors span{max-width:200px;font-size:13px;line-height:1.4}
+.bc-squad-contributors strong{font-size:12px}
+.bc-squad-contributors small{font-size:11px;line-height:1.3}
+.bc-squad-contributors>div>b{font-size:12px}

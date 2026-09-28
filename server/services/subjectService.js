@@ -1,4 +1,5 @@
 const { SUBJECT_CATALOG } = require('../data/subjectCatalog');
+const { normalizeBranchList } = require('../utils/branches');
 
 function normalizeSubjectText(value) {
   return String(value || '')
@@ -11,22 +12,6 @@ function normalizeSubjectText(value) {
 
 function slugifySubject(value) {
   return normalizeSubjectText(value).replace(/\s+/g, '-');
-}
-
-function normalizeBranchList(value) {
-  const raw = Array.isArray(value) ? value : [value];
-  const result = new Set();
-
-  raw.forEach((entry) => {
-    String(entry || '')
-      .toUpperCase()
-      .split(/\s*&\s*|\s*\/\s*|\s*,\s*/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .forEach((item) => result.add(item));
-  });
-
-  return Array.from(result);
 }
 
 function flattenSubjectCatalog() {

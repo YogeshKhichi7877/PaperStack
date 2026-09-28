@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import './SmartPaperUpload.css';
+import PaperStackLoader from './PaperStackLoader';
 
 function confidenceLabel(value) {
   const score = Number(value || 0);
@@ -63,7 +64,7 @@ export default function SmartPaperUpload({
 
       {analyzing && (
         <div className="smart-analysis-card is-loading">
-          <div className="smart-analysis-spinner" />
+          <PaperStackLoader compact label="Reading PDF" />
           <div>
             <strong>Reading your paper...</strong>
             <p>Detecting the exam metadata. This usually takes only a few seconds.</p>

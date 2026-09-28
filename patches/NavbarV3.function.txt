@@ -1,0 +1,320 @@
+function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const primaryItems = [
+    { to: '/', label: 'Archive' },
+    { to: '/search', label: 'Search' },
+    { to: '/questions', label: 'Questions' },
+    { to: '/semester-survival', label: 'Survival' },
+    { to: '/mock-exams', label: 'Mocks' },
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/contribute', label: 'Contribute', featured: true },
+  ];
+
+  const moreSections = [
+    {
+      title: 'Study & AI',
+      items: [
+        { to: '/exam-mode', label: 'Exam Mode' },
+        { to: '/pyq-intelligence', label: 'PYQ Intelligence' },
+        { to: '/important-topics', label: 'Important Topics' },
+        { to: '/revision-sheets', label: 'Revision Sheets' },
+        { to: '/exam-war-room', label: 'Exam War Room' },
+        { to: '/ask-paperstack', label: 'Ask PaperStack' },
+      ],
+    },
+    {
+      title: 'Community',
+      items: [
+        { to: '/missing-papers', label: 'Missing Papers' },
+        { to: '/contributors', label: 'Contributors' },
+        { to: '/verify-archive', label: 'Verify Archive' },
+        { to: '/branch-competition', label: 'Branch Competition' },
+        { to: '/trending', label: 'Trending' },
+        { to: '/streaks', label: 'Study Progress' },
+      ],
+    },
+    {
+      title: 'Archive',
+      items: [
+        { to: '/archive-progress', label: 'Archive Progress' },
+        { to: '/analytics', label: 'Archive Analytics' },
+        ...(user
+          ? [{ to: '/notifications', label: 'Notifications' }]
+          : []),
+      ],
+    },
+    ...(isAdmin
+      ? [
+          {
+            title: 'Admin',
+            items: [
+              { to: '/admin/moderation', label: 'Moderation Center' },
+              { to: '/admin/product-analytics', label: 'Product Analytics' },
+              { to: '/admin/upload', label: 'Upload Center' },
+              { to: '/admin/contributions', label: 'Contributions' },
+              { to: '/admin/reports', label: 'Reports' },
+              { to: '/admin/question-extraction', label: 'Question Extraction' },
+              { to: '/admin/question-solutions', label: 'Student Solutions' },
+            ],
+          },
+        ]
+      : []),
+  ];
+
+  const isActive = (path) =>
+    path === '/'
+      ? location.pathname === '/'
+      : location.pathname.startsWith(path);
+
+  const closeMenu = () => {
+    setMenuOpen(false);
+    setMoreOpen(false);
+  };
+
+  const userLabel =
+    user?.name ||
+    user?.username ||
+    user?.email ||
+    user?.rollNumber ||
+    user?.id ||
+    'User';
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userSemester');
+    setUser(null);
+    toast('Logged out successfully', 'info');
+    closeMenu();
+    navigate('/');
+  };
+
+  const exitAdmin = () => {
+    localStorage.removeItem('adminToken');
+    setIsAdmin(false);
+    toast('Exited admin mode', 'info');
+    closeMenu();
+    navigate('/');
+  };
+
+  const moreActive = moreSections.some((section) =>
+    section.items.some((item) => isActive(item.to))
+  );
+
+  const renderFeatureLink = (item) => (
+    <Link
+      key={item.to}
+      to={item.to}
+      onClick={closeMenu}
+      className={[
+        'psnav-link',
+        item.featured ? 'featured' : '',
+        isActive(item.to) ? 'active' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {item.label}
+    </Link>
+  );
+
+  const renderSection = (section) => (
+    <section className="psnav-group" key={section.title}>
+      <span className="psnav-group-title">
+        {section.title}
+      </span>
+
+      <div className="psnav-group-links">
+        {section.items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={closeMenu}
+            className={isActive(item.to) ? 'active' : ''}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+
+  return (
+    <nav className={`navbar ps-navbar-v3 ${user ? 'has-user' : 'is-guest'}`}>
+      <ProductAnalyticsTracker />
+      <StudyActivityTracker user={user} />
+
+      <div className="psnav-brand-zone">
+        <Link to="/" onClick={closeMenu} className="psnav-brand">
+          <span className="psnav-brand-mark">PS</span>
+
+          <span className="psnav-brand-copy">
+            <strong>PaperStack</strong>
+            <small>IIIT Surat Exam OS</small>
+          </span>
+        </Link>
+
+        {user && (
+          <span className="psnav-user-mini" title={userLabel}>
+            {userLabel}
+          </span>
+        )}
+      </div>
+
+      <div className="psnav-primary">
+        {primaryItems.map(renderFeatureLink)}
+
+        <div className="psnav-more-wrap">
+          <button
+            type="button"
+            className={`psnav-more-btn ${moreOpen ? 'open' : ''} ${
+              moreActive ? 'active' : ''
+            }`}
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+          >
+            More
+            <span className="psnav-chevron">▾</span>
+          </button>
+
+          <div className={`psnav-more-menu ${moreOpen ? 'open' : ''}`}>
+            {moreSections.map(renderSection)}
+          </div>
+        </div>
+      </div>
+
+      <div className="psnav-actions">
+        {user && <NotificationNavButton />}
+
+        <button
+          type="button"
+          className="psnav-icon-btn"
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          title="Toggle theme"
+        >
+          {theme === 'light' ? 'Dark' : 'Light'}
+        </button>
+
+        {!isAdmin && (
+          <Link
+            to="/admin"
+            onClick={closeMenu}
+            className="psnav-admin-btn"
+          >
+            Admin
+          </Link>
+        )}
+
+        {isAdmin && (
+          <>
+            <span className="psnav-admin-state">
+              Admin
+            </span>
+
+            <button
+              type="button"
+              className="psnav-exit-admin"
+              onClick={exitAdmin}
+            >
+              Exit
+            </button>
+          </>
+        )}
+
+        {user ? (
+          <button
+            type="button"
+            className="psnav-logout-btn"
+            onClick={logout}
+          >
+            Logout
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            onClick={closeMenu}
+            className="psnav-login-btn"
+          >
+            Login
+          </Link>
+        )}
+      </div>
+
+      <button
+        type="button"
+        className="psnav-mobile-toggle"
+        onClick={() => setMenuOpen((open) => !open)}
+        aria-label="Toggle navigation menu"
+        aria-expanded={menuOpen}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      <div className={`psnav-mobile-panel ${menuOpen ? 'open' : ''}`}>
+        <div className="psnav-mobile-primary">
+          {primaryItems.map(renderFeatureLink)}
+        </div>
+
+        <div className="psnav-mobile-groups">
+          {moreSections.map(renderSection)}
+        </div>
+
+        <div className="psnav-mobile-actions">
+          <button
+            type="button"
+            className="psnav-icon-btn"
+            onClick={toggleTheme}
+          >
+            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+          </button>
+
+          {!isAdmin && (
+            <Link
+              to="/admin"
+              onClick={closeMenu}
+              className="psnav-admin-btn"
+            >
+              Admin
+            </Link>
+          )}
+
+          {isAdmin && (
+            <button
+              type="button"
+              className="psnav-exit-admin"
+              onClick={exitAdmin}
+            >
+              Exit Admin
+            </button>
+          )}
+
+          {user ? (
+            <button
+              type="button"
+              className="psnav-logout-btn"
+              onClick={logout}
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              onClick={closeMenu}
+              className="psnav-login-btn"
+            >
+              Login
+            </Link>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}

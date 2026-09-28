@@ -1,0 +1,90 @@
+/* Shared type stays separate from math and icon fonts. */
+:root, body { --font-family-base: 'DM Sans', Arial, sans-serif; --font-family-heading: 'Manrope', Arial, sans-serif; }
+body, button, input, select, textarea { font-family: var(--font-family-base); }
+h1, h2, h3, h4, .landing-hero h1, .home-study-card h2 { font-family: 'Manrope', Arial, sans-serif; letter-spacing: 0; }
+h1, h2, h3, h4 { font-weight: 800; }
+.psnav-link { font-size: 14px; }
+.ps-navbar-v3 .psnav-primary { gap: 7px; }
+.ps-navbar-v3 .psnav-search input, .ps-navbar-v3 .psnav-mobile-search input { font-size: 14px; }
+.ps-navbar-v3 .psnav-profile summary { gap: 11px; font-size: 14px; }
+.ps-navbar-v3 .psnav-profile-label { max-width: 160px; }
+.ps-navbar-v3 .psnav-actions { gap: 11px; }
+@media(max-width:1500px) { .ps-navbar-v3 .psnav-primary { gap: 3px; } .ps-navbar-v3 .psnav-actions { gap: 7px; } }
+.s2-page .s2-filter-heading, .s2-page .s2-filter-heading b { font-size: 15px; }
+.s2-page .s2-filter-grid label, .s2-page .s2-filter-grid label > span { font-size: 13px; line-height: 1.5; }
+.s2-page .s2-filter-grid input, .s2-page .s2-filter-grid select, .s2-page .s2-tabs button { font-size: 15px; }
+.home-resource-benefits small, .home-resource-copy p, .landing-footer p, .landing-footer a { font-size: 14px; line-height: 1.6; }
+.site-footer { background: linear-gradient(110deg, #e4f6f3 0%, #e9f2fb 55%, #fff5e5 100%); border-top: 3px solid #29949a; }
+.site-footer .footer-heading { color: #075d66; }
+.site-footer .footer-description, .site-footer .footer-list a, .site-footer .footer-bottom { color: #31546a; }
+.site-footer .footer-list a:hover { color: #006b75; }
+.site-footer .footer-bottom { border-top-color: #afd5d7; }
+.pd-activity-columns > article { padding: 17px; }
+.pd-activity-columns > article > header span { font-size: 14px; }
+.pd-activity-columns > article > header a { font-size: 14px; }
+.pd-activity-list > div { grid-template-columns: 25px minmax(0,1fr) auto; gap: 10px; min-height: 64px; }
+.pd-activity-list strong { font-size: 15px; line-height: 1.35; }
+.pd-activity-list span { font-size: 13px; line-height: 1.4; }
+.pd-solution-actions > a { font-size: 13px; }
+.pd-activity-list .pd-status { font-size: 12px; }
+.qe-page .qe-preview > div, .qe-page .qe-paper-main p, .qe-page .qe-count span { font-size: 14px; }
+.qe-page .qe-status { font-size: 12px; }
+.qe-page .qe-paper-main h2 { font-size: 19px; }
+.am-page .am-hero > div:first-child > span, .am-page .am-kind, .am-page .am-priority span, .am-page .am-meta { font-size: 12px; }
+.am-page .am-tabs button, .am-page .am-tabs button b, .am-page .am-main p, .am-page .am-small-meta span, .am-page .am-source-links a, .am-page .am-action-link, .am-page .am-actions button, .am-page .am-pressure p, .am-page .am-point-preview { font-size: 13px; line-height: 1.4; }
+.am-page .am-main h2 { font-size: 20px; }
+.am-page .am-card { padding: 20px; }
+.am-page .am-main { gap: 22px; }
+.as-page .as-hero > div:first-child > span, .as-page .as-stats span,
+.as-page .as-card-head span, .as-page .as-card-head p, .as-page .as-status,
+.as-page .as-question strong, .as-page .as-answer > strong,
+.as-page .as-question a, .as-page .as-meta, .as-page .as-note { font-size: 13px; line-height: 1.45; }
+.as-page .as-question p, .as-page .as-answer > div { font-size: 16px; }
+.as-page .as-toolbar button, .as-page .as-toolbar input, .as-page .as-actions button { font-size: 14px; }
+.pa-page .pa-hero > div:first-child > span, .pa-page .pa-head span,
+.pa-page .pa-kpis span, .pa-page .pa-kpis p, .pa-page .pa-legend span,
+.pa-page .pa-route-list strong, .pa-page .pa-route-list span,
+.pa-page .pa-search-health span, .pa-page .pa-stack-stats span,
+.pa-page .pa-buckets > div, .pa-page .pa-privacy,
+.pa-page .pa-growth span, .pa-page .pa-growth small,
+.pa-page .pa-warning, .pa-page .pa-muted { font-size: 12px; line-height: 1.4; }
+.pa-page .pa-window button, .pa-page .pa-admin-link { font-size: 13px; }
+.pa-page .pa-daily > div { min-width: 38px; }
+.pa-page .pa-daily span, .pa-page .pa-daily small { font-size: 10px; }
+
+.smart-contribution-page { max-width: 1040px; margin: 0 auto; padding: 28px 24px 64px; }
+.smart-contribution-page .smart-contribution-hero { display: flex; align-items: center; justify-content: space-between; gap: 30px; text-align: left; padding: 28px 0; margin: 0; background: none; border: 0; box-shadow: none; }
+.smart-contribution-hero > div { max-width: 690px; }
+.smart-contribution-page .smart-contribution-hero h1 { font-size: 38px; line-height: 1.2; margin: 12px 0; }
+.smart-contribution-page .smart-contribution-hero p { font-size: 17px; line-height: 1.65; margin: 0 0 15px; }
+.smart-contribution-hero > img { width: 165px; height: 180px; object-fit: contain; opacity: .85; }
+.smart-contribution-hero a { color: #087f86; font-size: 14px; font-weight: 700; }
+.contribution-journey { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; gap: 20px; padding: 20px 0; margin: 0 0 26px; border-top: 1px solid #cde1e3; border-bottom: 1px solid #cde1e3; }
+.contribution-journey li { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.contribution-journey li > span { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; background: #e3f3f4; border-radius: 50%; color: #087f86; font-size: 14px; font-weight: 800; }
+.contribution-journey strong, .contribution-journey small { display: block; }
+.contribution-journey strong { font-size: 15px; color: #173e48; }.contribution-journey small { font-size: 13px; color: #59717b; margin-top: 3px; }
+.smart-contribution-page .smart-contribution-shell { border: 0; border-radius: 0; box-shadow: none; padding: 0; background: transparent; }
+.smart-contribution-page .contribution-mode-switch { max-width: 640px; padding: 5px; background: #e6f1f2; border: 1px solid #cde1e3; border-radius: 8px; margin-bottom: 24px; }
+.smart-contribution-page .contribution-mode-btn { border-radius: 5px; font-size: 16px; min-height: 62px; box-shadow: none; }
+.smart-contribution-page .contribution-mode-btn span { font-size: 13px; }
+.smart-contribution-page .contribution-step-head h2 { font-size: 23px; }.smart-contribution-page .contribution-step-head p { font-size: 15px; }
+.smart-contribution-page .contribution-step-number { display: inline-block; width: auto; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+.smart-contribution-page .page-back-link::before { content: none; }
+.smart-contribution-page .smart-upload-dropzone { border-radius: 8px; background: #f3fbfa; min-height: 215px; }
+.smart-contribution-page .contribution-details-panel { padding: 24px 0 0; border: 0; border-top: 1px solid #cde1e3; background: transparent; }
+.smart-contribution-page .contrib-form label { font-size: 14px; line-height: 1.5; }
+.smart-contribution-page .contrib-form :is(input,select,textarea) { font-family: var(--font-family-base); font-size: 16px; border-radius: 6px; }
+.smart-contribution-page .contribution-field-grid { gap: 20px; }
+.smart-contribution-page .smart-contribution-submit-area { background: #eef7f6; border-radius: 8px; padding: 22px; }
+.smart-contribution-page .smart-contribution-submit-area label { display: flex; gap: 12px; align-items: flex-start; }
+.smart-contribution-submit-area input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; }
+@media(max-width:640px) {
+  .smart-contribution-page { padding: 22px 18px 48px; }
+  .smart-contribution-page .smart-contribution-hero { gap: 10px; padding: 20px 0; }
+  .smart-contribution-page .smart-contribution-hero h1 { font-size: 28px; }
+  .smart-contribution-hero > img { width: 86px; height: 115px; }
+  .contribution-journey { gap: 12px; }.contribution-journey li { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .contribution-journey strong { font-size: 13px; }.contribution-journey small { display: none; }
+  .smart-contribution-page .contribution-mode-btn { padding: 12px 8px; font-size: 14px; }.smart-contribution-page .contribution-mode-btn span { font-size: 12px; }
+}

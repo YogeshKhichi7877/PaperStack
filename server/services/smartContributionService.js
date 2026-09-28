@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { normalizeBranch: canonicalBranch } = require('../utils/branches');
 const pdfParse = require('pdf-parse');
 const {
   FLAT_SUBJECT_CATALOG,
@@ -148,14 +149,15 @@ function detectSemester(source, subject) {
 
 function detectBranch(source, subject) {
   const text = String(source || '').toUpperCase();
-  const candidates = ['CSE', 'ECE', 'AIML', 'AI', 'IT'];
-  const hits = candidates.filter((branch) => new RegExp(`(?:^|[^A-Z0-9])${branch}(?:$|[^A-Z0-9])`).test(text));
-
-  if (hits.includes('CSE') && hits.includes('ECE')) {
+  const hasCse = /\bCSE\b/.test(text);
+  const hasEce = /\bECE\b/.test(text);
+  if (hasCse && hasEce) {
     return { value: 'CSE & ECE', confidence: 96, reason: 'CSE and ECE found in paper' };
   }
-  if (hits.length === 1) {
-    return { value: hits[0], confidence: 94, reason: 'branch found in paper' };
+  const candidates = ['CSE (AI-ML)', 'CYBER SECURITY', 'MATHEMATICS AND COMPUTING', 'AIML', 'MNC', 'CYBER', 'CSE', 'ECE'];
+  const found = candidates.find((branch) => text.includes(branch));
+  if (found) {
+    return { value: canonicalBranch(found), confidence: 94, reason: 'branch found in paper' };
   }
 
   if (subject?.branches?.length === 1) {

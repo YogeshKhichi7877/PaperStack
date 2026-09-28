@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowRight, BookOpen, Download, FileText } from 'lucide-react';
 import { FRONTEND_URL } from '../config/appConfig';
 import {
   fetchSubjectResources,
@@ -9,6 +10,7 @@ import {
   recordResourceView,
 } from '../services/resourceApi';
 import './SubjectPage.css';
+import './SubjectPageCompact.css';
 
 const RESOURCE_TABS = [
   { value: 'all', label: 'All Resources', short: 'All' },
@@ -22,6 +24,8 @@ const RESOURCE_TABS = [
   { value: 'viva_questions', label: 'Viva Questions', short: 'Viva' },
   { value: 'important_questions', label: 'Important Questions', short: 'Important' },
   { value: 'revision_sheet', label: 'Revision Sheets', short: 'Revision' },
+  { value: 'syllabus', label: 'Syllabus', short: 'Syllabus' },
+  { value: 'other', label: 'Other Resources', short: 'Other' },
 ];
 
 const RESOURCE_LABELS = Object.fromEntries(RESOURCE_TABS.map((item) => [item.value, item.label]));
@@ -77,6 +81,7 @@ function ResourceCard({ resource, user, toast, navigate }) {
     <article className="subject-hub-resource-card">
       <div className="subject-hub-resource-topline">
         <span className={`subject-hub-kind subject-hub-kind-${resource.kind}`}>
+          {isPaper ? <FileText size={16} /> : <BookOpen size={16} />}
           {resourceKindLabel(resource.kind)}
         </span>
         {resource.year ? <span className="subject-hub-year">{resource.year}</span> : null}
@@ -103,23 +108,30 @@ function ResourceCard({ resource, user, toast, navigate }) {
 
       <div className="subject-hub-resource-actions">
         <button type="button" onClick={openResource} disabled={!canOpen}>
-          {isPaper ? 'View Paper' : 'Open Resource'}
+          {isPaper ? 'View Paper' : 'Open Resource'} <ArrowRight size={16} />
         </button>
         <button type="button" className="secondary" onClick={downloadResource} disabled={!canOpen}>
-          Download
+          <Download size={16} /> Download
         </button>
       </div>
     </article>
   );
 }
 
-function EmptyResources({ label, contributionPath }) {
+function EmptyResources({
+  label,
+  contributionPath,
+  resourceContributionPath,
+  isPaperTab,
+}) {
   return (
     <div className="subject-hub-empty">
       <span>Nothing here yet</span>
       <h3>No {label.toLowerCase()} have been added for this subject.</h3>
-      <p>PaperStack can grow this section as students contribute more useful exam material.</p>
-      <Link to={contributionPath}>Contribute a paper</Link>
+      <p>Be the first student to help complete this category.</p>
+      <Link to={isPaperTab ? contributionPath : resourceContributionPath}>
+        {isPaperTab ? 'Upload a question paper' : `Upload ${label}`}
+      </Link>
     </div>
   );
 }
@@ -203,11 +215,26 @@ export default function SubjectPage({ user, toast }) {
   if (firstSemester) contributionParams.set('semester', String(firstSemester));
   const contributionPath = `/contribute${contributionParams.toString() ? `?${contributionParams.toString()}` : ''}`;
 
+  const resourceContributionParams = new URLSearchParams();
+  if (summary?.subjectName) resourceContributionParams.set('subject', summary.subjectName);
+  if (summary?.subjectCode) resourceContributionParams.set('subjectCode', summary.subjectCode);
+  if (summary?.subjectShortCode) resourceContributionParams.set('shortCode', summary.subjectShortCode);
+  if (firstBranch) resourceContributionParams.set('branch', firstBranch);
+  if (firstSemester) resourceContributionParams.set('semester', String(firstSemester));
+  if (activeKind !== 'all' && activeKind !== 'question_paper') {
+    resourceContributionParams.set('kind', activeKind);
+  }
+  const resourceContributionPath = `/contribute-resource${resourceContributionParams.toString() ? `?${resourceContributionParams.toString()}` : ''}`;
+  const isPaperTab = activeKind === 'question_paper';
+  const activeUploadPath = isPaperTab ? contributionPath : resourceContributionPath;
+  const activeUploadLabel = isPaperTab ? 'Upload Paper' : 'Upload Resource';
+
   const examParams = new URLSearchParams();
   if (firstBranch) examParams.set('branch', firstBranch);
   if (firstSemester) examParams.set('semester', String(firstSemester));
   if (summary?.subjectName) examParams.set('subject', summary.subjectName);
   const examModePath = `/exam-mode${examParams.toString() ? `?${examParams.toString()}` : ''}`;
+  const studyQuery = `?subjectCode=${encodeURIComponent(subjectCode)}`;
 
   if (loading) {
     return (
@@ -263,7 +290,7 @@ export default function SubjectPage({ user, toast }) {
 
       <section className="subject-hub-hero">
         <div className="subject-hub-hero-copy">
-          <span className="subject-hub-eyebrow">IIIT Surat Subject Hub</span>
+          <span className="subject-hub-eyebrow">Subject library</span>
           <div className="subject-hub-title-row">
             <div className="subject-hub-code-badge">{summary.subjectShortCode || subjectCode}</div>
             <div>
@@ -271,50 +298,24 @@ export default function SubjectPage({ user, toast }) {
               <p>{subjectCode}{semesterText ? ` • ${semesterText}` : ''}{branchText ? ` • ${branchText}` : ''}</p>
             </div>
           </div>
-          <p className="subject-hub-description">
-            Everything PaperStack currently has for this subject, organized into one exam-focused workspace.
-          </p>
+          <p className="subject-hub-description">{summary.kindCounts?.question_paper || 0} papers · {summary.kindCounts?.solution || 0} solutions · {(summary.years || []).length} years in the archive</p>
           <div className="subject-hub-hero-actions">
             <Link to={examModePath} className="subject-hub-primary-action">Open Exam Mode</Link>
             <Link to={contributionPath} className="subject-hub-secondary-action">Contribute Paper</Link>
+            <Link to={resourceContributionPath} className="subject-hub-secondary-action subject-hub-resource-upload-action">Upload Resource</Link>
           </div>
         </div>
 
-        <div className="subject-hub-overview-card">
-          <span>Archive snapshot</span>
-          <strong>{summary.totalResources || 0}</strong>
-          <p>Total resources</p>
-          <div className="subject-hub-overview-grid">
-            <div><b>{summary.kindCounts?.question_paper || 0}</b><span>PYQs</span></div>
-            <div><b>{summary.kindCounts?.solution || 0}</b><span>Solutions</span></div>
-            <div><b>{(summary.years || []).length}</b><span>Years</span></div>
-            <div><b>{Number(summary.totalDownloads || 0).toLocaleString('en-IN')}</b><span>Downloads</span></div>
-          </div>
-        </div>
       </section>
 
-      <section className="subject-hub-stat-strip">
-        <div><span>Question Papers</span><strong>{summary.kindCounts?.question_paper || 0}</strong></div>
-        <div><span>Solutions</span><strong>{summary.kindCounts?.solution || 0}</strong></div>
-        <div><span>Total Views</span><strong>{Number(summary.totalViews || 0).toLocaleString('en-IN')}</strong></div>
-        <div><span>Years Available</span><strong>{summary.years?.length ? `${Math.min(...summary.years)}–${Math.max(...summary.years)}` : '—'}</strong></div>
-      </section>
-
-      <section className="subject-hub-intelligence">
-        <div className="subject-hub-section-heading">
-          <div>
-            <span>PaperStack Intelligence</span>
-            <h2>Exam preparation tools</h2>
-          </div>
-          <p>These cards are already positioned for the next intelligence features.</p>
-        </div>
-        <div className="subject-hub-intelligence-grid">
-          <article><span>Next</span><h3>PYQ Intelligence</h3><p>Topic frequency, repeated concepts, marks trends and historical patterns.</p><small>Feature #11</small></article>
-          <article><span>Next</span><h3>Important Topics</h3><p>See which topics deserve revision attention using historical evidence.</p><small>Feature #12</small></article>
-          <article><span>Future AI</span><h3>Ask PaperStack</h3><p>Ask questions grounded in IIIT Surat papers and contributed resources.</p><small>Free-model first</small></article>
-          <article><span>Practice</span><h3>Mock Exam</h3><p>Generate practice papers based on the structure of previous exams.</p><small>Feature #18</small></article>
-        </div>
-      </section>
+      <nav className="subject-hub-tools" aria-label="Study this subject">
+        <Link to={`/questions${studyQuery}`}>Practice questions</Link>
+        <Link to={`/pyq-intelligence${studyQuery}`}>PYQ patterns</Link>
+        <Link to={`/important-topics${studyQuery}`}>Important topics</Link>
+        <Link to={`/revision-sheets${studyQuery}`}>Revision sheet</Link>
+        <Link to={`/exam-war-room${studyQuery}`}>Exam War Room</Link>
+        <Link to={`/mock-exams${studyQuery}`}>Mock exam</Link>
+      </nav>
 
       <section className="subject-hub-resources" id="resources">
         <div className="subject-hub-section-heading subject-hub-resource-heading">
@@ -322,22 +323,28 @@ export default function SubjectPage({ user, toast }) {
             <span>Resource Library</span>
             <h2>{currentTab.label}</h2>
           </div>
-          <p>{filteredResources.length} of {resources.length} resources shown</p>
+          <div className="subject-hub-resource-heading-actions">
+            <p>{filteredResources.length} of {resources.length} resources</p>
+            <Link to={activeUploadPath} className="subject-hub-upload-resource-btn">
+              + {activeUploadLabel}
+            </Link>
+          </div>
         </div>
 
-        <div className="subject-hub-tabs" role="tablist" aria-label="Subject resource type">
+        <div className="subject-hub-tabs" role="group" aria-label="Filter by resource type">
           {RESOURCE_TABS.map((tab) => {
-            const count = tab.value === 'all' ? resources.length : Number(summary.kindCounts?.[tab.value] || 0);
+            const count = tab.value === 'all' ? resources.length
+              : resources.filter((resource) => resource.kind === tab.value).length;
+            const selected = activeKind === tab.value;
             return (
               <button
                 key={tab.value}
                 type="button"
-                role="tab"
-                aria-selected={activeKind === tab.value}
-                className={activeKind === tab.value ? 'active' : ''}
+                aria-pressed={selected}
+                className={selected ? 'active' : ''}
                 onClick={() => setActiveKind(tab.value)}
               >
-                <span>{tab.short}</span>
+                <span>{tab.value === 'question_paper' ? 'Papers' : tab.label}</span>
                 <b>{count}</b>
               </button>
             );
@@ -352,11 +359,11 @@ export default function SubjectPage({ user, toast }) {
             placeholder="Search this subject..."
             aria-label="Search subject resources"
           />
-          <select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)}>
+          <select aria-label="Year" value={yearFilter} onChange={(event) => setYearFilter(event.target.value)}>
             <option value="">All years</option>
             {years.map((year) => <option key={year} value={year}>{year}</option>)}
           </select>
-          <select value={examFilter} onChange={(event) => setExamFilter(event.target.value)}>
+          <select aria-label="Exam type" value={examFilter} onChange={(event) => setExamFilter(event.target.value)}>
             <option value="">All exam types</option>
             {examTypes.map((type) => <option key={type} value={type}>{type}</option>)}
           </select>
@@ -372,17 +379,13 @@ export default function SubjectPage({ user, toast }) {
             ))}
           </div>
         ) : (
-          <EmptyResources label={currentTab.label} contributionPath={contributionPath} />
+          <EmptyResources
+            label={currentTab.label}
+            contributionPath={contributionPath}
+            resourceContributionPath={resourceContributionPath}
+            isPaperTab={isPaperTab}
+          />
         )}
-      </section>
-
-      <section className="subject-hub-bottom-cta">
-        <div>
-          <span>Help complete this subject</span>
-          <h2>Have a paper or solution that is missing?</h2>
-          <p>Your upload can become useful to every student taking {subjectName} after you.</p>
-        </div>
-        <Link to={contributionPath}>Contribute to {summary.subjectShortCode || subjectName}</Link>
       </section>
 
     </main>

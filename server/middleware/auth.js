@@ -18,7 +18,11 @@ function createAuthMiddleware(jwtSecret) {
     if (!token) return res.status(401).json({ error: 'Access denied: no token' });
 
     try {
-      req.user = jwt.verify(token, jwtSecret);
+      const verified = jwt.verify(token, jwtSecret, { algorithms: ['HS256'] });
+      if (verified.role === 'admin' || verified.tokenType === 'admin' || !verified._id) {
+        return res.status(403).json({ error: 'Student access required' });
+      }
+      req.user = verified;
       next();
     } catch (err) {
       res.status(401).json({ error: 'Invalid token' });
@@ -34,8 +38,8 @@ function createAuthMiddleware(jwtSecret) {
     if (!token) return res.status(401).json({ error: 'Admin token required' });
 
     try {
-      const verified = jwt.verify(token, jwtSecret);
-      if (verified.role !== 'admin') {
+      const verified = jwt.verify(token, jwtSecret, { algorithms: ['HS256'] });
+      if (verified.role !== 'admin' || verified.tokenType !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
       }
       req.admin = verified;

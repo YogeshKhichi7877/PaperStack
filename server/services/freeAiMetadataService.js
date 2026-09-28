@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { FLAT_SUBJECT_CATALOG } = require('./subjectService');
+const { normalizeBranch: canonicalBranch } = require('../utils/branches');
 
 function envTrue(value, fallback = true) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -39,10 +40,7 @@ function normalizeBranch(value) {
   const hasCse = /\bCSE\b/.test(raw);
   const hasEce = /\bECE\b/.test(raw);
   if (hasCse && hasEce) return 'CSE & ECE';
-  for (const branch of ['CSE', 'ECE', 'AIML', 'AI', 'IT']) {
-    if (new RegExp(`\\b${branch}\\b`).test(raw)) return branch;
-  }
-  return '';
+  return canonicalBranch(raw) || '';
 }
 
 function normalizeAiMetadata(raw = {}) {
@@ -100,7 +98,7 @@ subjectName, subjectCode, subjectShortCode, branch, semester, year, examType.
 
 Rules:
 - Choose the subject from the catalog below whenever possible.
-- branch must be one of: CSE, ECE, CSE & ECE, AIML, AI, IT, or empty string.
+- branch must be one of: CSE, CSE (AI-ML), Cyber Security, Mathematics and Computing, ECE, or empty string.
 - semester must be an integer 1-8 or null.
 - examType must be Mid-Sem, End-Sem, or empty string.
 - year must be a four-digit exam year or null.

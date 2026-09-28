@@ -1,0 +1,349 @@
+.qs-panel {
+  margin-top: 18px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  background: rgba(255,255,255,.80);
+  box-shadow: 0 14px 42px rgba(18,84,91,.05);
+}
+
+.qs-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.qs-heading > div:first-child > span,
+.qs-public-title > span {
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.qs-heading h2 {
+  margin-top: 6px;
+  font-size: 27px;
+}
+
+.qs-heading p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.qs-heading-actions {
+  text-align: right;
+}
+
+.qs-heading-actions strong,
+.qs-heading-actions a {
+  display: block;
+}
+
+.qs-heading-actions strong {
+  font-size: 13px;
+}
+
+.qs-heading-actions a {
+  margin-top: 7px;
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.qs-my {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+}
+
+.qs-my-pending {
+  background: rgba(230,129,97,.07);
+}
+
+.qs-my-approved {
+  background: rgba(33,128,141,.07);
+}
+
+.qs-my-rejected {
+  background: rgba(192,21,47,.06);
+}
+
+.qs-my > div > strong {
+  display: block;
+  margin-top: 7px;
+}
+
+.qs-my p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.qs-my button {
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.qs-status {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.qs-status-pending {
+  background: rgba(230,129,97,.12);
+  color: var(--color-warning);
+}
+
+.qs-status-approved {
+  background: rgba(33,128,141,.12);
+  color: var(--color-primary);
+}
+
+.qs-status-rejected {
+  background: rgba(192,21,47,.10);
+  color: var(--color-error);
+}
+
+.qs-compose {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(33,128,141,.18);
+  border-radius: 16px;
+  background: rgba(33,128,141,.035);
+}
+
+.qs-compose-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.qs-compose-head span,
+.qs-compose-head strong {
+  display: block;
+}
+
+.qs-compose-head span {
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+
+.qs-compose-head strong {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.qs-compose-head small {
+  color: var(--color-text-secondary);
+}
+
+.qs-compose textarea {
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px;
+  resize: vertical;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.55;
+}
+
+.qs-compose-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.qs-compose-foot p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+}
+
+.qs-compose-foot button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--color-primary);
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.qs-compose-foot button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.qs-login {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px dashed rgba(33,128,141,.28);
+  border-radius: 14px;
+}
+
+.qs-login p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.qs-login a {
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.qs-public {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.qs-public-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qs-public-title strong {
+  min-width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-secondary);
+}
+
+.qs-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 13px;
+}
+
+.qs-solution {
+  padding: 17px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  background: rgba(255,255,255,.72);
+}
+
+.qs-solution-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.qs-solution-top > div:last-child {
+  text-align: right;
+}
+
+.qs-solution-top span,
+.qs-solution-top strong {
+  display: block;
+}
+
+.qs-solution-top span {
+  color: var(--color-text-secondary);
+  font-size: 9px;
+}
+
+.qs-solution-top strong {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.qs-answer {
+  margin-top: 15px;
+  padding: 15px;
+  border-radius: 12px;
+  background: rgba(33,128,141,.045);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+  font-size: 14px;
+}
+
+.qs-solution > button {
+  margin-top: 12px;
+  border: 1px solid rgba(33,128,141,.22);
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.qs-state {
+  margin-top: 13px;
+  padding: 28px 16px;
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: 13px;
+  color: var(--color-text-secondary);
+}
+
+.qs-state strong,
+.qs-state p {
+  display: block;
+}
+
+.qs-state p {
+  margin: 4px 0 0;
+  font-size: 11px;
+}
+
+@media (max-width: 680px) {
+  .qs-panel {
+    padding: 18px 14px;
+  }
+
+  .qs-heading,
+  .qs-my,
+  .qs-compose-foot,
+  .qs-login,
+  .qs-solution-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .qs-heading-actions,
+  .qs-solution-top > div:last-child {
+    text-align: left;
+  }
+}

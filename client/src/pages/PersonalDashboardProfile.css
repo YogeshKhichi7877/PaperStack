@@ -1,0 +1,40 @@
+.pd-profile {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.pd-profile h2 { margin: 0; font-size: 20px; color: var(--color-text); }
+.pd-profile p { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: var(--color-text-secondary); }
+.pd-profile-form { display: grid; grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; min-width: 0; }
+.pd-profile-form > label { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 700; color: var(--color-text); }
+.pd-profile-form input:not([type="file"]) { min-width: 0; width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-text); font: inherit; }
+.pd-profile-form input[readonly] { color: var(--color-text-secondary); }
+.pd-profile-form button, .pd-photo-picker { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 12px; border: 1px solid var(--color-primary); border-radius: 6px; background: var(--color-primary); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.pd-profile-form button:disabled { opacity: .6; cursor: wait; }
+.pd-profile-photo { display: grid; justify-items: center; gap: 6px; }
+.pd-profile-photo img, .pd-profile-photo span { width: 64px; height: 64px; display: grid; place-items: center; object-fit: cover; border-radius: 50%; background: var(--color-primary); color: #fff; font-size: 25px; font-weight: 800; }
+.pd-photo-picker { min-height: 28px; padding: 2px 6px; font-size: 11px; }
+.pd-photo-picker input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.pd-google-link { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 12px; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+.pd-google-link h2 { margin: 0; font-size: 17px; }
+.pd-google-link p { margin: 4px 0 0; max-width: 460px; font-size: 13px; color: var(--color-text-secondary); }
+
+@media (max-width: 1100px) {
+  .pd-profile { grid-template-columns: 1fr; }
+  .pd-profile-form { grid-template-columns: 80px minmax(0, 1fr) minmax(0, 1fr); }
+  .pd-profile-form button { grid-column: 2 / -1; }
+}
+
+@media (max-width: 680px) {
+  .pd-profile-form { grid-template-columns: 72px minmax(0, 1fr); }
+  .pd-profile-photo { grid-row: 1 / 3; }
+  .pd-profile-form > label { grid-column: 2; }
+  .pd-profile-form button { grid-column: 1 / -1; }
+}

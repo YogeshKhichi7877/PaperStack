@@ -1,0 +1,45 @@
+/* Phase 29: reduce oversized global footer spacing */
+.site-footer {
+  padding: 28px 0 14px !important;
+}
+
+.site-footer .footer-grid {
+  gap: 28px !important;
+  margin-bottom: 18px !important;
+}
+
+.site-footer .footer-brand {
+  max-width: 320px;
+}
+
+.site-footer .footer-description {
+  margin-top: 8px !important;
+  line-height: 1.45 !important;
+}
+
+.site-footer .footer-heading {
+  margin-bottom: 8px !important;
+}
+
+.site-footer .footer-list {
+  gap: 4px !important;
+}
+
+.site-footer .footer-list li {
+  margin: 0 !important;
+}
+
+.site-footer .footer-bottom {
+  margin-top: 10px !important;
+  padding-top: 12px !important;
+}
+
+@media (max-width: 760px) {
+  .site-footer {
+    padding: 22px 0 12px !important;
+  }
+
+  .site-footer .footer-grid {
+    gap: 18px !important;
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
@@ -6,13 +6,43 @@ import { Helmet } from 'react-helmet-async';
 import logo from './assets/Paperstack_logo_wt2.png';
 import authLogo from './assets/Paperstack_auth_owl.png';
 import authWordmark from './assets/Paperstack_auth_wordmark.png';
+import { Bookmark, CalendarDays, Download, Eye, FileText, Link2, Search, Share2, ShieldCheck, TriangleAlert, BookOpen, Menu, ChevronDown, Cloud, Database, Monitor, Cpu, Network, Calculator } from 'lucide-react';
+import PaperStackHomePage from './pages/PaperStackHomePage';
+import { TestimonialsPage, SiteReportPage } from './pages/CommunityFeedbackPage';
+import { OFFICIAL_BRANCHES, normalizeBranchList } from './config/branches';
 
-import paperstackWordmark from './assets/Paperstack_auth_wordmark.png';
-import paperstackOwl from './assets/Paperstack_auth_owl.png';
-import iiitSuratLogo from './assets/iiit_surat.png';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import ContributorLeaderboardPage from './pages/ContributorLeaderboardPage';
 import ContributorProfilePage from './pages/ContributorProfilePage';
+import PaperBountiesPage from './pages/PaperBountiesPage';
+import ArchiveCompletionPage from './pages/ArchiveCompletionPage';
+import VerificationPage from './pages/VerificationPage';
+import AdminQuestionExtractionPage from './pages/AdminQuestionExtractionPage';
+import InteractiveQuestionsPage from './pages/InteractiveQuestionsPage';
+import PyqIntelligencePage from './pages/PyqIntelligencePage';
+import ImportantTopicsPage from './pages/ImportantTopicsPage';
+import AdminQuestionSolutionsPage from './pages/AdminQuestionSolutionsPage';
+import RevisionSheetsPage from './pages/RevisionSheetsPage';
+import ExamWarRoomPage from './pages/ExamWarRoomPage';
+import AskPaperStackPage from './pages/AskPaperStackPage';
+import MockExamGeneratorPage from './pages/MockExamGeneratorPage';
+import MockEvaluationPage from './pages/MockEvaluationPage';
+import SemesterSurvivalPage from './pages/SemesterSurvivalPage';
+import PersonalDashboardPage from './pages/PersonalDashboardPage';
+import NotificationsPage from './pages/NotificationsPage';
+import StreaksBadgesPage from './pages/StreaksBadgesPage';
+import BranchCompetitionPage from './pages/BranchCompetitionPage';
+import TrendingPage from './pages/TrendingPage';
+import SearchV2Page from './pages/SearchV2Page';
+import AdminModerationPage from './pages/AdminModerationPage';
+import AdminProductAnalyticsPage from './pages/AdminProductAnalyticsPage';
+import ResourceContributionPage from './pages/ResourceContributionPage';
+import NotificationNavButton from './components/NotificationNavButton';
+import StudyActivityTracker from './components/StudyActivityTracker';
+import ProductAnalyticsTracker from './components/ProductAnalyticsTracker';
+import './components/NavbarV3.css';
+import './components/CompactLayout.css';
+import PaperVerificationModal from './components/PaperVerificationModal';
 import SubjectPage from './pages/SubjectPage';
 import { getSubjectHubPath } from './utils/subjectRoute';
 import SmartPaperUpload from './components/SmartPaperUpload';
@@ -27,6 +57,15 @@ import {
 import { authHeader, adminHeader } from './services/authHeaders';
 
 import './App.css';
+import './styles/NavbarRefresh.css';
+import './styles/AuthResponsive.css';
+import './styles/StudyFeatureReadability.css';
+import './styles/ExperienceRefresh.css';
+import './styles/ArchiveReference.css';
+import './styles/ReferenceNavbar.css';
+import './styles/ProductPolish.css';
+import PaperStackLoader from './components/PaperStackLoader';
+import { ErrorState } from './components/ErrorState';
 
 function getPaperShareUrl(paper) {
   const baseUrl = FRONTEND_URL.replace(/\/$/, '');
@@ -87,34 +126,6 @@ function BackToTopButton() {
   );
 }
 
-function PaperStackLoader({ label = 'Loading PaperStack...', compact = false }) {
-  if (compact) {
-    return (
-      <span className="ps-loader-wrap ps-loader-compact" role="status" aria-live="polite">
-        <span className="ps-loader-mark">
-          <img src={logo} alt="" aria-hidden="true" />
-          <span />
-          <span />
-          <span />
-        </span>
-        <span>{label}</span>
-      </span>
-    );
-  }
-
-  return (
-    <div className="ps-loader-wrap" role="status" aria-live="polite">
-      <div className="ps-loader-mark">
-        <img src={logo} alt="" aria-hidden="true" />
-        <span />
-        <span />
-        <span />
-      </div>
-      <p>{label}</p>
-    </div>
-  );
-}
-
 function storeAuthSession(authPayload, setUser) {
   const user = authPayload.user || authPayload;
   localStorage.setItem('token', authPayload.token);
@@ -123,6 +134,7 @@ function storeAuthSession(authPayload, setUser) {
   if (semester) localStorage.setItem('userSemester', semester);
   setUser({
     username: user.username,
+    name: user.name || user.displayName || user.username,
     email: user.email,
     bookmarks: user.bookmarks || [],
     semester,
@@ -174,12 +186,14 @@ function GoogleAuthButton({ setUser, toast }) {
       const status = err.response?.status;
       const serverMessage = err.response?.data?.message || err.response?.data?.error;
 
-      if (status === 403) {
-        toast(serverMessage || 'Please create a manual account first, then use Google login.', 'error');
+      if (status === 409) {
+        toast(serverMessage || 'Sign in with your password to link Google.', 'error');
+      } else if (status === 403) {
+        toast(serverMessage || 'This email cannot be used for PaperStack.', 'error');
       } else if (status === 401) {
         openGoogleFallback('Google login is currently unavailable. Please use manual login.');
       } else {
-        openGoogleFallback(serverMessage || 'Google login is currently unavailable. Please use manual login.');
+        openGoogleFallback('Google sign-in is temporarily unavailable. You can continue using email and password.');
       }
     } finally {
       setLoading(false);
@@ -244,7 +258,7 @@ function GoogleAuthButton({ setUser, toast }) {
             text="continue_with"
             size="large"
             theme="outline"
-            width="360"
+            width="260"
           />
         </div>
 
@@ -277,16 +291,18 @@ function Footer() {
               <h3 className="footer-logo">PaperStack</h3>
             </div>
             <p className="footer-description">
-              A premium, community-driven academic archive platform built for IIIT Surat students.
+              IIIT Surat papers and study resources, collected by students.
             </p>
           </div>
           <div className="footer-links">
             <h4 className="footer-heading">Explore</h4>
             <ul className="footer-list">
-              <li><Link to="/">Archive</Link></li>
-              <li><Link to="/exam-mode">Exam Mode</Link></li>
-              <li><Link to="/missing-papers">Missing Papers</Link></li>
-              <li><Link to="/contributors">Contributors</Link></li>
+              <li><Link to="/archive">Archive</Link></li>
+              <li><Link to="/search">Search</Link></li>
+              <li><Link to="/questions">Questions</Link></li>
+              <li><Link to="/revision-sheets">Revision Sheets</Link></li>
+              <li><Link to="/exam-war-room">Exam War Room</Link></li>
+              <li><Link to="/mock-exams">Mock Exams</Link></li>
             </ul>
           </div>
           <div className="footer-links">
@@ -296,6 +312,8 @@ function Footer() {
               <li><Link to="/contribute">Contribute</Link></li>
               <li><Link to="/faq">FAQ</Link></li>
               <li><Link to="/contact">Contact</Link></li>
+              <li><Link to="/testimonials">Student Experiences</Link></li>
+              <li><Link to="/report" className="footer-report-link"><TriangleAlert size={16} /> Report a Problem</Link></li>
             </ul>
           </div>
           <div className="footer-links">
@@ -309,32 +327,105 @@ function Footer() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} PaperStack. Built by students, for students.</p>
-          <div className="footer-status"><span className="status-dot" /> System Online Version 2.0</div>
+          <p>&copy; {new Date().getFullYear()} PaperStack. Created by Yogesh Khinchi. Built by students, for students.</p>
+          <Link to="/contributors">Meet the contributors</Link>
         </div>
       </div>
     </footer>
   );
 }
 
-function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
 
-  const navItems = [
-    { to: '/', label: 'Archive' },
-    { to: '/exam-mode', label: 'Exam Mode' },
-    { to: '/missing-papers', label: 'Missing Papers' },
-    { to: '/contributors', label: 'Leaderboard' },
-    { to: '/analytics', label: 'Analytics' },
-    { to: '/contribute', label: 'Contribute', featured: true }
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [navSearch, setNavSearch] = useState('');
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (!menuRef.current?.contains(event.target)) setMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  const primaryItems = [
+    { to: '/', label: 'Home' },
+    { to: '/archive', label: 'Archive' },
+    { to: '/search', label: 'Search' },
+    { to: '/questions', label: 'Questions' },
+    { to: '/semester-survival', label: 'Survival' },
+    { to: '/mock-exams', label: 'Mocks' },
+    { to: '/contribute', label: 'Contribute', featured: true },
+  ];
+
+  const menuSections = [
+    {
+      title: 'Study & AI',
+      items: [
+        { to: '/exam-mode', label: 'Exam Mode' },
+        { to: '/pyq-intelligence', label: 'PYQ Intelligence' },
+        { to: '/important-topics', label: 'Important Topics' },
+        { to: '/revision-sheets', label: 'Revision Sheets' },
+        { to: '/exam-war-room', label: 'Exam War Room' },
+        { to: '/ask-paperstack', label: 'Ask PaperStack' },
+      ],
+    },
+    {
+      title: 'Community',
+      items: [
+        { to: '/missing-papers', label: 'Missing Papers' },
+        { to: '/contribute-resource', label: 'Upload Resource' },
+        { to: '/contributors', label: 'Contributors' },
+        { to: '/verify-archive', label: 'Verify Archive' },
+        { to: '/branch-competition', label: 'Branch Competition' },
+        { to: '/trending', label: 'Trending' },
+        { to: '/streaks', label: 'Study Progress' },
+        { to: '/testimonials', label: 'Student Experiences' },
+        { to: '/report', label: 'Report a Problem' },
+      ],
+    },
+    {
+      title: 'Archive',
+      items: [
+        { to: '/archive-progress', label: 'Archive Progress' },
+        { to: '/analytics', label: 'Archive Analytics' },
+      ],
+    },
+    ...(user ? [{ title: 'Account', items: [
+      { to: '/dashboard', label: 'Dashboard' },
+      { to: '/notifications', label: 'Notifications' },
+    ] }] : []),
+    ...(isAdmin
+      ? [
+          {
+            title: 'Admin',
+            items: [
+              { to: '/admin/moderation', label: 'Moderation Center' },
+              { to: '/admin/product-analytics', label: 'Product Analytics' },
+              { to: '/admin/upload', label: 'Upload Center' },
+              { to: '/admin/contributions', label: 'Contributions' },
+              { to: '/admin/reports', label: 'Reports' },
+              { to: '/admin/question-extraction', label: 'Question Extraction' },
+              { to: '/admin/question-solutions', label: 'Student Solutions' },
+            ],
+          },
+        ]
+      : []),
   ];
 
   const isActive = (path) =>
-    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+    location.pathname === path || (path !== '/' && location.pathname.startsWith(`${path}/`));
 
-  const closeMenu = () => setMenuOpen(false);
+  const closeMenu = () => {
+    setMenuOpen(false);
+  };
 
   const userLabel =
     user?.name ||
@@ -354,7 +445,14 @@ function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast 
     navigate('/');
   };
 
+  const submitNavSearch = (event) => {
+    event.preventDefault();
+    const query = navSearch.trim();
+    if (query) navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
   const exitAdmin = () => {
+    sessionStorage.removeItem('adminToken');
     localStorage.removeItem('adminToken');
     setIsAdmin(false);
     toast('Exited admin mode', 'info');
@@ -362,139 +460,141 @@ function Navbar({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast 
     navigate('/');
   };
 
-  const navLinks = (
-    <>
-      {navItems.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          onClick={closeMenu}
-          className={`nav-text-link ${item.featured ? 'btn-navbar-contrib' : ''} ${
-            isActive(item.to) ? 'active' : ''
-          }`}
-        >
-          {item.label}
-        </Link>
-      ))}
-    </>
+  const renderFeatureLink = (item) => (
+    <Link
+      key={item.to}
+      to={item.to}
+      onClick={closeMenu}
+      className={[
+        'psnav-link',
+        item.featured ? 'featured' : '',
+        isActive(item.to) ? 'active' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {item.label}
+    </Link>
   );
 
-  const navActions = (
-    <div className="nav-actions">
-      <button className="theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
-        {theme === 'light' ? 'Dark' : 'Light'}
-      </button>
+  const renderSection = (section) => (
+    <section className="psnav-group" key={section.title}>
+      <span className="psnav-group-title">
+        {section.title}
+      </span>
 
-      {!isAdmin && (
-        <Link to="/admin" onClick={closeMenu} className="nav-admin-btn">
-          ADMIN
-        </Link>
-      )}
-
-      {isAdmin && (
-        <div className="ps-admin-actions">
-          <Link to="/admin/upload" onClick={closeMenu} className="nav-admin-link">
-            Upload
+      <div className="psnav-group-links">
+        {section.items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={closeMenu}
+            className={isActive(item.to) ? 'active' : ''}
+          >
+            {item.label}
           </Link>
-
-          <Link to="/admin/contributions" onClick={closeMenu} className="nav-admin-link">
-            Review Panel
-          </Link>
-
-          <Link to="/admin/reports" onClick={closeMenu} className="nav-admin-link">
-            Reports
-          </Link>
-
-          <button className="btn-exit-admin" onClick={exitAdmin}>
-            Exit Admin
-          </button>
-        </div>
-      )}
-
-      {user ? (
-        <>
-          <button className="btn-logout" onClick={logout}>
-            Logout
-          </button>
-        </>
-      ) : (
-        <Link to="/login" onClick={closeMenu} className="btn-login">
-          Login
-        </Link>
-      )}
-    </div>
+        ))}
+      </div>
+    </section>
   );
 
   return (
-    <nav className={`navbar ps-navbar-repaired ${user ? 'has-user' : 'is-guest'}`}>
-      <div className="nav-user-slot">
-        {user && (
-          <span className="nav-user-pill" title={userLabel}>
-            {userLabel}
-          </span>
+    <nav className={`navbar ps-navbar-v3 ${user ? 'has-user' : 'is-guest'}`} ref={menuRef} onKeyDown={(event) => {
+      if (event.key === 'Escape' && menuOpen) {
+        setMenuOpen(false);
+        event.currentTarget.querySelector('.psnav-main-menu')?.focus();
+      }
+    }}>
+      <ProductAnalyticsTracker />
+      <StudyActivityTracker user={user} />
+
+      <div className="psnav-brand-zone">
+        <button type="button" className="psnav-main-menu" onClick={() => setMenuOpen((open) => !open)} aria-label="Open site menu" aria-controls="psnav-feature-menu" aria-expanded={menuOpen}><Menu size={23} /></button>
+        <Link to="/" onClick={closeMenu} className="psnav-brand">
+          <img src={authWordmark} alt="PaperStack" className="psnav-wordmark" />
+        </Link>
+      </div>
+
+      <div className="psnav-primary">
+        {primaryItems.map(renderFeatureLink)}
+
+      </div>
+
+      <div className="psnav-actions">
+        <form className="psnav-search" onSubmit={submitNavSearch}><Search size={18} /><input type="search" value={navSearch} onChange={(event) => setNavSearch(event.target.value)} placeholder="Search papers, subjects, topics..." aria-label="Search PaperStack" /></form>
+
+        {user && <NotificationNavButton />}
+
+        {user ? (
+          <details className="psnav-profile"><summary title={userLabel}><span className="psnav-avatar">{userLabel.slice(0, 2).toUpperCase()}</span><span className="psnav-profile-label">{userLabel}</span><ChevronDown size={16} /></summary><div><Link to="/dashboard">Dashboard</Link><Link to="/contributors/me">Contributor Profile</Link><Link to="/notifications">Notifications</Link><Link to="/dashboard#profile">Edit Profile</Link>{!isAdmin && <Link to="/admin">Admin</Link>}{isAdmin && <button type="button" onClick={exitAdmin}>Exit admin</button>}<button type="button" onClick={logout}>Logout</button></div></details>
+        ) : (
+          <Link
+            to="/login"
+            onClick={closeMenu}
+            className="psnav-login-btn"
+          >
+            Login
+          </Link>
         )}
       </div>
 
-      <div className="nav-center-links">{navLinks}</div>
+      <div id="psnav-feature-menu" className={`psnav-mobile-panel ${menuOpen ? 'open' : ''}`}>
+        <form className="psnav-mobile-search" onSubmit={(event) => { submitNavSearch(event); closeMenu(); }}><Search size={18} /><input type="search" value={navSearch} onChange={(event) => setNavSearch(event.target.value)} placeholder="Search papers, subjects, topics..." aria-label="Search PaperStack" /></form>
+        <div className="psnav-mobile-primary">
+          {user && <span className="psnav-mobile-user" title={userLabel}>{userLabel}</span>}
+          {primaryItems.map(renderFeatureLink)}
+        </div>
 
-      <div className="nav-right-actions">{navActions}</div>
+        <div className="psnav-mobile-groups">
+          {menuSections.map(renderSection)}
+        </div>
 
-      <button
-        type="button"
-        className={`mobile-menu-toggle ${menuOpen ? 'is-open' : ''}`}
-        onClick={() => setMenuOpen((open) => !open)}
-        aria-label="Toggle navigation menu"
-        aria-expanded={menuOpen}
-      >
-        <span />
-        <span />
-        <span />
-      </button>
+        <div className="psnav-mobile-actions">
+          {!isAdmin && (
+            <Link
+              to="/admin"
+              onClick={closeMenu}
+              className="psnav-admin-btn"
+            >
+              Admin
+            </Link>
+          )}
 
-      <div className={`mobile-nav-panel ${menuOpen ? 'is-open' : ''}`}>
-        {user && (
-          <span className="nav-user-pill" title={userLabel}>
-            {userLabel}
-          </span>
-        )}
-        {navLinks}
-        <div className="mobile-nav-divider" />
-        {navActions}
+          {isAdmin && (
+            <button
+              type="button"
+              className="psnav-exit-admin"
+              onClick={exitAdmin}
+            >
+              Exit Admin
+            </button>
+          )}
+
+          {user ? (
+            <button
+              type="button"
+              className="psnav-logout-btn"
+              onClick={logout}
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              onClick={closeMenu}
+              className="psnav-login-btn"
+            >
+              Login
+            </Link>
+          )}
+        </div>
       </div>
     </nav>
   );
 }
 
 function Register({ setUser, toast }) {
-  const [formData, setFormData] = useState({ username: '', email: '', password: '', semester: 1 });
-  const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    if (!formData.email.toLowerCase().endsWith('@iiitsurat.ac.in')) {
-      toast('Please use your @iiitsurat.ac.in email', 'error');
-      return;
-    }
-    if (formData.password.length < 6) {
-      toast('Password must be at least 6 characters.', 'error');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await axios.post(`${API_URL}/api/auth/register`, formData);
-      storeAuthSession(res.data, setUser);
-      toast('Registration successful.', 'success');
-      const queryParams = new URLSearchParams(location.search);
-      const redirectTo = queryParams.get('redirect') || '/';
-      navigate(redirectTo);
-    } catch (err) {
-      toast(err.response?.data?.message || err.response?.data?.error || 'Registration failed', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="auth-page auth-page-register">
@@ -515,7 +615,7 @@ function Register({ setUser, toast }) {
             </Link>
             <p className="auth-kicker auth-pill">Join PaperStack</p>
             <h1 className="auth-brand-title">Join the PaperStack Community</h1>
-            <p className="auth-brand-copy">Create your account manually using your IIIT Surat email.</p>
+            <p className="auth-brand-copy">Create your account with your verified IIIT Surat Google identity.</p>
             <div className="auth-benefit-grid">
               <span className="auth-benefit-pill">Save Papers</span>
               <span className="auth-benefit-pill">Earn Contributor Points</span>
@@ -536,24 +636,12 @@ function Register({ setUser, toast }) {
                 <img src={authWordmark} alt="PaperStack" className="auth-card-wordmark" />
                 <img src="/iiit_surat.png" alt="IIIT Surat Logo" className="inst-logo" />
               </div>
-              <h2>Create Account</h2>
-              <p>Create your account manually using your IIIT Surat email.</p>
+              <h2>Create your account</h2>
+              <p>Use your IIIT Surat Google account to join PaperStack.</p>
             </div>
 
-            <form onSubmit={handleRegister} className="login-form-content auth-form">
-              <input className="auth-input" type="text" placeholder="Username" onChange={(e) => setFormData({ ...formData, username: e.target.value })} required />
-              <input className="auth-input" type="email" placeholder="Institute email" onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
-              <input className="auth-input" type="password" placeholder="Password" onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
-              <div className="sem-select-container">
-                <label>Current Semester</label>
-                <select className="auth-input" value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: Number(e.target.value) })}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => <option key={sem} value={sem}>Semester {sem}</option>)}
-                </select>
-              </div>
-              <button type="submit" className="login-btn-gradient auth-submit" disabled={submitting}>
-                {submitting ? 'Creating Account...' : 'Create Account'}
-              </button>
-            </form>
+            <GoogleAuthButton setUser={setUser} toast={toast} />
+            <p className="auth-signup-note">Google verifies that you own the institute email. Existing password accounts can continue to use the login page.</p>
 
             <p className="auth-switch-text auth-switch-link auth-switch">Already have an account? <Link to={`/login${location.search}`}>Login here</Link></p>
           </div>
@@ -637,8 +725,8 @@ function Login({ setUser, toast }) {
             </div>
 
             <form onSubmit={handleLogin} className="login-form-content auth-form">
-              <input className="auth-input" type="email" placeholder="Institute Email ID" onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
-              <input className="auth-input" type="password" placeholder="Password" onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
+              <label>Email<input className="auth-input" type="email" autoComplete="email" placeholder="Institute Email ID" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></label>
+              <label>Password<input className="auth-input" type="password" autoComplete="current-password" placeholder="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></label>
               <button type="submit" className="auth-btn login-btn-gradient auth-submit" disabled={submitting}>
                 {submitting ? 'Signing In...' : 'Secure Login'}
               </button>
@@ -663,7 +751,7 @@ function AdminLogin({ setIsAdmin, toast }) {
     e.preventDefault();
     try {
       const res = await axios.post(`${API_URL}/api/admin/verify`, { password });
-      localStorage.setItem('adminToken', res.data.token);
+      sessionStorage.setItem('adminToken', res.data.token);
       setIsAdmin(true);
       toast('Admin verified successfully', 'success');
       navigate('/');
@@ -922,26 +1010,35 @@ function ContributionPopup() {
   );
 }
 
-function Home({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+function Home({ user, setUser, isAdmin, setIsAdmin, toast }) {
+  return <div className="app-container"><Helmet><title>PaperStack - IIIT Surat Past Papers</title><meta name="description" content="IIIT Surat past papers, solutions, and study tools, curated by students." /><link rel="canonical" href={`${FRONTEND_URL}/`} /></Helmet><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><PaperStackHomePage user={user} /><Footer /></div>;
+}
+
+function getArchiveSubjectIcon(paper) {
+  const subject = String(paper.subject || paper.title || '').toLowerCase();
+  if (subject.includes('cloud')) return Cloud;
+  if (subject.includes('graphics')) return Monitor;
+  if (subject.includes('database') || subject.includes('data science')) return Database;
+  if (subject.includes('network')) return Network;
+  if (subject.includes('mathematics') || subject.includes('statistics')) return Calculator;
+  if (subject.includes('computer') || subject.includes('processor')) return Cpu;
+  return BookOpen;
+}
+
+function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSem, setFilterSem] = useState(user?.semester?.toString() || '');
+  const [filterSem, setFilterSem] = useState('');
   const [filterExam, setFilterExam] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterBranch, setFilterBranch] = useState('');
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [selectedReportPaper, setSelectedReportPaper] = useState(null);
+  const [selectedVerificationPaper, setSelectedVerificationPaper] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   
-  // V2 stats state
-  const [analyticsData, setAnalyticsData] = useState({
-    totalPapers: 0,
-    totalViews: 0,
-    totalDownloads: 0,
-    totalContributors: 5
-  });
-
   const navigate = useNavigate();
 
   const fetchPapers = useCallback(async () => {
@@ -964,18 +1061,13 @@ function Home({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast })
 
   useEffect(() => {
     fetchPapers();
-    // Fetch quick stats
-    axios.get(`${API_URL}/api/analytics`)
-      .then(res => setAnalyticsData(res.data))
-      .catch(() => console.warn('Failed to load quick stats'));
   }, [fetchPapers]);
 
   useEffect(() => {
-    if (user?.semester) setFilterSem(user.semester.toString());
-  }, [user?.semester]);
+    axios.get(`${API_URL}/api/analytics`).then((res) => setAnalytics(res.data)).catch(() => setAnalytics(null));
+  }, []);
 
   const years = useMemo(() => Array.from(new Set(papers.map((paper) => paper.year).filter(Boolean))).sort((a, b) => b - a), [papers]);
-  const branches = useMemo(() => Array.from(new Set(papers.map((paper) => paper.branch).filter(Boolean))).sort(), [papers]);
 
   const displayedPapers = papers.filter((paper) => {
     const haystack = [
@@ -994,7 +1086,7 @@ function Home({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast })
     const matchesSem = filterSem ? String(paper.semester) === filterSem : true;
     const matchesExam = filterExam ? paper.examType === filterExam : true;
     const matchesYear = filterYear ? String(paper.year) === filterYear : true;
-    const matchesBranch = filterBranch ? paper.branch === filterBranch : true;
+    const matchesBranch = filterBranch ? normalizeBranchList(paper.branch).includes(filterBranch) : true;
     return matchesSearch && matchesTab && matchesSem && matchesExam && matchesYear && matchesBranch;
   });
 
@@ -1088,210 +1180,86 @@ function Home({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast })
       <Helmet>
         <title>{filterSem ? `Semester ${filterSem} Papers - PaperStack` : 'PaperStack - IIIT Surat Question Papers'}</title>
         <meta name="description" content="Browse IIIT Surat previous year question papers by semester, subject, branch, year, and exam type." />
-        <link rel="canonical" href={`${FRONTEND_URL}/`} />
+        <link rel="canonical" href={`${FRONTEND_URL}/archive`} />
       </Helmet>
       <ContributionPopup />
       
-      <div className="app-container">
-        <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
-        
-        <header className="ps-home-hero-final">
-  <img
-    src={iiitSuratLogo}
-    alt=""
-    aria-hidden="true"
-    className="ps-bg-watermark ps-bg-iiit-left"
-  />
+      <div className="app-container archive-page">
+        <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+        <div className="ps-archive-stats" aria-label="Archive statistics">
+          {[
+            { label: 'Total Papers', value: analytics?.totalPapers, icon: FileText },
+            { label: 'Total Views', value: analytics?.totalViews, icon: Eye },
+            { label: 'Total Downloads', value: analytics?.totalDownloads, icon: Download },
+            { label: 'Active Contributors', value: analytics?.totalContributors, icon: BookOpen },
+          ].map(({ label, value, icon: Icon }) => <div className="ps-archive-stat" key={label}><div><strong>{value == null ? '—' : Number(value).toLocaleString('en-IN')}</strong><span>{label}</span></div><Icon size={26} /></div>)}
+        </div>
 
-  <img
-    src={paperstackOwl}
-    alt=""
-    aria-hidden="true"
-    className="ps-bg-watermark ps-bg-owl-right"
-  />
-
-  <div className="ps-home-hero-inner">
-    <section className="ps-home-hero-left">
-      <img
-        src={paperstackWordmark}
-        alt="PaperStack"
-        className="ps-home-wordmark"
-      />
-
-      <span className="ps-home-pill">IIIT SURAT ARCHIVE</span>
-
-      <h1>
-        The Smart Archive for <span>IIIT Surat </span>Students
-      </h1>
-
-      <p>
-        Access mid-sem and end-sem past papers, solutions, exam stats, and
-        semester resources — curated by students, for students.
-      </p>
-
-      <div className="ps-home-actions">
-        <button
-          type="button"
-          className="ps-home-btn ps-home-btn-primary"
-          onClick={() =>
-            document.getElementById('archive-browser')?.scrollIntoView({
-              behavior: 'smooth',
-            })
-          }
-        >
-          Browse Papers
-        </button>
-
-        <Link to="/contribute" className="ps-home-btn ps-home-btn-secondary">
-          Contribute Papers
-        </Link>
-      </div>
-    </section>
-
-    <section className="ps-home-hero-right">
-      <div className="ps-owl-visual-wrap">
-        <img
-          src={iiitSuratLogo}
-          alt=""
-          aria-hidden="true"
-          className="ps-owl-iiit-watermark"
-        />
-
-        <div className="ps-owl-orbit ps-owl-orbit-one" />
-        <div className="ps-owl-orbit ps-owl-orbit-two" />
-
-        <img
-          src={paperstackOwl}
-          alt="PaperStack owl mascot"
-          className="ps-home-main-owl"
-        />
-
-        <span className="ps-home-float-chip ps-home-chip-download">Download</span>
-        <span className="ps-home-float-chip ps-home-chip-search">Search</span>
-        <span className="ps-home-float-chip ps-home-chip-share">Share</span>
-        <span className="ps-home-float-chip ps-home-chip-contribute">Contribute</span>
-      </div>
-    </section>
-  </div>
-</header>
-
-        {/* Stats Strip */}
-        <section className="stats-strip-container">
-          <div className="stats-strip-grid">
-            <div className="stats-strip-card">
-              <h3>{papers.length || 0}</h3>
-              <p>Total Papers</p>
-            </div>
-            <div className="stats-strip-card">
-              <h3>{analyticsData.totalViews || 0}</h3>
-              <p>Total Views</p>
-            </div>
-            <div className="stats-strip-card">
-              <h3>{analyticsData.totalDownloads || 0}</h3>
-              <p>Total Downloads</p>
-            </div>
-            <div className="stats-strip-card">
-              <h3>{analyticsData.totalContributors || 5}</h3>
-              <p>Active Contributors</p>
-            </div>
-          </div>
-        </section>
-
-        <main className="main-content" id="archive-browser">
-          <div className="controls-section">
-            <div className="section-title-row">
-              <h2 className="section-heading">{filterSem ? `Semester ${filterSem} Question Papers` : 'All Semester Papers'}</h2>
-            </div>
-            
-            <div className="controls-bar">
-              <div className="tabs">
-                <button className={filter === 'all' ? 'tab active' : 'tab'} onClick={() => setFilter('all')}>Papers</button>
-                <button className={filter === 'saved' ? 'tab active' : 'tab'} onClick={() => setFilter('saved')}>Saved</button>
+        <main className="archive-main" id="archive-browser">
+          <div className="archive-controls">
+            <div className="archive-heading-row">
+              <div>
+                <span className="ps-archive-eyebrow">Smart Archive</span>
+                <h1>All Semester Papers</h1>
+                <p aria-live="polite">{loading ? 'Loading papers' : `${displayedPapers.length} ${displayedPapers.length === 1 ? 'paper' : 'papers'} found`}</p>
               </div>
-              <span className="navbar-paper-count"><h5>{displayedPapers.length} papers</h5></span>
-              <div className="filters">
-                <select className="sem-filter" value={filterSem} onChange={(e) => setFilterSem(e.target.value)}>
-                  <option value="">All Sems</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => <option key={sem} value={sem}>Sem {sem}</option>)}
+              <Link to="/contribute">Contribute a paper</Link>
+            </div>
+            <div className="archive-controls-bar">
+              <div className="tabs">
+                <button type="button" className={filter === 'all' ? 'tab active' : 'tab'} onClick={() => setFilter('all')}>Papers</button>
+                <button type="button" className={filter === 'saved' ? 'tab active' : 'tab'} onClick={() => setFilter('saved')}>Saved</button>
+              </div>
+              <div className="archive-filters">
+                <select aria-label="Semester" value={filterSem} onChange={(e) => setFilterSem(e.target.value)}>
+                  <option value="">All semesters</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => <option key={sem} value={sem}>Semester {sem}</option>)}
                 </select>
-                <select className="sem-filter" value={filterExam} onChange={(e) => setFilterExam(e.target.value)}>
-                  <option value="">All Types</option>
+                <select aria-label="Exam type" value={filterExam} onChange={(e) => setFilterExam(e.target.value)}>
+                  <option value="">All exams</option>
                   <option>Mid-Sem</option>
                   <option>End-Sem</option>
                 </select>
-                <select className="sem-filter" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
-                  <option value="">All Years</option>
+                <select aria-label="Year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
+                  <option value="">All years</option>
                   {years.map((year) => <option key={year} value={year}>{year}</option>)}
                 </select>
-                <select className="sem-filter" value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
-                  <option value="">All Branches</option>
-                  {branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
+                <select aria-label="Branch" value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
+                  <option value="">All branches</option>
+                  {OFFICIAL_BRANCHES.map(({ key, name }) => <option key={key} value={key}>{name}</option>)}
                 </select>
-                <input className="search-input" type="text" placeholder="Search subject, branch..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                {(filterSem || filterExam || filterYear || filterBranch) && (
+                  <button type="button" onClick={() => { setFilterSem(''); setFilterExam(''); setFilterYear(''); setFilterBranch(''); }}>Reset filters</button>
+                )}
               </div>
+              <label className="ps-archive-search"><Search size={18} /><span className="sr-only">Search papers</span><input type="search" placeholder="Search subject, branch..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></label>
             </div>
           </div>
 
-          <div className="papers-grid">
+          <div className="ps-archive-grid">
             {loading ? (
-              <div className="papers-loading-panel">
+              <div className="archive-list-state">
                 <PaperStackLoader label="Loading question papers..." />
               </div>
             ) : displayedPapers.length === 0 ? (
-              <div className="empty-state">
-                <h3>No papers found</h3>
-                <p>Try changing filters or search terms.</p>
+              <div className="archive-list-state">
+                <h3>{filter === 'saved' ? 'No saved papers yet' : 'No papers match these filters'}</h3>
+                <p>{filter === 'saved' ? 'Save a paper from the archive to return to it later.' : 'Try a broader search or clear your filters.'}</p>
+                <button type="button" onClick={() => { setFilter('all'); setSearchTerm(''); setFilterSem(''); setFilterExam(''); setFilterYear(''); setFilterBranch(''); }}>Show all papers</button>
               </div>
             ) : displayedPapers.map((paper) => {
               const saved = user?.bookmarks?.some((id) => String(id) === String(paper._id));
+              const SubjectIcon = getArchiveSubjectIcon(paper);
               return (
-                <div key={paper._id} className="paper-card">
-                  <div className="card-stats-row">
-                    <div className="stat-item">Views {paper.views || 0}</div>
-                    <div className="stat-item">Downloads {paper.downloads || 0}</div>
-                    <button className={`heart-icon ${saved ? 'liked' : ''}`} onClick={(e) => toggleBookmark(paper._id, e)} aria-label={saved ? 'Remove saved paper' : 'Save paper'}>
-                      {saved ? 'Saved' : 'Save'}
-                    </button>
-                  </div>
-                  <div className="card-body" onClick={() => handleView(paper)} style={{ cursor: 'pointer' }}>
-                    <span className={`badge ${paper.examType === 'Mid-Sem' ? 'mid' : 'end'}`}>{paper.examType}</span>
-                    <h3 className="subject-name">{paper.subject}</h3>
-                    <p className="paper-title">{paper.title}</p>
-                    <p className="paper-meta">Sem {paper.semester} - {paper.branch || 'CSE'} - {paper.year}</p>
-                    {paper.contributedByName && (
-                      <p className="contributor-name-small">Contributed by {paper.contributedByName}</p>
-                    )}
-                  </div>
-                  <div className="card-actions-v2">
-                    <button className="btn-view-pdf" onClick={() => handleView(paper)}>View</button>
-                    <button
-                      type="button"
-                      className="subject-hub-open-button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(getSubjectHubPath(paper));
-                      }}
-                    >
-                      Subject Hub
-                    </button>
-                    
-                    <div className="card-sharing-row">
-                      {paper.solutionPath && <button className="btn-icon solution-icon" onClick={(e) => handleSolution(e, paper)} title="Solution">Sol</button>}
-                      <button className="btn-icon download-icon" onClick={(e) => handleDownload(e, paper)} title="Download">Download</button>
-                      <button className="btn-icon share-wa-icon" onClick={(e) => handleWhatsAppShare(paper, e)} title="Share WhatsApp">WA</button>
-                      <button className="btn-icon copy-link-icon" onClick={(e) => handleCopyLink(paper, e)} title="Copy Link">Link</button>
-                      <button className="btn-icon report-icon" onClick={(e) => { e.stopPropagation(); setSelectedReportPaper(paper); }} title="Report Wrong Details">⚠️</button>
-                      
-                      {isAdmin && (
-                        <label className="btn-icon solution-icon update-btn" title="Update Solution">
-                          {paper.solutionPath ? 'Upd' : 'Add'}
-                          <input type="file" hidden accept="application/pdf" onChange={(e) => handleAddSolutionToExisting(paper._id, e.target.files[0])} />
-                        </label>
-                      )}
-                      {isAdmin && <button className="btn-icon delete-icon" onClick={(e) => handleDelete(e, paper._id)}>Del</button>}
-                    </div>
-                  </div>
-                </div>
+                <article key={paper._id} className="ps-paper-card">
+                  <div className="ps-paper-card-top"><span className="ps-paper-exam">{paper.examType || 'Paper'}</span><span className="ps-paper-year">{paper.year || 'Year unknown'}</span><span className="ps-paper-card-spacer" /><span title="Views"><Eye size={16} /> {paper.views || 0}</span><span title="Downloads"><Download size={16} /> {paper.downloads || 0}</span><button type="button" className={saved ? 'is-saved' : ''} onClick={(e) => toggleBookmark(paper._id, e)} aria-label={saved ? 'Remove saved paper' : 'Save paper'} title={saved ? 'Remove saved paper' : 'Save paper'}><Bookmark size={22} fill={saved ? 'currentColor' : 'none'} /></button></div>
+                  <div className="ps-paper-card-title"><div><h2>{paper.subject || paper.title}</h2><p>{paper.subjectCode || paper.title || 'Question Paper'}</p></div><span className="ps-paper-subject-icon"><SubjectIcon size={34} /></span></div>
+                  <div className="ps-paper-card-meta"><span><BookOpen size={16} /> Semester {paper.semester || '—'} · {paper.branch || 'IIIT Surat'}</span><span><FileText size={16} /> Question Paper</span><span><CalendarDays size={16} /> {paper.year || '—'}</span></div>
+                  <div className="ps-paper-card-contributor"><span>Contributed by <strong>{paper.contributedByName || 'PaperStack community'}</strong></span><span>{paper.createdAt ? new Date(paper.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span></div>
+                  <div className="ps-paper-card-primary"><button type="button" onClick={() => handleView(paper)}><Eye size={18} /> View</button><button type="button" onClick={() => navigate(getSubjectHubPath(paper))}><BookOpen size={18} /> Subject Hub</button></div>
+                  <div className="ps-paper-card-utilities"><button type="button" onClick={(e) => handleDownload(e, paper)}><Download size={17} /> Download</button><button type="button" onClick={(e) => handleWhatsAppShare(paper, e)} title="Share on WhatsApp"><Share2 size={17} /> WA</button><button type="button" onClick={(e) => handleCopyLink(paper, e)}><Link2 size={17} /> Link</button><button type="button" onClick={() => setSelectedReportPaper(paper)}><TriangleAlert size={17} /> Report</button></div>
+                  {(paper.solutionPath || isAdmin) && <details className="ps-paper-card-extra"><summary>More actions</summary><div>{paper.solutionPath && <button type="button" onClick={(e) => handleSolution(e, paper)}>Open solution</button>}<button type="button" onClick={() => setSelectedVerificationPaper(paper)}><ShieldCheck size={16} /> Verify details</button>{isAdmin && <label>Update solution<input type="file" accept="application/pdf" onChange={(e) => handleAddSolutionToExisting(paper._id, e.target.files[0])} /></label>}{isAdmin && <button type="button" onClick={(e) => handleDelete(e, paper._id)}>Delete paper</button>}</div></details>}
+                </article>
               );
             })}
           </div>
@@ -1300,6 +1268,15 @@ function Home({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast })
         <Footer />
         {selectedPaper && <PaperModal paper={selectedPaper} user={user} onClose={() => setSelectedPaper(null)} toast={toast} navigate={navigate} />}
         {selectedReportPaper && <ReportModal paper={selectedReportPaper} user={user} onClose={() => setSelectedReportPaper(null)} toast={toast} navigate={navigate} />}
+        {selectedVerificationPaper && (
+          <PaperVerificationModal
+            paper={selectedVerificationPaper}
+            user={user}
+            onClose={() => setSelectedVerificationPaper(null)}
+            toast={toast}
+            navigate={navigate}
+          />
+        )}
       </div>
     </>
   );
@@ -1314,7 +1291,7 @@ function InfoPage({ title, description, path, children }) {
         <link rel="canonical" href={`${FRONTEND_URL}${path}`} />
       </Helmet>
       <main className="page-shell">
-        <Link to="/" className="page-back-link">Back to papers</Link>
+        <Link to="/archive" className="page-back-link">Back to papers</Link>
         <h1>{title}</h1>
         <p className="page-lead">{description}</p>
         <div className="page-content">{children}</div>
@@ -1379,7 +1356,7 @@ function CopyrightPage() {
   );
 }
 
-function PaperSharePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+function PaperSharePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const { id } = useParams();
   const [paper, setPaper] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1433,9 +1410,9 @@ function PaperSharePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin
         <meta name="twitter:card" content="summary_large_image" />
         <link rel="canonical" href={shareUrl} />
       </Helmet>
-      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+      <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
       <main className="page-shell paper-share-page">
-        <Link to="/" className="page-back-link">Back to papers</Link>
+        <Link to="/archive" className="page-back-link">Back to papers</Link>
         {loading ? (
           <section className="paper-share-card">
             <PaperStackLoader label="Loading shared paper..." />
@@ -1444,7 +1421,7 @@ function PaperSharePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin
           <section className="paper-share-card empty-state">
             <h1>Paper not found</h1>
             <p>This PaperStack share link may be outdated or removed.</p>
-            <Link to="/" className="btn-primary-teal">Browse Archive</Link>
+            <Link to="/archive" className="btn-primary-teal">Browse Archive</Link>
           </section>
         ) : (
           <section className="paper-share-card">
@@ -1499,15 +1476,11 @@ function FAQPage() {
 }
 
 function NotFoundPage() {
-  return (
-    <InfoPage title="404" path="/404" description="The page you are looking for does not exist.">
-      <Link to="/" className="btn-login">Return to Papers</Link>
-    </InfoPage>
-  );
+  return <><Helmet><title>Page not found | PaperStack</title><meta name="robots" content="noindex" /></Helmet><ErrorState notFound /></>;
 }
 
 // V2 Page: Interactive Contribution Form with Cloudinary Upload
-function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+function ContributePageNew({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -1684,22 +1657,26 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
 
   return (
     <div className="app-container">
-      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+      <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
 
       <main className="smart-contribution-page">
-        <Link to="/" className="page-back-link">← Back to papers</Link>
+        <Link to="/archive" className="page-back-link">← Back to papers</Link>
 
         <section className="smart-contribution-hero">
-          <span className="page-eyebrow">Community Archive</span>
-          <h1>Contribute to PaperStack</h1>
-          <p>Upload a question paper and let PaperStack fill the details for you. You can always correct anything before submitting.</p>
+          <div><span className="page-eyebrow">Community Archive</span>
+          <h1>One paper. A little less exam stress.</h1>
+          <p>Share a question paper with the next batch. Check the details before it goes to review.</p>
+          <Link to="/contribute-resource">Sharing notes or solutions? Upload a resource <span aria-hidden="true">→</span></Link></div>
+          <img src="/resource-upload-owl.png" alt="" />
         </section>
+        <ol className="contribution-journey" aria-label="Contribution steps"><li className="is-current"><span>01</span><div><strong>Choose a PDF</strong><small>Question paper, up to 30 MB</small></div></li><li><span>02</span><div><strong>Check the details</strong><small>Subject, semester and exam</small></div></li><li><span>03</span><div><strong>Send for review</strong><small>Earn points once approved</small></div></li></ol>
 
         <section className="smart-contribution-shell">
-          <div className="contribution-mode-switch" role="tablist" aria-label="Contribution upload mode">
+          <div className="contribution-mode-switch" role="group" aria-label="Contribution upload mode">
             <button
               type="button"
               className={`contribution-mode-btn ${uploadMode === 'smart' ? 'active' : ''}`}
+              aria-pressed={uploadMode === 'smart'}
               onClick={() => changeUploadMode('smart')}
             >
               Smart Upload
@@ -1708,6 +1685,7 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
             <button
               type="button"
               className={`contribution-mode-btn ${uploadMode === 'manual' ? 'active' : ''}`}
+              aria-pressed={uploadMode === 'manual'}
               onClick={() => changeUploadMode('manual')}
             >
               Manual Upload
@@ -1796,12 +1774,7 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
                   <div className="form-group">
                     <label>Branch <span>*</span></label>
                     <select value={formData.branch} onChange={(e) => setFormData({ ...formData, branch: e.target.value })}>
-                      <option>CSE</option>
-                      <option>ECE</option>
-                      <option>CSE &amp; ECE</option>
-                      <option>AI</option>
-                      <option>AIML</option>
-                      <option>IT</option>
+                      {OFFICIAL_BRANCHES.map(({ key, name }) => <option key={key} value={key}>{name}</option>)}
                     </select>
                   </div>
 
@@ -1868,9 +1841,7 @@ function ContributePageNew({ user, setUser, theme, toggleTheme, isAdmin, setIsAd
 
 // V2 Page: Exam Mode screen
 // V2 Page: Exam Mode Screen
-function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
-  const CURRENT_YEAR = new Date().getFullYear();
-  const EXPECTED_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3, CURRENT_YEAR - 4, CURRENT_YEAR - 5];
+function ExamModePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const navigate = useNavigate();
   const location = useLocation();
   const examModeParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -1881,76 +1852,6 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
   const [subject, setSubject] = useState(() => examModeParams.get('subject') || '');
   const [examType, setExamType] = useState(() => examModeParams.get('examType') || 'Mid-Sem');
   const [loading, setLoading] = useState(true);
-  const [searched, setSearched] = useState(false);
-
-  const normalize = (value) => {
-    return String(value || '')
-      .toLowerCase()
-      .replace(/branch\s*:/g, '')
-      .replace(/semester\s*/g, '')
-      .replace(/sem\s*/g, '')
-      .replace(/&/g, 'and')
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim();
-  };
-
-  const normalizeSubject = (value) => {
-    return normalize(value)
-      .replace(/\bdsa\b/g, 'data structure algorithms')
-      .replace(/\bdaa\b/g, 'design analysis algorithm')
-      .replace(/\badc\b/g, 'analog digital communication')
-      .replace(/\boot\b/g, 'object oriented technology')
-      .replace(/\bss\b/g, 'system software');
-  };
-
-  const getPaperSemester = (paper) => {
-    const raw = paper?.semester || paper?.sem || '';
-    const match = String(raw).match(/\d+/);
-    return match ? match[0] : String(raw);
-  };
-
-  const paperMatchesBranch = (paper) => {
-    const selectedBranch = normalize(branch);
-    const paperBranch = normalize(paper?.branch);
-
-    if (!selectedBranch || selectedBranch === 'all') return true;
-
-    return (
-      paperBranch === selectedBranch ||
-      paperBranch.includes(selectedBranch) ||
-      selectedBranch.includes(paperBranch)
-    );
-  };
-
-  const paperMatchesSemester = (paper) => {
-    const selectedSem = String(semester).replace(/\D/g, '');
-    const paperSem = String(getPaperSemester(paper)).replace(/\D/g, '');
-
-    if (!selectedSem) return true;
-
-    return paperSem === selectedSem;
-  };
-
-  const paperMatchesExamType = (paper) => {
-    const selectedType = normalize(examType);
-    const paperType = normalize(paper?.examType || paper?.type);
-
-    if (!selectedType || selectedType === 'all') return true;
-
-    return paperType === selectedType || paperType.includes(selectedType);
-  };
-
-  const paperMatchesSubject = (paper) => {
-    const selectedSubject = normalizeSubject(subject);
-    const paperSubject = normalizeSubject(paper?.subject || paper?.normalizedSubject || paper?.title);
-
-    if (!selectedSubject) return true;
-
-    return (
-      paperSubject.includes(selectedSubject) ||
-      selectedSubject.includes(paperSubject)
-    );
-  };
 
   useEffect(() => {
     let mounted = true;
@@ -1984,17 +1885,55 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
   }, [toast]);
 
   const baseMatchedPapers = useMemo(() => {
+    const normalizeValue = (value) => String(value || '')
+      .toLowerCase()
+      .replace(/branch\s*:/g, '')
+      .replace(/semester\s*/g, '')
+      .replace(/sem\s*/g, '')
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    const selectedBranch = normalizeValue(branch);
+    const selectedSemester = String(semester).replace(/\D/g, '');
+    const selectedExamType = normalizeValue(examType);
+
     return papers.filter((paper) => {
-      return (
-        paperMatchesBranch(paper) &&
-        paperMatchesSemester(paper) &&
-        paperMatchesExamType(paper)
-      );
+      const paperBranch = normalizeValue(paper?.branch);
+      const rawSemester = paper?.semester || paper?.sem || '';
+      const semesterMatch = String(rawSemester).match(/\d+/);
+      const paperSemester = String(semesterMatch ? semesterMatch[0] : rawSemester).replace(/\D/g, '');
+      const paperExamType = normalizeValue(paper?.examType || paper?.type);
+
+      const branchMatches = !selectedBranch || selectedBranch === 'all' ||
+        paperBranch === selectedBranch || paperBranch.includes(selectedBranch) || selectedBranch.includes(paperBranch);
+      const semesterMatches = !selectedSemester || paperSemester === selectedSemester;
+      const examTypeMatches = !selectedExamType || selectedExamType === 'all' ||
+        paperExamType === selectedExamType || paperExamType.includes(selectedExamType);
+
+      return branchMatches && semesterMatches && examTypeMatches;
     });
   }, [papers, branch, semester, examType]);
 
   const subjectMatchedPapers = useMemo(() => {
-    return baseMatchedPapers.filter((paper) => paperMatchesSubject(paper));
+    const normalizeSubjectValue = (value) => String(value || '')
+      .toLowerCase()
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\bdsa\b/g, 'data structure algorithms')
+      .replace(/\bdaa\b/g, 'design analysis algorithm')
+      .replace(/\badc\b/g, 'analog digital communication')
+      .replace(/\boot\b/g, 'object oriented technology')
+      .replace(/\bss\b/g, 'system software');
+
+    const selectedSubject = normalizeSubjectValue(subject);
+    if (!selectedSubject) return baseMatchedPapers;
+
+    return baseMatchedPapers.filter((paper) => {
+      const paperSubject = normalizeSubjectValue(paper?.subject || paper?.normalizedSubject || paper?.title);
+      return paperSubject.includes(selectedSubject) || selectedSubject.includes(paperSubject);
+    });
   }, [baseMatchedPapers, subject]);
 
   const availableYears = useMemo(() => {
@@ -2009,8 +1948,10 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
   }, [subjectMatchedPapers]);
 
   const missingYears = useMemo(() => {
-    return EXPECTED_YEARS.filter((year) => !availableYears.includes(year));
-  }, [EXPECTED_YEARS, availableYears]);
+    const currentYear = new Date().getFullYear();
+    const expectedYears = Array.from({ length: 6 }, (_, index) => currentYear - index);
+    return expectedYears.filter((year) => !availableYears.includes(year));
+  }, [availableYears]);
 
   const recommendedPapers = useMemo(() => {
     return [...subjectMatchedPapers]
@@ -2028,7 +1969,6 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
 
   const handleSearch = (event) => {
     event.preventDefault();
-    setSearched(true);
   };
 
   const downloadPaper = (paper) => {
@@ -2143,15 +2083,13 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
       <Navbar
         user={user}
         setUser={setUser}
-        theme={theme}
-        toggleTheme={toggleTheme}
         isAdmin={isAdmin}
         setIsAdmin={setIsAdmin}
         toast={toast}
       />
 
       <main className="exam-mode-v2-page">
-        <Link to="/" className="exam-back-link">
+        <Link to="/archive" className="exam-back-link">
           Back to papers
         </Link>
 
@@ -2169,9 +2107,7 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
             <div className="exam-field">
               <label>Branch</label>
               <select value={branch} onChange={(e) => setBranch(e.target.value)}>
-                <option value="CSE">CSE</option>
-                <option value="ECE">ECE</option>
-                <option value="CSE & ECE">CSE & ECE</option>
+                {OFFICIAL_BRANCHES.map(({ key }) => <option key={key} value={key}>{key}</option>)}
               </select>
             </div>
 
@@ -2263,7 +2199,7 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
               ) : (
                 <div className="exam-empty-state">
                   No papers available for this exact combination.
-                  Try leaving subject empty or checking branch as CSE & ECE.
+                  Try leaving the subject empty or checking another branch.
                 </div>
               )}
             </div>
@@ -2356,378 +2292,6 @@ function ExamModePage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, 
 }
 // V2 Page: Missing Papers Board
 // V2 Page: Missing Papers Board
-function MissingPapersPage({
-  user,
-  setUser,
-  theme,
-  toggleTheme,
-  isAdmin,
-  setIsAdmin,
-  toast
-} = {}) {
-  const [data, setData] = useState({
-    summary: null,
-    missingPapers: []
-  });
-
-  const [loading, setLoading] = useState(true);
-  const [branchFilter, setBranchFilter] = useState('All');
-  const [semesterFilter, setSemesterFilter] = useState('All');
-  const [examTypeFilter, setExamTypeFilter] = useState('All');
-  const [yearFilter, setYearFilter] = useState('All');
-  const [priorityFilter, setPriorityFilter] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const loadMissingPapers = async () => {
-    setLoading(true);
-
-    try {
-      const res = await axios.get(`${API_URL}/api/missing-papers`);
-
-      const payload = res.data || {};
-
-      const missingList = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload.missingPapers)
-          ? payload.missingPapers
-          : [];
-
-      setData({
-        summary: payload.summary || null,
-        missingPapers: missingList
-      });
-    } catch (error) {
-      console.error('Missing papers load failed:', error);
-
-      if (toast) {
-        toast('Failed to load missing papers', 'error');
-      }
-
-      setData({
-        summary: null,
-        missingPapers: []
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadMissingPapers();
-  }, []);
-
-  const normalize = (value) => {
-    return String(value || '').toLowerCase().trim();
-  };
-
-  const filteredMissingPapers = useMemo(() => {
-    return data.missingPapers.filter((item) => {
-      const matchesBranch =
-        branchFilter === 'All' || item.branch === branchFilter;
-
-      const matchesSemester =
-        semesterFilter === 'All' ||
-        Number(item.semester) === Number(semesterFilter);
-
-      const matchesExamType =
-        examTypeFilter === 'All' || item.examType === examTypeFilter;
-
-      const matchesYear =
-        yearFilter === 'All' || Number(item.year) === Number(yearFilter);
-
-      const matchesPriority =
-        priorityFilter === 'All' || item.priority === priorityFilter;
-
-      const searchPool = [
-        item.subject,
-        item.subjectCode,
-        item.shortCode,
-        item.branch,
-        item.examType,
-        item.year,
-        `semester ${item.semester}`,
-        `sem ${item.semester}`
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      const matchesSearch =
-        !searchTerm.trim() || searchPool.includes(normalize(searchTerm));
-
-      return (
-        matchesBranch &&
-        matchesSemester &&
-        matchesExamType &&
-        matchesYear &&
-        matchesPriority &&
-        matchesSearch
-      );
-    });
-  }, [
-    data.missingPapers,
-    branchFilter,
-    semesterFilter,
-    examTypeFilter,
-    yearFilter,
-    priorityFilter,
-    searchTerm
-  ]);
-
-  const availableYears = useMemo(() => {
-    const years = new Set(
-      data.missingPapers
-        .map((item) => item.year)
-        .filter(Boolean)
-    );
-
-    return Array.from(years).sort((a, b) => b - a);
-  }, [data.missingPapers]);
-
-  const summary = data.summary || {
-    totalMissing: data.missingPapers.length,
-    highPriority: data.missingPapers.filter((item) => item.priority === 'High').length,
-    mediumPriority: data.missingPapers.filter((item) => item.priority === 'Medium').length,
-    lowPriority: data.missingPapers.filter((item) => item.priority === 'Low').length
-  };
-
-  const openContribution = (item) => {
-    const contributionUrl =
-      item.contributionUrl ||
-      `/contribute?branch=${encodeURIComponent(item.branch)}&semester=${encodeURIComponent(item.semester)}&subject=${encodeURIComponent(item.subject)}&subjectCode=${encodeURIComponent(item.subjectCode || '')}&examType=${encodeURIComponent(item.examType)}&year=${encodeURIComponent(item.year)}`;
-
-    if (!user) {
-      window.location.href = `/login?redirect=${encodeURIComponent(contributionUrl)}`;
-      return;
-    }
-
-    window.location.href = contributionUrl;
-  };
-
-  const clearFilters = () => {
-    setBranchFilter('All');
-    setSemesterFilter('All');
-    setExamTypeFilter('All');
-    setYearFilter('All');
-    setPriorityFilter('All');
-    setSearchTerm('');
-  };
-
-  const priorityClass = (priority) => {
-    if (priority === 'High') return 'mp-priority-high';
-    if (priority === 'Medium') return 'mp-priority-medium';
-    return 'mp-priority-low';
-  };
-
-  return (
-    <div className="app-container">
-      <Helmet>
-        <title>Missing Papers Board - PaperStack</title>
-        <meta
-          name="description"
-          content="Find missing IIIT Surat previous year question papers and contribute to PaperStack."
-        />
-      </Helmet>
-
-      <Navbar
-        user={user}
-        setUser={setUser}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        isAdmin={isAdmin}
-        setIsAdmin={setIsAdmin}
-        toast={toast}
-      />
-
-      <main className="missing-page-v2">
-        <Link to="/" className="mp-back-link">
-          Back to papers
-        </Link>
-
-        <section className="mp-hero-panel">
-          <div>
-            <span className="mp-label">Community Mission</span>
-            <h1>Missing Papers Board</h1>
-            <p>
-              See which papers are still missing from PaperStack. Upload missing papers,
-              help your juniors, and earn contributor points.
-            </p>
-          </div>
-
-          <div className="mp-hero-card">
-            <span>Contribution Score</span>
-            <strong>Build the Archive</strong>
-            <p>
-              Every approved paper improves the archive and your contributor rank.
-            </p>
-          </div>
-        </section>
-
-        <section className="mp-stats-grid">
-          <div className="mp-stat-card">
-            <span>Total Missing</span>
-            <strong>{summary.totalMissing || 0}</strong>
-            <p>Expected papers not uploaded yet</p>
-          </div>
-
-          <div className="mp-stat-card high">
-            <span>High Priority</span>
-            <strong>{summary.highPriority || 0}</strong>
-            <p>Current year missing papers</p>
-          </div>
-
-          <div className="mp-stat-card medium">
-            <span>Medium Priority</span>
-            <strong>{summary.mediumPriority || 0}</strong>
-            <p>Previous year missing papers</p>
-          </div>
-
-          <div className="mp-stat-card low">
-            <span>Low Priority</span>
-            <strong>{summary.lowPriority || 0}</strong>
-            <p>Older missing papers</p>
-          </div>
-        </section>
-
-        <section className="mp-filter-panel">
-          <div className="mp-filter-header">
-            <div>
-              <h2>Find Missing Papers</h2>
-              <p>
-                Showing <strong>{filteredMissingPapers.length}</strong> of{' '}
-                <strong>{data.missingPapers.length}</strong> missing papers.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={loadMissingPapers}
-              className="mp-refresh-btn"
-            >
-              Refresh
-            </button>
-          </div>
-
-          <div className="mp-filter-grid">
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-            >
-              <option value="All">All Branches</option>
-              <option value="CSE">CSE</option>
-              <option value="ECE">ECE</option>
-            </select>
-
-            <select
-              value={semesterFilter}
-              onChange={(e) => setSemesterFilter(e.target.value)}
-            >
-              <option value="All">All Semesters</option>
-              <option value="1">Semester 1</option>
-              <option value="2">Semester 2</option>
-              <option value="3">Semester 3</option>
-              <option value="4">Semester 4</option>
-              <option value="5">Semester 5</option>
-              <option value="6">Semester 6</option>
-              <option value="7">Semester 7</option>
-            </select>
-
-            <select
-              value={examTypeFilter}
-              onChange={(e) => setExamTypeFilter(e.target.value)}
-            >
-              <option value="All">All Exam Types</option>
-              <option value="Mid-Sem">Mid-Sem</option>
-              <option value="End-Sem">End-Sem</option>
-            </select>
-
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-            >
-              <option value="All">All Years</option>
-              {availableYears.map((year) => (
-                <option value={year} key={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-            >
-              <option value="All">All Priority</option>
-              <option value="High">High Priority</option>
-              <option value="Medium">Medium Priority</option>
-              <option value="Low">Low Priority</option>
-            </select>
-
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search subject, code, year..."
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="mp-clear-btn"
-          >
-            Clear all filters
-          </button>
-        </section>
-
-        <section className="mp-list-section">
-          {loading ? (
-            <div className="mp-loading-card">
-              <PaperStackLoader label="Checking expected curriculum against uploaded papers..." />
-            </div>
-          ) : filteredMissingPapers.length ? (
-            <div className="mp-cards-grid">
-              {filteredMissingPapers.map((item, index) => (
-                <article
-                  className="mp-paper-card"
-                  key={`${item.branch}-${item.semester}-${item.subject}-${item.examType}-${item.year}-${index}`}
-                >
-                  <div className="mp-card-top">
-                    <span className={`mp-priority ${priorityClass(item.priority)}`}>
-                      {item.priority}
-                    </span>
-
-                    <span className="mp-year">{item.year}</span>
-                  </div>
-
-                  <h3>{item.subject}</h3>
-
-                  <div className="mp-meta-grid">
-                    <span>{item.branch}</span>
-                    <span>Semester {item.semester}</span>
-                    <span>{item.examType}</span>
-                    <span>{item.shortCode || item.subjectCode || 'Paper'}</span>
-                  </div>
-
-                  <button type="button" onClick={() => openContribution(item)}>
-                    Contribute Paper
-                  </button>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="mp-empty-state">
-              <h2>No missing papers found</h2>
-              <p>Try changing filters or refresh the missing papers board.</p>
-            </div>
-          )}
-        </section>
-      </main>
-
-      <Footer />
-    </div>
-  );
-}
 function getAnalyticsSubjectCode(item, fallback) {
   const source = String(item?.shortCode || item?.subjectCode || item?.subject || fallback || '').toLowerCase();
   const direct = String(item?.shortCode || item?.subjectCode || '').trim();
@@ -2993,7 +2557,7 @@ function SimplePieChart({ data, colors = ['#0f9f9f'], size = 220 }) {
 }
 
 // V2 Page: Analytics Dashboard Screen
-function AnalyticsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+function AnalyticsPage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const [data, setData] = useState(null);
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3210,15 +2774,13 @@ function AnalyticsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin,
       <Navbar
         user={user}
         setUser={setUser}
-        theme={theme}
-        toggleTheme={toggleTheme}
         isAdmin={isAdmin}
         setIsAdmin={setIsAdmin}
         toast={toast}
       />
 
       <main className="analytics-dashboard-page">
-        <Link to="/" className="analytics-back-link">
+        <Link to="/archive" className="analytics-back-link">
           Back to papers
         </Link>
 
@@ -3411,7 +2973,7 @@ function AnalyticsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin,
 }
 
 // V2 Page: Admin Contribution Hub
-function AdminContributionsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+function AdminContributionsPage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -3462,9 +3024,9 @@ function AdminContributionsPage({ user, setUser, theme, toggleTheme, isAdmin, se
 
   return (
     <div className="app-container">
-      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+      <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
       <main className="page-shell">
-        <Link to="/" className="page-back-link">Back to papers</Link>
+        <Link to="/archive" className="page-back-link">Back to papers</Link>
         
         <div className="contributors-header">
           <h1>Admin Contribution review Hub</h1>
@@ -3511,9 +3073,16 @@ function AdminContributionsPage({ user, setUser, theme, toggleTheme, isAdmin, se
 }
 
 // V2 Page: Admin Reports panel page
-function AdminReportsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdmin, toast }) {
+function AdminReportsPage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const categories = [...new Set(reports.map((item) => item.category || item.reason).filter(Boolean))].sort();
+  const visibleReports = reports.filter((item) =>
+    (!categoryFilter || (item.category || item.reason) === categoryFilter) &&
+    (!statusFilter || item.status === statusFilter)
+  );
 
   const fetchReports = useCallback(() => {
     setLoading(true);
@@ -3539,39 +3108,61 @@ function AdminReportsPage({ user, setUser, theme, toggleTheme, isAdmin, setIsAdm
 
   return (
     <div className="app-container">
-      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+      <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
       <main className="page-shell">
-        <Link to="/" className="page-back-link">Back to papers</Link>
+        <Link to="/archive" className="page-back-link">Back to papers</Link>
 
         <div className="contributors-header">
           <h1>Admin Reports Hub</h1>
-          <p className="page-lead">Review wrong detail reports and PDF issues reported by students.</p>
+          <p className="page-lead">Review paper issues and problems reported by students.</p>
+        </div>
+
+        <div className="admin-report-filters">
+          <label>Category
+            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+              <option value="">All categories</option>
+              {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+          </label>
+          <label>Status
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="">All statuses</option>
+              {['open', 'investigating', 'reviewed', 'resolved', 'dismissed'].map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+          </label>
+          <span>{visibleReports.length} reports</span>
         </div>
 
         {loading ? (
           <div className="analytics-state">Loading reports...</div>
         ) : (
           <div className="admin-contributions-list">
-            {reports.map(item => (
+            {visibleReports.map(item => (
               <div key={item._id} className="auth-card admin-contrib-card">
                 <div className="admin-contrib-details">
-                  <h4>Paper: {item.paperTitle}</h4>
+                  <h4>{item.title || item.paperTitle || 'PaperStack issue'}</h4>
                   <p><strong>Reporter:</strong> {item.reporterName} ({item.reporterEmail})</p>
-                  <p style={{ color: '#ef4444' }}><strong>Reason:</strong> {item.reason}</p>
+                  <p><strong>Category:</strong> {item.category || item.reason}</p>
+                  {item.page && <p><strong>Page:</strong> {item.page}</p>}
+                  {item.url && <p><strong>URL:</strong> {item.url}</p>}
+                  {item.relatedId && <p><strong>Related ID:</strong> {item.relatedId}</p>}
+                  <p><strong>Submitted:</strong> {new Date(item.createdAt).toLocaleString('en-IN')}</p>
                   <p className="notes-para"><strong>Details:</strong> {item.message}</p>
                   <p className="status-pill-v2">Status: <span className={`status-${item.status}`}>{item.status.toUpperCase()}</span></p>
                 </div>
                 <div className="admin-contrib-actions">
-                  {item.status !== 'resolved' && (
-                    <>
-                      <button onClick={() => handleUpdateStatus(item, 'reviewed')} className="btn-view-sol-contrib">Mark Reviewed</button>
-                      <button onClick={() => handleUpdateStatus(item, 'resolved')} className="btn-approve-contrib">Mark Resolved</button>
-                    </>
-                  )}
+                  <select aria-label={`Status for ${item.title || item.paperTitle}`} value={item.status} onChange={(event) => handleUpdateStatus(item, event.target.value)}>
+                    {['open', 'investigating', 'reviewed', 'resolved', 'dismissed'].map((status) => <option key={status} value={status}>{status}</option>)}
+                  </select>
+                  <button type="button" onClick={async () => {
+                    if (!window.confirm('Delete this report?')) return;
+                    try { await axios.delete(`${API_URL}/api/admin/reports/${item._id}`, { headers: adminHeader() }); fetchReports(); }
+                    catch (error) { toast(error.response?.data?.error || 'Could not delete report', 'error'); }
+                  }}>Delete spam</button>
                 </div>
               </div>
             ))}
-            {reports.length === 0 && <p className="no-data-notice">No issue reports submitted yet.</p>}
+            {visibleReports.length === 0 && <p className="no-data-notice">No reports match these filters.</p>}
           </div>
         )}
       </main>
@@ -3592,15 +3183,15 @@ const ADMIN_UPLOAD_INITIAL_FORM = {
 
 const CSV_TEMPLATE_CONTENT = `fileName,solutionFileName,branch,semester,subject,subjectCode,examType,year,title
 dsa_mid_2024.pdf,dsa_mid_2024_solution.pdf,CSE,2,Data Structure and Algorithms,DSA,Mid-Sem,2024,Branch : CSE
-dm_mid_2024.pdf,,CSE & ECE,2,Discrete Mathematics,DM,Mid-Sem,2024,Branch : CSE & ECE
+dm_mid_2024.pdf,,CSE,2,Discrete Mathematics,DM,Mid-Sem,2024,Branch : CSE
 `;
 
-function AdminAccessRequired({ setIsAdmin, toast, theme, toggleTheme }) {
+function AdminAccessRequired({ setIsAdmin, toast }) {
   const navigate = useNavigate();
 
   return (
     <div className="app-container">
-      <Navbar user={null} setUser={() => {}} theme={theme} toggleTheme={toggleTheme} isAdmin={false} setIsAdmin={setIsAdmin} toast={toast} />
+      <Navbar user={null} setUser={() => {}} isAdmin={false} setIsAdmin={setIsAdmin} toast={toast} />
       <main className="admin-upload-page">
         <section className="admin-upload-access-card">
           <h1>Admin access required</h1>
@@ -3615,7 +3206,7 @@ function AdminAccessRequired({ setIsAdmin, toast, theme, toggleTheme }) {
   );
 }
 
-function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast, theme, toggleTheme }) {
+function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const [uploadMode, setUploadMode] = useState('single');
   const [singleForm, setSingleForm] = useState(ADMIN_UPLOAD_INITIAL_FORM);
   const [paperFile, setPaperFile] = useState(null);
@@ -3757,7 +3348,7 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast, theme, t
   if (!isAdmin) {
     return (
       <div className="app-container">
-        <Navbar user={null} setUser={() => {}} theme={theme} toggleTheme={toggleTheme} isAdmin={false} setIsAdmin={setIsAdmin} toast={toast} />
+        <Navbar user={null} setUser={() => {}} isAdmin={false} setIsAdmin={setIsAdmin} toast={toast} />
         <main className="admin-upload-page">
           <section className="admin-upload-access-card">
             <h1>Admin access required</h1>
@@ -3778,10 +3369,10 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast, theme, t
         <title>Admin Upload Center - PaperStack</title>
         <meta name="description" content="Admin upload center for PaperStack question papers." />
       </Helmet>
-      <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+      <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
 
       <main className="admin-upload-page">
-        <Link to="/" className="page-back-link">Back to papers</Link>
+        <Link to="/archive" className="page-back-link">Back to papers</Link>
 
         <section className="admin-upload-hero">
           <span>Admin Upload Center</span>
@@ -3810,9 +3401,7 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast, theme, t
                 </label>
                 <label>Branch <span>*</span>
                   <select value={singleForm.branch} onChange={(e) => setSingleForm({ ...singleForm, branch: e.target.value })}>
-                    <option>CSE</option>
-                    <option>ECE</option>
-                    <option>CSE & ECE</option>
+                    {OFFICIAL_BRANCHES.map(({ key }) => <option key={key} value={key}>{key}</option>)}
                   </select>
                 </label>
                 <label>Semester <span>*</span>
@@ -3966,29 +3555,49 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast, theme, t
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
-  const [isAdmin, setIsAdmin] = useState(Boolean(localStorage.getItem('adminToken')));
+  const [isAdmin, setIsAdmin] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [databaseOffline, setDatabaseOffline] = useState(false);
+  const databaseOfflineRef = useRef(false);
+
+  useEffect(() => {
+    localStorage.removeItem('adminToken');
+    if (!sessionStorage.getItem('adminToken')) return;
+    axios.get(`${API_URL}/api/admin/session`, { headers: adminHeader() })
+      .then(() => setIsAdmin(true))
+      .catch(() => { sessionStorage.removeItem('adminToken'); setIsAdmin(false); });
+  }, []);
+
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => {
+        if (response.config?.url?.startsWith(API_URL) && !response.config.url.endsWith('/api/health')) {
+          databaseOfflineRef.current = false;
+          setDatabaseOffline(false);
+        }
+        return response;
+      },
+      (error) => {
+        if (error.response?.status === 503 && error.response?.data?.code === 'DATABASE_UNAVAILABLE') {
+          databaseOfflineRef.current = true;
+          setDatabaseOffline(true);
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
 
   const dismissToast = useCallback((id) => {
     setToasts((items) => items.filter((toast) => toast.id !== id));
   }, []);
 
   const toast = useCallback((message, type = 'info') => {
+    if (type === 'error' && databaseOfflineRef.current) return;
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((items) => [...items, { id, message, type }]);
     setTimeout(() => dismissToast(id), 3800);
   }, [dismissToast]);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
-
-  useEffect(() => {
-    document.body.className = theme;
-  }, [theme]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -4001,6 +3610,7 @@ export default function App() {
         const semester = res.data.semester || res.data.currentSemester;
         setUser({
           username: res.data.username,
+          name: res.data.name || res.data.displayName || res.data.username,
           email: res.data.email,
           bookmarks: res.data.bookmarks || [],
           semester,
@@ -4009,31 +3619,42 @@ export default function App() {
         });
         if (semester) localStorage.setItem('userSemester', semester);
       })
-      .catch(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
+      .catch((error) => {
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          setUser(null);
+        }
       });
   }, []);
 
   const appRoutes = (
     <Router>
       <ToastStack toasts={toasts} dismissToast={dismissToast} />
+      {databaseOffline && <div className="database-offline-banner" role="status">
+        <strong>PaperStack data is temporarily unavailable.</strong>
+        <span>The database connection is down. Please try again shortly.</span>
+        <button type="button" onClick={() => window.location.reload()}>Retry</button>
+      </div>}
       <PWAInstallPrompt />
       <BackToTopButton />
       <Routes>
-        <Route path="/" element={<Home user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        <Route path="/" element={<Home user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        <Route path="/archive" element={<ArchivePage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        <Route path="/testimonials" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><TestimonialsPage user={user} isAdmin={isAdmin} /><Footer /></div>} />
+        <Route path="/report" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><SiteReportPage user={user} /><Footer /></div>} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy-policy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/disclaimer" element={<DisclaimerPage />} />
         <Route path="/copyright" element={<CopyrightPage />} />
-        <Route path="/paper/:id" element={<PaperSharePage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        <Route path="/paper/:id" element={<PaperSharePage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
               <Route
                 path="/subject/:subjectKey"
                 element={
                   <div className="app-container">
-                    <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
                     <SubjectPage user={user} toast={toast} />
                     <Footer />
                   </div>
@@ -4041,12 +3662,32 @@ export default function App() {
               />
         
         {/* Interactive V2 routes */}
-        <Route path="/contribute" element={<ContributePageNew user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        <Route path="/contribute" element={<ContributePageNew user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
         <Route
+                path="/verify-archive"
+                element={
+                  <div className="app-container">
+                    <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <VerificationPage user={user} toast={toast} />
+                    <Footer />
+                  </div>
+                }
+              />
+              <Route
+                path="/archive-progress"
+                element={
+                  <div className="app-container">
+                    <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <ArchiveCompletionPage toast={toast} />
+                    <Footer />
+                  </div>
+                }
+              />
+              <Route
                 path="/contributors"
                 element={
                   <div className="app-container">
-                    <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
                     <ContributorLeaderboardPage user={user} toast={toast} />
                     <Footer />
                   </div>
@@ -4056,24 +3697,252 @@ export default function App() {
                 path="/contributors/:contributorId"
                 element={
                   <div className="app-container">
-                    <Navbar user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
                     <ContributorProfilePage user={user} toast={toast} />
                     <Footer />
                   </div>
                 }
               />
-        <Route path="/exam-mode" element={<ExamModePage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
-        <Route path="/missing-papers" element={<MissingPapersPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
-        <Route path="/analytics" element={<AnalyticsPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
-        
-        {/* Admin panel routes */}
+        <Route path="/exam-mode" element={<ExamModePage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
         <Route
+                path="/missing-papers"
+                element={
+                  <div className="app-container">
+                    <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                    <PaperBountiesPage user={user} toast={toast} />
+                    <Footer />
+                  </div>
+                }
+              />
+        <Route path="/analytics" element={<AnalyticsPage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        
+        <Route
+          path="/questions"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <InteractiveQuestionsPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+        <Route
+          path="/questions/:questionId"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <InteractiveQuestionsPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/pyq-intelligence"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <PyqIntelligencePage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        {/* Admin panel routes */}
+                <Route
+          path="/important-topics"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <ImportantTopicsPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+                <Route
+          path="/revision-sheets"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <RevisionSheetsPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/exam-war-room"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <ExamWarRoomPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/ask-paperstack"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <AskPaperStackPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/mock-exams"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <MockExamGeneratorPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/mock-evaluation"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <MockEvaluationPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/semester-survival"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <SemesterSurvivalPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/dashboard"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <PersonalDashboardPage toast={toast} setUser={setUser} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/notifications"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <NotificationsPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/streaks"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <StreaksBadgesPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/branch-competition"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <BranchCompetitionPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/trending"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <TrendingPage toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/search"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <SearchV2Page toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/contribute-resource"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <ResourceContributionPage user={user} toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/admin/question-solutions"
+          element={
+            isAdmin ? <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <AdminQuestionSolutionsPage toast={toast} />
+              <Footer />
+            </div> : <AdminAccessRequired setIsAdmin={setIsAdmin} toast={toast} />
+          }
+        />
+
+        <Route
+          path="/admin/moderation"
+          element={
+            isAdmin ? <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <AdminModerationPage isAdmin={isAdmin} toast={toast} />
+              <Footer />
+            </div> : <AdminAccessRequired setIsAdmin={setIsAdmin} toast={toast} />
+          }
+        />
+
+        <Route
+          path="/admin/product-analytics"
+          element={
+            isAdmin ? <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <AdminProductAnalyticsPage isAdmin={isAdmin} toast={toast} />
+              <Footer />
+            </div> : <AdminAccessRequired setIsAdmin={setIsAdmin} toast={toast} />
+          }
+        />
+
+<Route
           path="/admin/upload"
           element={
             isAdmin ? (
-              <AdminUploadCenter user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
+              <AdminUploadCenter user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
             ) : (
-              <AdminAccessRequired setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
+              <AdminAccessRequired setIsAdmin={setIsAdmin} toast={toast} />
             )
           }
         />
@@ -4081,9 +3950,23 @@ export default function App() {
           path="/admin/contributions"
           element={
             isAdmin ? (
-              <AdminContributionsPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <AdminContributionsPage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
             ) : (
-              <AdminAccessRequired setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
+              <AdminAccessRequired setIsAdmin={setIsAdmin} toast={toast} />
+            )
+          }
+        />
+        <Route
+          path="/admin/question-extraction"
+          element={
+            isAdmin ? (
+              <div className="app-container">
+                <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+                <AdminQuestionExtractionPage toast={toast} />
+                <Footer />
+              </div>
+            ) : (
+              <AdminAccessRequired setIsAdmin={setIsAdmin} toast={toast} />
             )
           }
         />
@@ -4091,9 +3974,9 @@ export default function App() {
           path="/admin/reports"
           element={
             isAdmin ? (
-              <AdminReportsPage user={user} setUser={setUser} theme={theme} toggleTheme={toggleTheme} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <AdminReportsPage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
             ) : (
-              <AdminAccessRequired setIsAdmin={setIsAdmin} theme={theme} toggleTheme={toggleTheme} toast={toast} />
+              <AdminAccessRequired setIsAdmin={setIsAdmin} toast={toast} />
             )
           }
         />

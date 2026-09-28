@@ -1,0 +1,91 @@
+/* Shared type and surface rhythm for the student study tools. */
+:is(.iq-page, .pi-page, .it-page, .rs-page, .wr-page, .aps-page, .me-page, .mv-page, .sp-page, .pd-page, .ac-page, .vq-page, .tr-page, .rc-page, .sb-page, .bc-page) {
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--color-background) !important;
+}
+
+:is(.iq-shell, .pi-shell, .it-shell, .rs-shell, .wr-shell, .aps-shell, .me-shell, .mv-shell,
+  .sp-shell, .pd-shell, .ac-shell, .vq-shell, .tr-shell, .rc-shell, .sb-shell, .bc-shell,
+  .nt-shell, .bounty-shell, .am-shell, .pa-shell, .qe-shell, .as-shell) {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.subject-hub-page {
+  width: calc(100% - 40px) !important;
+  max-width: none !important;
+}
+
+@media (max-width: 650px) {
+  .subject-hub-page { width: calc(100% - 28px) !important; }
+}
+
+.database-offline-banner {
+  position: fixed;
+  inset: auto 16px 16px;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  max-width: 760px;
+  margin-inline: auto;
+  padding: 12px 16px;
+  border: 1px solid #c46848;
+  border-radius: 6px;
+  background: #fff8f3;
+  color: #572b1d;
+  box-shadow: 0 8px 30px rgba(37, 29, 20, .15);
+  font-size: 14px;
+}
+.database-offline-banner button { min-height: 34px; padding: 5px 10px; border: 1px solid currentColor; border-radius: 5px; background: transparent; color: inherit; cursor: pointer; font-weight: 700; }
+@media (max-width: 650px) {
+  .database-offline-banner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 10px 12px; }
+  .database-offline-banner strong { grid-column: 1; }
+  .database-offline-banner span { grid-column: 1; font-size: 13px; }
+  .database-offline-banner button { grid-column: 2; grid-row: 1 / span 2; }
+}
+
+:is(.iq-page, .pi-page, .it-page, .rs-page, .wr-page, .aps-page, .me-page, .mv-page, .sp-page, .pd-page, .ac-page, .vq-page, .tr-page, .rc-page, .sb-page, .bc-page)
+  :is(button, a, label, input, select, textarea, summary, legend, li, td, th, small) {
+  font-size: max(14px, 1em) !important;
+}
+
+:is(.iq-page, .pi-page, .it-page, .rs-page, .wr-page, .aps-page, .me-page, .mv-page, .sp-page, .pd-page, .ac-page, .vq-page, .tr-page, .rc-page, .sb-page, .bc-page)
+  p {
+  font-size: max(15px, 1em) !important;
+  line-height: 1.6;
+}
+
+:is(.iq-page, .pi-page, .it-page, .rs-page, .wr-page, .aps-page, .me-page, .mv-page, .sp-page, .pd-page, .ac-page, .vq-page, .tr-page, .rc-page, .sb-page, .bc-page)
+  :is(button, a, input, select, textarea) {
+  overflow-wrap: anywhere;
+}
+
+:is(.pi-page, .it-page, .wr-page, .aps-page, .me-page, .mv-page, .sp-page, .pd-page, .ac-page, .vq-page, .tr-page, .rc-page, .sb-page, .bc-page)
+  [class$="-hero"] {
+  padding: 12px 0 24px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:is(.pi-page, .it-page, .wr-page, .aps-page, .me-page, .mv-page, .sp-page, .pd-page, .ac-page, .vq-page, .tr-page, .rc-page, .sb-page, .bc-page)
+  [class$="-hero"] h1 {
+  max-width: 32ch;
+  font-size: 36px !important;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.pi-hero-side { padding: 10px 0 10px 20px !important; border-left: 1px solid var(--color-border); border-radius: 0 !important; background: transparent !important; }
+
+@media (max-width: 650px) {
+  :is(.pi-page, .it-page, .wr-page, .aps-page, .me-page, .mv-page, .sp-page, .pd-page, .ac-page, .vq-page, .tr-page, .rc-page, .sb-page, .bc-page)
+    [class$="-hero"] h1 { font-size: 28px !important; }
+  .pi-hero-side { padding: 10px 0 !important; border-left: 0; border-top: 1px solid var(--color-border); }
+}
