@@ -3282,6 +3282,32 @@ input, select, textarea {
   text-align: center;
 }
 
+.google-auth-error {
+  margin: 12px 0 0;
+  color: #a43629;
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.legacy-login-details {
+  margin-top: 26px;
+  border-top: 1px solid var(--color-card-border);
+  padding-top: 18px;
+}
+
+.legacy-login-details summary {
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+
+.legacy-login-details .auth-form {
+  margin-top: 18px;
+}
+
 .google-auth-btn {
   width: 100%;
   border: 1px solid var(--color-border);

@@ -132,6 +132,7 @@ function storeAuthSession(authPayload, setUser) {
   localStorage.setItem('username', user.username);
   const semester = user.semester || user.currentSemester;
   if (semester) localStorage.setItem('userSemester', semester);
+  else localStorage.removeItem('userSemester');
   setUser({
     username: user.username,
     name: user.name || user.displayName || user.username,
@@ -145,7 +146,7 @@ function storeAuthSession(authPayload, setUser) {
 
 function GoogleAuthButton({ setUser, toast }) {
   const [loading, setLoading] = useState(false);
-  const [showFallback, setShowFallback] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const isDev = process.env.NODE_ENV === 'development';
@@ -158,17 +159,18 @@ function GoogleAuthButton({ setUser, toast }) {
     }
   }, [isDev]);
 
-  const openGoogleFallback = (message = 'Google login is currently unavailable. Please use manual login.') => {
-    setShowFallback(true);
-    toast(message, 'info');
+  const showGoogleError = (message) => {
+    setError(message);
+    toast(message, 'error');
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
     if (!credentialResponse?.credential) {
-      openGoogleFallback('Google did not return a valid login credential. Please use manual login for now.');
+      showGoogleError('Google did not return a credential. Please try again.');
       return;
     }
 
+    setError('');
     setLoading(true);
 
     try {
@@ -186,65 +188,17 @@ function GoogleAuthButton({ setUser, toast }) {
       const status = err.response?.status;
       const serverMessage = err.response?.data?.message || err.response?.data?.error;
 
-      if (status === 409) {
-        toast(serverMessage || 'Sign in with your password to link Google.', 'error');
-      } else if (status === 403) {
-        toast(serverMessage || 'This email cannot be used for PaperStack.', 'error');
-      } else if (status === 401) {
-        openGoogleFallback('Google login is currently unavailable. Please use manual login.');
-      } else {
-        openGoogleFallback('Google sign-in is temporarily unavailable. You can continue using email and password.');
-      }
+      showGoogleError(serverMessage || (status === 401
+        ? 'Google could not verify this sign-in. Please try again.'
+        : 'Sign-in is temporarily unavailable. Please try again shortly.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const fallbackModal = showFallback && (
-    <div className="auth-fallback-overlay" role="presentation" onClick={() => setShowFallback(false)}>
-      <div
-        className="auth-fallback-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="google-fallback-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="auth-fallback-close"
-          onClick={() => setShowFallback(false)}
-          aria-label="Close Google login message"
-        >
-          x
-        </button>
-
-        <div className="auth-fallback-icon">G</div>
-        <h3 id="google-fallback-title">Google login is temporarily unavailable</h3>
-        <p>Please use manual login while Google authentication is unavailable.</p>
-
-        <button type="button" className="login-btn-gradient" onClick={() => setShowFallback(false)}>
-          Use Manual Login
-        </button>
-      </div>
-    </div>
-  );
-
   if (!GOOGLE_AUTH_CONFIGURED) {
     return (
-      <>
-        <div className="google-auth-wrap">
-          <button
-            type="button"
-            className="google-fallback-btn auth-google-fallback"
-            onClick={() => openGoogleFallback()}
-          >
-            <span className="google-g">G</span>
-            Continue with Google
-          </button>
-          <p className="google-soon-note">Google sign-in is temporarily unavailable.</p>
-        </div>
-        {fallbackModal}
-      </>
+      <p className="google-auth-error" role="alert">Google sign-in is not configured. Please contact the PaperStack team.</p>
     );
   }
 
@@ -254,7 +208,7 @@ function GoogleAuthButton({ setUser, toast }) {
         <div className="google-login-wrapper">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
-            onError={() => openGoogleFallback('Google login is currently unavailable. Please use manual login.')}
+            onError={() => showGoogleError('Google sign-in could not start. Please try again or use another browser.')}
             text="continue_with"
             size="large"
             theme="outline"
@@ -263,20 +217,9 @@ function GoogleAuthButton({ setUser, toast }) {
         </div>
 
         {loading && <div className="google-loading">Signing in...</div>}
+        {error && <p className="google-auth-error" role="alert">{error}</p>}
       </div>
-
-      {fallbackModal}
     </>
-  );
-}
-
-function AuthDivider() {
-  return (
-    <div className="auth-divider auth-or-divider">
-      <span />
-      <em>or</em>
-      <span />
-    </div>
   );
 }
 
@@ -641,7 +584,7 @@ function Register({ setUser, toast }) {
             </div>
 
             <GoogleAuthButton setUser={setUser} toast={toast} />
-            <p className="auth-signup-note">Google verifies that you own the institute email. Existing password accounts can continue to use the login page.</p>
+            <p className="auth-signup-note">Google verifies that you own your IIIT Surat email. Already registered? Use the same Google account to keep your papers and contributions.</p>
 
             <p className="auth-switch-text auth-switch-link auth-switch">Already have an account? <Link to={`/login${location.search}`}>Login here</Link></p>
           </div>
@@ -721,19 +664,20 @@ function Login({ setUser, toast }) {
                 <img src="/iiit_surat.png" alt="IIIT Surat Logo" className="inst-logo" />
               </div>
               <h2>Welcome Back</h2>
-              <p>Login to continue to PaperStack</p>
+              <p>Continue with your IIIT Surat Google account, including existing PaperStack accounts.</p>
             </div>
 
-            <form onSubmit={handleLogin} className="login-form-content auth-form">
-              <label>Email<input className="auth-input" type="email" autoComplete="email" placeholder="Institute Email ID" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></label>
-              <label>Password<input className="auth-input" type="password" autoComplete="current-password" placeholder="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></label>
-              <button type="submit" className="auth-btn login-btn-gradient auth-submit" disabled={submitting}>
-                {submitting ? 'Signing In...' : 'Secure Login'}
-              </button>
-            </form>
-
-            <AuthDivider />
             <GoogleAuthButton setUser={setUser} toast={toast} />
+            <details className="legacy-login-details">
+              <summary>Use password instead</summary>
+              <form onSubmit={handleLogin} className="login-form-content auth-form">
+                <label>Email<input className="auth-input" type="email" autoComplete="email" placeholder="Institute Email ID" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></label>
+                <label>Password<input className="auth-input" type="password" autoComplete="current-password" placeholder="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></label>
+                <button type="submit" className="auth-btn login-btn-gradient auth-submit" disabled={submitting}>
+                  {submitting ? 'Signing In...' : 'Sign in with password'}
+                </button>
+              </form>
+            </details>
 
             <p className="auth-switch-text auth-switch-link auth-switch">New here? <Link to={`/register${location.search}`}>Create account</Link></p>
           </div>
@@ -3601,10 +3545,7 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
-    const savedSem = localStorage.getItem('userSemester');
-    if (!token || !username) return;
-    setUser({ username, bookmarks: [], semester: savedSem ? Number(savedSem) : null });
+    if (!token) return;
     axios.get(`${API_URL}/api/user/me`, { headers: authHeader() })
       .then((res) => {
         const semester = res.data.semester || res.data.currentSemester;
@@ -3623,10 +3564,12 @@ export default function App() {
         if (error.response?.status === 401 || error.response?.status === 403) {
           localStorage.removeItem('token');
           localStorage.removeItem('username');
+          localStorage.removeItem('userSemester');
           setUser(null);
+          toast('Your session expired. Please sign in with Google again.', 'info');
         }
       });
-  }, []);
+  }, [toast]);
 
   const appRoutes = (
     <Router>

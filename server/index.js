@@ -12,6 +12,7 @@ const { notifyAdminUpload } = require('./services/adminUploadNotification');
 const dns = require('dns');
 const pdfParse = require('pdf-parse');
 const { OAuth2Client } = require('google-auth-library');
+const { applyVerifiedGoogleIdentity } = require('./utils/googleAccount');
 const nodemailer = require('nodemailer');
 const archiver = require('archiver');
 const axios = require('axios');
@@ -1209,7 +1210,7 @@ Sitemap: ${FRONTEND_URL}/sitemap.xml`);
 const accountAttemptLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: 'draft-8', legacyHeaders: false, message: { success: false, message: 'Too many account attempts. Try again later.' } });
 
 app.post('/api/auth/register', accountAttemptLimit, async (req, res) => {
-  return res.status(403).json({ success: false, message: 'New accounts require a verified IIIT Surat Google sign-in. Existing password accounts can still log in.' });
+  return res.status(403).json({ success: false, message: 'Create an account with your verified IIIT Surat Google sign-in.' });
 });
 
 app.post('/api/auth/login', accountAttemptLimit, async (req, res) => {
@@ -1297,31 +1298,11 @@ app.post('/api/auth/google', accountAttemptLimit, async (req, res) => {
         role: 'student',
       });
     }
-    if (user.authProvider === 'local' && !user.googleId) {
-      return res.status(409).json({ success: false, message: 'Sign in with your password, then link Google from your dashboard.' });
+    const linked = applyVerifiedGoogleIdentity(user, payload);
+    if (linked.status) {
+      return res.status(linked.status).json({ success: false, message: linked.message });
     }
-    if (user.googleId && user.googleId !== payload.sub) {
-      return res.status(409).json({ success: false, message: 'This account is linked to another Google identity.' });
-    }
-
-    let changed = false;
-    if (!user.googleId && payload.sub) {
-      user.googleId = payload.sub;
-      changed = true;
-    }
-    if (user.authProvider === 'local') {
-      user.authProvider = 'linked';
-      changed = true;
-    }
-    if (!user.avatar && payload.picture) {
-      user.avatar = payload.picture;
-      changed = true;
-    }
-    if (!user.emailVerified) {
-      user.emailVerified = true;
-      changed = true;
-    }
-    if (changed) {
+    if (linked.changed) {
       await user.save();
     }
 
@@ -1344,17 +1325,9 @@ app.post('/api/auth/google/link', authenticate, async (req, res) => {
     const payload = await verifiedGooglePayload(req.body?.credential);
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (normalizeEmail(payload.email) !== normalizeEmail(user.email)) {
-      return res.status(403).json({ error: 'Google email must match your PaperStack account.' });
-    }
-    if (user.googleId && user.googleId !== payload.sub) {
-      return res.status(409).json({ error: 'This account is linked to another Google identity.' });
-    }
-    user.googleId = payload.sub;
-    user.authProvider = user.password ? 'linked' : 'google';
-    user.emailVerified = true;
-    if (!user.avatar && payload.picture) user.avatar = payload.picture;
-    await user.save();
+    const linked = applyVerifiedGoogleIdentity(user, payload);
+    if (linked.status) return res.status(linked.status).json({ error: linked.message });
+    if (linked.changed) await user.save();
     return res.json({ user: buildUserResponse(user) });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ error: 'This Google identity is linked to another account.' });
