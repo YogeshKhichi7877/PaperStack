@@ -1,8 +1,9 @@
-const { aiAvailable, generateText } = require('./aiService');
+const { aiAvailable, generateForTask } = require('./aiService');
+const { parseAiJson, revisionSchema, warRoomSchema } = require('./aiSchemas');
 const { compact, parseRevisionAi } = require('./revisionWorkspaceService');
 
 async function revisionAiContent(sheet, solutions = [], resources = []) {
-  if (!aiAvailable() || (!solutions.length && !resources.length)) return null;
+  if (!aiAvailable(process.env, 'REVISION_CONTENT') || (!solutions.length && !resources.length)) return null;
   const solutionSource = solutions.slice(0, 10).map((item) => ({
     sourceId: String(item.questionId),
     approvedAnswer: compact(item.answerText, 900),
@@ -26,12 +27,12 @@ async function revisionAiContent(sheet, solutions = [], resources = []) {
     }),
   ].join('\n');
   try {
-    const text = await generateText(prompt, {
+    const text = await generateForTask('REVISION_CONTENT', prompt, {
       json: true,
       temperature: 0.1, maxOutputTokens: 800,
     });
     return parseRevisionAi(
-      text,
+      JSON.stringify(parseAiJson(text, revisionSchema)),
       new Set(solutionSource.map((item) => item.sourceId)),
       new Map(source.map((item) => [item.sourceId, item.approvedAnswer])),
       new Map(resources.map((item) => [String(item._id), item.fileUrl || '']))
@@ -43,7 +44,7 @@ async function revisionAiContent(sheet, solutions = [], resources = []) {
 }
 
 async function warAiBriefing(room) {
-  if (!aiAvailable() || !room.command?.actions?.length) return '';
+  if (!aiAvailable(process.env, 'WAR_ROOM_BRIEFING') || !room.command?.actions?.length) return '';
   const prompt = [
     'You are PaperStack AI. Write one concise, action-oriented exam briefing from archive evidence only.',
     'Return JSON only: {"briefing":"..."}. Maximum 65 words.',
@@ -54,11 +55,11 @@ async function warAiBriefing(room) {
       rankedActions: room.command.actions.slice(0, 5) }),
   ].join('\n');
   try {
-    const text = await generateText(prompt, {
+    const text = await generateForTask('WAR_ROOM_BRIEFING', prompt, {
       json: true,
       temperature: 0.1, maxOutputTokens: 180,
     });
-    const data = JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
+    const data = parseAiJson(text, warRoomSchema);
     return compact(data.briefing, 400);
   } catch (error) {
     console.warn('War Room AI unavailable:', error.message);

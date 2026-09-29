@@ -17,7 +17,6 @@ import {
   ArrowRight,
   BarChart3,
   BookOpen,
-  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -1390,11 +1389,9 @@ export default function MockEvaluationPage({
                   Overall feedback
                 </span>
 
-                <p>
-                  {
-                    result.overallFeedback
-                  }
-                </p>
+                <React.Suspense fallback={<p>{result.overallFeedback}</p>}>
+                  <MathAnswer>{result.overallFeedback}</MathAnswer>
+                </React.Suspense>
               </article>
             </section>
 
@@ -1541,11 +1538,9 @@ export default function MockEvaluationPage({
                               </strong>
                             </div>
 
-                            <p>
-                              {
-                                evaluation.feedback
-                              }
-                            </p>
+                            <React.Suspense fallback={<p>{evaluation.feedback}</p>}>
+                              <MathAnswer>{evaluation.feedback}</MathAnswer>
+                            </React.Suspense>
                           </div>
 
                           <div className="mv-feedback-columns">
@@ -1570,14 +1565,10 @@ export default function MockEvaluationPage({
                                     (
                                       item
                                     ) => (
-                                      <li
-                                        key={
-                                          item
-                                        }
-                                      >
-                                        {
-                                          item
-                                        }
+                                      <li key={item}>
+                                        <React.Suspense fallback={item}>
+                                          <MathAnswer>{item}</MathAnswer>
+                                        </React.Suspense>
                                       </li>
                                     )
                                   )}
@@ -1606,15 +1597,11 @@ export default function MockEvaluationPage({
                                     (
                                       item
                                     ) => (
-                                      <span
-                                        key={
-                                          item
-                                        }
-                                      >
-                                        {
-                                          item
-                                        }
-                                      </span>
+                                      <div className="mv-tag" key={item}>
+                                        <React.Suspense fallback={item}>
+                                          <MathAnswer>{item}</MathAnswer>
+                                        </React.Suspense>
+                                      </div>
                                     )
                                   )}
                                 </div>
@@ -1634,11 +1621,9 @@ export default function MockEvaluationPage({
                                   do next
                                 </strong>
 
-                                <p>
-                                  {
-                                    evaluation.nextStep
-                                  }
-                                </p>
+                                <React.Suspense fallback={<p>{evaluation.nextStep}</p>}>
+                                  <MathAnswer>{evaluation.nextStep}</MathAnswer>
+                                </React.Suspense>
                               </div>
                             </div>
                           )}

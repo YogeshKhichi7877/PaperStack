@@ -29,13 +29,11 @@ import {
   FolderUp,
   GraduationCap,
   History,
-  Image,
   Layers3,
   Lightbulb,
   Loader2,
   NotebookPen,
   Paperclip,
-  ShieldCheck,
   Sparkles,
   Upload,
   X,
@@ -345,7 +343,7 @@ export default function ResourceContributionPage({
     useState(false);
 
   const [
-    activeStep,
+    ,
     setActiveStep,
   ] =
     useState(1);

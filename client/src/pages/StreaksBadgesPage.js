@@ -354,28 +354,11 @@ export default function StreaksBadgesPage({
     );
 
   const visibleBadges =
-    useMemo(() => {
-      if (
-        badgeFilter ===
-        'earned'
-      ) {
-        return earnedBadges;
-      }
-
-      if (
-        badgeFilter ===
-        'locked'
-      ) {
-        return lockedBadges;
-      }
-
-      return badges;
-    }, [
-      badges,
-      badgeFilter,
-      earnedBadges,
-      lockedBadges,
-    ]);
+    badgeFilter === 'earned'
+      ? earnedBadges
+      : badgeFilter === 'locked'
+        ? lockedBadges
+        : badges;
 
   const selectedDay =
     useMemo(
@@ -393,26 +376,10 @@ export default function StreaksBadgesPage({
     );
 
   const focusedBadge =
-    useMemo(() => {
-      const source = [
-        ...nextBadges,
-        ...badges,
-      ];
-
-      return (
-        source.find(
-          (badge) =>
-            badge.id ===
-            selectedBadgeId
-        ) ||
-        nextBadges[0] ||
-        null
-      );
-    }, [
-      nextBadges,
-      badges,
-      selectedBadgeId,
-    ]);
+    [...nextBadges, ...badges].find(
+      (badge) =>
+        badge.id === selectedBadgeId
+    ) || nextBadges[0] || null;
 
   const totalCategoryDays =
     Object.values(

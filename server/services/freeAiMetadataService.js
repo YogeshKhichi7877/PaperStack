@@ -1,6 +1,7 @@
-const axios = require('axios');
 const { FLAT_SUBJECT_CATALOG } = require('./subjectService');
 const { normalizeBranch: canonicalBranch } = require('../utils/branches');
+const { aiAvailable, generateForTask, taskStatus } = require('./aiService');
+const { metadataSchema, parseAiJson } = require('./aiSchemas');
 
 function envTrue(value, fallback = true) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -9,13 +10,16 @@ function envTrue(value, fallback = true) {
 
 function getFreeAiStatus() {
   const enabled = envTrue(process.env.SMART_AI_ENABLED, true);
-  const configured = enabled && Boolean(String(process.env.GEMINI_API_KEY || '').trim());
+  const routeStatus = taskStatus('METADATA_EXTRACTION_TEXT');
+  const configured = enabled && (aiAvailable(process.env, 'METADATA_EXTRACTION_TEXT') ||
+    aiAvailable(process.env, 'METADATA_EXTRACTION_VISUAL'));
   return {
+    ...routeStatus,
     enabled,
     configured,
-    provider: 'gemini',
-    model: String(process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim(),
-    paidRequired: false,
+    available: configured,
+    providersAvailable: enabled ? routeStatus.providersAvailable : 0,
+    degraded: enabled && routeStatus.degraded,
   };
 }
 
@@ -65,7 +69,7 @@ function parseGeminiResponse(responseData) {
     .join('') || '';
   if (!text) return null;
   try {
-    return normalizeAiMetadata(JSON.parse(cleanJsonText(text)));
+    return normalizeAiMetadata(parseAiJson(text, metadataSchema));
   } catch (error) {
     return null;
   }
@@ -77,14 +81,16 @@ function subjectCatalogPrompt() {
     .join('\n');
 }
 
-async function analyzePdfWithFreeGemini(file, ruleAnalysis = {}) {
+async function analyzePdfWithAi(file, ruleAnalysis = {}) {
   const status = getFreeAiStatus();
   if (!status.configured) {
-    return { attempted: false, reason: 'Gemini free-tier key is not configured.', metadata: null };
+    return { attempted: false, reason: 'AI metadata extraction is unavailable.', metadata: null };
   }
 
   const maxMb = Math.max(1, Number(process.env.SMART_AI_INLINE_PDF_MAX_MB || 12));
-  if (Number(file.size || file.buffer?.length || 0) > maxMb * 1024 * 1024) {
+  const text = String(ruleAnalysis.extraction?.textPreview || '').trim();
+  const visual = text.length < 180;
+  if (visual && Number(file.size || file.buffer?.length || 0) > maxMb * 1024 * 1024) {
     return {
       attempted: false,
       reason: `PDF is larger than the ${maxMb} MB AI fallback limit; local extraction was used instead.`,
@@ -108,50 +114,29 @@ Current local guess (may be incomplete):
 ${JSON.stringify(ruleAnalysis.metadata || {})}
 
 IIIT Surat subject catalog:
-${subjectCatalogPrompt()}`;
+${subjectCatalogPrompt()}
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(status.model)}:generateContent`;
-  const response = await axios.post(
-    url,
-    {
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inline_data: {
-                mime_type: 'application/pdf',
-                data: file.buffer.toString('base64'),
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: 'application/json',
-      },
-    },
-    {
-      headers: {
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      timeout: Number(process.env.SMART_AI_TIMEOUT_MS || 25000),
-      maxBodyLength: Infinity,
+${visual ? '' : `Extracted PDF text (untrusted):\n${text}`}`;
+
+  const response = await generateForTask(
+    visual ? 'METADATA_EXTRACTION_VISUAL' : 'METADATA_EXTRACTION_TEXT', prompt, {
+      json: true, temperature: 0, maxOutputTokens: 700,
+      timeoutMs: Number(process.env.SMART_AI_TIMEOUT_MS) || undefined,
+      ...(visual ? { attachment: { buffer: file.buffer, mimeType: 'application/pdf' }, fallbackText: text } : {}),
     }
   );
-
-  const metadata = parseGeminiResponse(response.data);
+  let metadata = null;
+  try { metadata = normalizeAiMetadata(parseAiJson(response, metadataSchema)); } catch {}
   return {
     attempted: true,
     metadata,
-    reason: metadata ? 'Gemini metadata extracted.' : 'Gemini response could not be parsed.',
+    reason: metadata ? 'AI metadata extracted.' : 'AI response could not be parsed.',
   };
 }
 
 module.exports = {
-  analyzePdfWithFreeGemini,
+  analyzePdfWithAi,
+  analyzePdfWithFreeGemini: analyzePdfWithAi,
   cleanJsonText,
   getFreeAiStatus,
   normalizeAiMetadata,

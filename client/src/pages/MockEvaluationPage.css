@@ -1615,7 +1615,8 @@
   margin-top: 8px;
 }
 
-.mv-tags span {
+.mv-tags span,
+.mv-tags .mv-tag {
   padding: 5px 7px;
 
   border-radius: 5px;

@@ -50,6 +50,8 @@ import {
 
 import './MockExamGeneratorPage.css';
 
+const MathAnswer = React.lazy(() => import('../components/MathAnswer'));
+
 /* =========================================================
    HELPERS
 ========================================================= */
@@ -122,12 +124,6 @@ function readAttempt(mockId) {
       completed: [],
     };
   }
-}
-
-function formatCount(value) {
-  return Number(
-    value || 0
-  ).toLocaleString('en-IN');
 }
 
 function sourceLabel(question) {
@@ -1849,11 +1845,9 @@ export default function MockExamGeneratorPage({
                                     )}
                                 </div>
 
-                                <p>
-                                  {
-                                    question.questionText
-                                  }
-                                </p>
+                                <React.Suspense fallback={<p>{question.questionText}</p>}>
+                                  <MathAnswer>{question.questionText}</MathAnswer>
+                                </React.Suspense>
 
                                 {question.source ===
                                   'generated' &&

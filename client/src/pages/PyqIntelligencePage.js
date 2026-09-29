@@ -16,7 +16,6 @@ import {
 import {
   ArrowRight,
   BarChart3,
-  BookOpen,
   CheckCircle2,
   ChevronDown,
   ChevronUp,

@@ -34,7 +34,6 @@ import {
   Pause,
   Play,
   RefreshCw,
-  RotateCcw,
   ShieldCheck,
   Sparkles,
   Target,
@@ -1730,8 +1729,9 @@ export default function ExamWarRoomPage({
 
                       {emergencyReveal && (
                         <div className="wr-emergency-answer">
-                          {emergencyRecall.answer ||
-                            'No approved answer is available yet.'}
+                          <React.Suspense fallback={emergencyRecall.answer || 'No approved answer is available yet.'}>
+                            <MathAnswer>{emergencyRecall.answer || 'No approved answer is available yet.'}</MathAnswer>
+                          </React.Suspense>
                         </div>
                       )}
 
@@ -1839,12 +1839,9 @@ export default function ExamWarRoomPage({
                       PaperStack briefing
                     </span>
 
-                    <p>
-                      {room.command
-                        ?.aiBriefing ||
-                        room.command
-                          ?.archiveBriefing}
-                    </p>
+                    <React.Suspense fallback={<p>{room.command?.aiBriefing || room.command?.archiveBriefing}</p>}>
+                      <MathAnswer>{room.command?.aiBriefing || room.command?.archiveBriefing}</MathAnswer>
+                    </React.Suspense>
 
                     {history.length >
                       0 &&

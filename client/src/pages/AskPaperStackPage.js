@@ -29,7 +29,6 @@ import {
   LibraryBig,
   Lightbulb,
   MessageSquareText,
-  Search,
   Send,
   Sparkles,
   Target,

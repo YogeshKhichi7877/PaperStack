@@ -112,3 +112,37 @@ test('full analyzer remains usable with local rules when no AI key is configured
   assert.equal(result.ai.used, false);
   if (previousKey !== undefined) process.env.GEMINI_API_KEY = previousKey;
 });
+
+test('smart metadata keeps its rule result during an AI outage', async () => {
+  const saved = {
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GROQ_API_KEY: process.env.GROQ_API_KEY,
+    AI_ENABLED: process.env.AI_ENABLED,
+    AI_MAX_RETRIES: process.env.AI_MAX_RETRIES,
+    SMART_AI_ENABLED: process.env.SMART_AI_ENABLED,
+    SMART_AI_MIN_CONFIDENCE: process.env.SMART_AI_MIN_CONFIDENCE,
+    fetch: global.fetch,
+  };
+  process.env.GEMINI_API_KEY = 'test-key';
+  delete process.env.GROQ_API_KEY;
+  process.env.AI_ENABLED = 'true';
+  process.env.AI_MAX_RETRIES = '0';
+  process.env.SMART_AI_ENABLED = 'true';
+  process.env.SMART_AI_MIN_CONFIDENCE = '99';
+  global.fetch = async () => ({ ok: false, status: 503 });
+  try {
+    const { analyzeContributionFile } = require('./smartContributionService');
+    const result = await analyzeContributionFile({
+      originalname: 'CS502_CSE_Sem5_MidSem_2026.pdf',
+      buffer: Buffer.from('not-a-real-pdf'), size: 14, mimetype: 'application/pdf',
+    });
+    assert.equal(result.metadata.subjectCode, 'CS502');
+    assert.equal(result.ai.used, false);
+    assert.equal(result.source, 'rules');
+  } finally {
+    for (const key of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'AI_ENABLED', 'AI_MAX_RETRIES', 'SMART_AI_ENABLED', 'SMART_AI_MIN_CONFIDENCE']) {
+      if (saved[key] === undefined) delete process.env[key]; else process.env[key] = saved[key];
+    }
+    global.fetch = saved.fetch;
+  }
+});

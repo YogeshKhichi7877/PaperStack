@@ -35,6 +35,24 @@ test('new questions need novelty, complete answer, and a marks-matched rubric', 
   assert.ok(similarity(template.questionText, template.questionText) > 0.99);
 });
 
+test('generated numerical questions require a verified calculation', () => {
+  const numericalTemplate = { ...template, questionType: 'numerical' };
+  const candidate = {
+    sourceQuestionId: template._id,
+    questionText: 'A square has an area of 16 square metres. Calculate its side length and explain the square root used.',
+    questionType: 'numerical', difficulty: 'moderate',
+    expectedAnswer: 'The square root of 16 is 4, so the final side length is 4 metres.',
+    keyPoints: ['Use square root', 'State the length with units'],
+    markingScheme: [{ criterion: 'Method', marks: 2 }, { criterion: 'Value and units', marks: 3 }],
+    numericCheck: { expression: 'sqrt(16)', result: 4 },
+  };
+  assert.ok(validateNovelQuestion(candidate, numericalTemplate, [], []));
+  assert.equal(validateNovelQuestion({ ...candidate, numericCheck: { expression: 'sqrt(16)', result: 5 } },
+    numericalTemplate, [], []), null);
+  assert.equal(validateNovelQuestion({ ...candidate, numericCheck: { expression: 'process.exit()', result: 4 } },
+    numericalTemplate, [], []), null);
+});
+
 test('public mock omits generated answer keys', () => {
   const base = buildMockExam([template], { subject: { subjectCode: 'CS504' }, totalMarks: 10 });
   const generated = validateNovelQuestion({

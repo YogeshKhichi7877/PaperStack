@@ -1,4 +1,5 @@
-const { aiAvailable, generateText } = require('./aiService');
+const { aiAvailable, generateForTask, modelForProvider, providerOrder } = require('./aiService');
+const { answerNumericalQuestion, isNumericalQuestion } = require('./numericalReasoningService');
 
 function normalizeText(value = '') {
   return String(value || '')
@@ -374,14 +375,15 @@ function buildLocalAnswer({
 }
 
 function questionAiEnabled() {
-  return aiAvailable();
+  return aiAvailable(process.env, 'QUESTION_TUTOR');
 }
 
 function geminiModel() {
-  return process.env.GEMINI_MODEL || '';
+  const provider = providerOrder(process.env, 'QUESTION_TUTOR')[0];
+  return provider ? modelForProvider(provider) : '';
 }
 
-async function askGemini({
+async function askAi({
   query,
   intent,
   question,
@@ -424,7 +426,7 @@ async function askGemini({
     .filter(Boolean)
     .join('\n\n');
 
-  return generateText(prompt, { temperature: 0.25, maxOutputTokens: 1200 });
+  return generateForTask('QUESTION_TUTOR', prompt, { temperature: 0.25, maxOutputTokens: 1200 });
 }
 
 async function answerSelectedQuestion({
@@ -451,15 +453,14 @@ async function answerSelectedQuestion({
     similarQuestions,
   });
 
-  if (useAi && questionAiEnabled()) {
+  if (intent === 'hint') {
+    answer = localHint(question);
+  } else if (useAi && questionAiEnabled() && !(intent === 'solution' && approvedSolutions.length)) {
     try {
-      const aiAnswer = await askGemini({
-        query,
-        intent,
-        question,
-        approvedSolutions,
-        similarQuestions,
-      });
+      const aiAnswer = isNumericalQuestion(question) &&
+        ['solution', 'general', 'explain'].includes(intent)
+        ? (await answerNumericalQuestion(question)).answer
+        : await askAi({ query, intent, question, approvedSolutions, similarQuestions });
 
       if (aiAnswer) {
         answer = intent === 'solution' && !approvedSolutions.length
@@ -481,7 +482,7 @@ async function answerSelectedQuestion({
     aiAvailable: questionAiEnabled(),
     answerStructure: expectedAnswerShape(question),
     topics: extractTopics(question),
-    approvedSolutions: approvedSolutions.slice(0, 3).map(publicSolution),
+    approvedSolutions: intent === 'hint' ? [] : approvedSolutions.slice(0, 3).map(publicSolution),
     similarQuestions: similarQuestions.map(publicQuestion),
     question: publicQuestion(question),
   };
@@ -489,7 +490,8 @@ async function answerSelectedQuestion({
 
 module.exports = {
   answerSelectedQuestion,
-  askGemini,
+  askAi,
+  askGemini: askAi,
   buildLocalAnswer,
   commandVerb,
   detectQuestionIntent,

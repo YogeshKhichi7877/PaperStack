@@ -2,92 +2,19 @@ const {
   buildMockExam,
   questionMarks,
 } = require('./mockExamService');
-const { aiAvailable, generateText } = require('./aiService');
+const { aiAvailable, generateForTask, modelForProvider, providerOrder } = require('./aiService');
+const { mockSelectionSchema, parseAiJson } = require('./aiSchemas');
 
 const DEFAULT_MODEL =
-  'gemini-3.5-flash-lite';
+  'openai/gpt-oss-120b';
 
 function mockAiModel() {
-  return (
-    process.env.MOCK_AI_MODEL ||
-    process.env.ASK_PAPERSTACK_GEMINI_MODEL ||
-    process.env.QUESTION_ASSISTANT_GEMINI_MODEL ||
-    process.env.GEMINI_MODEL ||
-    DEFAULT_MODEL
-  );
+  const provider = providerOrder(process.env, 'MOCK_GENERATION')[0];
+  return provider ? modelForProvider(provider) : DEFAULT_MODEL;
 }
 
 function mockAiEnabled() {
-  return process.env.MOCK_AI_ENABLED !== 'false' && aiAvailable();
-}
-
-function sleep(ms) {
-  return new Promise(
-    (resolve) =>
-      setTimeout(resolve, ms)
-  );
-}
-
-async function fetchWithRetry(
-  url,
-  options,
-  {
-    attempts = 3,
-    delays = [0, 1200, 3000],
-  } = {}
-) {
-  let lastError;
-
-  for (
-    let attempt = 0;
-    attempt < attempts;
-    attempt += 1
-  ) {
-    const delay =
-      delays[attempt] || 0;
-
-    if (delay) {
-      await sleep(delay);
-    }
-
-    try {
-      const response =
-        await fetch(
-          url,
-          options
-        );
-
-      if (response.ok) {
-        return response;
-      }
-
-      const body =
-        await response.text();
-
-      if (
-        response.status !== 429 &&
-        response.status !== 503
-      ) {
-        throw new Error(
-          `Gemini request failed: ${response.status} ${body}`
-        );
-      }
-
-      lastError =
-        new Error(
-          `Gemini temporarily unavailable: ${response.status}`
-        );
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw (
-    lastError ||
-    new Error(
-      'Gemini request failed'
-    )
-  );
+  return process.env.MOCK_AI_ENABLED !== 'false' && aiAvailable(process.env, 'MOCK_GENERATION');
 }
 
 function candidateForAi(
@@ -165,7 +92,7 @@ function parseJsonFromText(
 
   if (!raw) {
     throw new Error(
-      'Gemini returned an empty selection'
+      'AI response invalid'
     );
   }
 
@@ -205,7 +132,7 @@ function parseJsonFromText(
   }
 
   throw new Error(
-    'Gemini did not return valid JSON'
+    'AI response invalid'
   );
 }
 
@@ -250,7 +177,7 @@ function validateSelectedIds(
 
   if (!selected.length) {
     throw new Error(
-      'Gemini did not select valid PaperStack question IDs'
+      'AI did not select valid PaperStack question IDs'
     );
   }
 
@@ -276,7 +203,7 @@ function validateSelectedIds(
     ) > 3
   ) {
     throw new Error(
-      `Gemini selection was ${total} marks instead of approximately ${targetMarks}`
+      `AI selection was ${total} marks instead of approximately ${targetMarks}`
     );
   }
 
@@ -369,12 +296,11 @@ async function requestAiSelection({
     '\n'
   );
 
-  const text = await generateText(prompt, { temperature: 0.15, maxOutputTokens: 1200, json: true });
+  const text = await generateForTask('MOCK_GENERATION', prompt,
+    { temperature: 0.15, maxOutputTokens: 1200, json: true });
 
   const parsed =
-    parseJsonFromText(
-      text
-    );
+    parseAiJson(text, mockSelectionSchema);
 
   return {
     model: null,
@@ -489,7 +415,6 @@ module.exports = {
   DEFAULT_MODEL,
   buildMockFromSelected,
   candidateForAi,
-  fetchWithRetry,
   generateMockWithMode,
   mockAiEnabled,
   mockAiModel,

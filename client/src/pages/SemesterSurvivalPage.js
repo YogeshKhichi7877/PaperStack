@@ -28,7 +28,6 @@ import {
   Library,
   Printer,
   Target,
-  Trophy,
   Upload,
 } from 'lucide-react';
 

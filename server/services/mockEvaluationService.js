@@ -1,3 +1,5 @@
+const { applyNumericalScoreCap } = require('./numericalEvaluationService');
+
 function normalizeText(value = '') {
   return String(value || '')
     .toLowerCase()
@@ -357,7 +359,7 @@ function evaluateLocalAnswer({
         ? 'Partially correct/relevant. The core direction is present, but important details or reasoning are still missing.'
         : 'The answer needs substantial improvement before it would be considered exam-ready.';
 
-  return {
+  return applyNumericalScoreCap({
     questionId: String(question._id || ''),
     score,
     maxMarks: marks,
@@ -370,7 +372,7 @@ function evaluateLocalAnswer({
       structure: Math.round(structure * 100),
     },
     ...details,
-  };
+  }, { question, answerText: trimmed, approvedSolutions }, roundHalf);
 }
 
 function summarizeEvaluations(items = []) {

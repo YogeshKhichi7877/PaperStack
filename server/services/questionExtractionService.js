@@ -12,7 +12,7 @@ const {
   extractQuestionsFromText,
 } = require('./questionExtractionRules');
 const {
-  extractQuestionsWithFreeGemini,
+  extractQuestionsWithAi,
   getQuestionAiStatus,
 } = require('./freeAiQuestionService');
 
@@ -178,7 +178,7 @@ function chooseExtraction({ localResult, aiResult, allowAi }) {
     aiResult?.questions?.length
   ) {
     return {
-      engine: 'gemini',
+      engine: 'ai',
       source: 'ai',
       questions: aiResult.questions,
       confidence: aiResult.confidence || 0,
@@ -351,11 +351,14 @@ async function extractPaperQuestions({
     };
 
     if (shouldTryAi) {
-      aiResult = await extractQuestionsWithFreeGemini({
-        buffer,
-        paper,
-        localResult,
-      });
+      try {
+        aiResult = await extractQuestionsWithAi({
+          buffer, paper, localResult, extractedText: parsedPdf.text,
+        });
+      } catch {
+        aiResult = { attempted: true, questions: [], confidence: 0,
+          reason: 'AI extraction was unavailable; local questions were retained.' };
+      }
     }
 
     const selected = chooseExtraction({

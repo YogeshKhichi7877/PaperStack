@@ -7,7 +7,7 @@ const {
   resolveSubject,
 } = require('./subjectService');
 const {
-  analyzePdfWithFreeGemini,
+  analyzePdfWithAi,
   getFreeAiStatus,
   normalizeAiMetadata,
 } = require('./freeAiMetadataService');
@@ -323,19 +323,20 @@ function mergeAiAnalysis(ruleAnalysis, aiResult) {
     })
     : null;
 
-  if (resolvedAiSubject && fields.subjectName < 80) {
+  if (resolvedAiSubject && FLAT_SUBJECT_CATALOG.some((item) => item.key === resolvedAiSubject.key)
+    && fields.subjectName < 80) {
     merged.subjectName = resolvedAiSubject.name || merged.subjectName;
     merged.subjectCode = resolvedAiSubject.code || merged.subjectCode;
     merged.subjectShortCode = resolvedAiSubject.shortCode || merged.subjectShortCode;
-    fields.subjectName = 88;
-    evidence.subject = 'free AI fallback + catalog validation';
+    fields.subjectName = Math.max(Number(fields.subjectName || 0), 65);
+    evidence.subject = 'AI suggestion matched to subject catalog; confirm against the paper';
   }
 
   for (const field of ['branch', 'semester', 'year', 'examType']) {
     if (ai[field] && Number(fields[field] || 0) < 80) {
       merged[field] = ai[field];
-      fields[field] = 86;
-      evidence[field] = 'free AI fallback';
+      fields[field] = Math.max(Number(fields[field] || 0), 65);
+      evidence[field] = 'AI suggestion; confirm against the paper';
     }
   }
 
@@ -345,7 +346,7 @@ function mergeAiAnalysis(ruleAnalysis, aiResult) {
 
   return {
     ...ruleAnalysis,
-    source: 'rules+gemini',
+    source: 'rules+ai',
     metadata: merged,
     confidence: { overall, fields },
     evidence,
@@ -366,13 +367,13 @@ async function analyzeContributionFile(file) {
         ...aiStatus,
         attempted: false,
         used: false,
-        reason: needsAi ? 'Free AI key is not configured; rule-based analysis remains available.' : 'Rule-based confidence is already high.',
+        reason: needsAi ? 'AI is unavailable; rule-based analysis remains available.' : 'Rule-based confidence is already high.',
       },
     };
   }
 
   try {
-    const aiResult = await analyzePdfWithFreeGemini(file, ruleAnalysis);
+    const aiResult = await analyzePdfWithAi(file, ruleAnalysis);
     if (!aiResult?.metadata) {
       return {
         ...ruleAnalysis,
@@ -380,7 +381,7 @@ async function analyzeContributionFile(file) {
           ...aiStatus,
           attempted: Boolean(aiResult?.attempted),
           used: false,
-          reason: aiResult?.reason || 'Free AI fallback did not return usable metadata.',
+          reason: aiResult?.reason || 'AI did not return usable metadata.',
         },
       };
     }
@@ -392,7 +393,7 @@ async function analyzeContributionFile(file) {
         ...aiStatus,
         attempted: true,
         used: true,
-        reason: 'Low-confidence fields were checked with the configured free Gemini model.',
+        reason: 'Low-confidence fields were suggested by AI; confirm them before submitting.',
       },
     };
   } catch (error) {
@@ -402,7 +403,7 @@ async function analyzeContributionFile(file) {
         ...aiStatus,
         attempted: true,
         used: false,
-        reason: 'Free AI fallback was unavailable, so PaperStack kept the local rule-based result.',
+        reason: 'AI was unavailable, so PaperStack kept the local rule-based result.',
       },
       warnings: Array.from(new Set([
         ...ruleAnalysis.warnings,

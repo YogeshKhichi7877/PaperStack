@@ -159,7 +159,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
             <h1>Question Extraction Console</h1>
             <p>
               Convert approved PaperStack PDFs into individual question records.
-              Local parsing runs first. Optional Gemini fallback is used only when enabled here
+              Local parsing runs first. Optional AI extraction is used only when enabled here
               and local confidence is low.
             </p>
           </div>
@@ -171,7 +171,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
               Minimum confidence: {system?.minimumConfidence ?? '—'}%
             </p>
             <div className="qe-ai-line">
-              Gemini: {system?.ai?.configured ? 'Configured' : 'Not configured'}
+              AI: {system?.ai?.configured ? 'Configured' : 'Not configured'}
             </div>
           </div>
         </section>
@@ -211,7 +211,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
               disabled={!system?.ai?.configured}
             />
             <span>
-              Allow Gemini fallback
+              Allow AI extraction
               {!system?.ai?.configured ? ' (not configured)' : ''}
             </span>
           </label>

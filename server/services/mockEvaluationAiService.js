@@ -5,78 +5,27 @@ const {
   roundHalf,
   summarizeEvaluations,
 } = require('./mockEvaluationService');
-const { aiAvailable, generateText } = require('./aiService');
+const { aiAvailable, generateForTask, modelForProvider, providerOrder } = require('./aiService');
+const { mockEvaluationSchema, parseAiJson } = require('./aiSchemas');
+const { applyNumericalScoreCap } = require('./numericalEvaluationService');
 
 const DEFAULT_MODEL =
-  'gemini-3.5-flash-lite';
+  'openai/gpt-oss-120b';
 
 function evaluationAiModel() {
-  return (
-    process.env.MOCK_EVALUATION_AI_MODEL ||
-    process.env.MOCK_AI_MODEL ||
-    process.env.ASK_PAPERSTACK_GEMINI_MODEL ||
-    process.env.GEMINI_MODEL ||
-    DEFAULT_MODEL
-  );
+  const provider = providerOrder(process.env, 'MOCK_EVALUATION')[0];
+  return provider ? modelForProvider(provider) : DEFAULT_MODEL;
 }
 
 function evaluationAiEnabled() {
-  return process.env.MOCK_EVALUATION_AI_ENABLED !== 'false' && aiAvailable();
-}
-
-function sleep(ms) {
-  return new Promise(
-    (resolve) => setTimeout(resolve, ms)
-  );
-}
-
-async function fetchWithRetry(url, options) {
-  const delays = [0, 1200, 3000];
-  let lastError;
-
-  for (
-    let index = 0;
-    index < delays.length;
-    index += 1
-  ) {
-    if (delays[index]) {
-      await sleep(delays[index]);
-    }
-
-    try {
-      const response = await fetch(url, options);
-
-      if (response.ok) {
-        return response;
-      }
-
-      const body = await response.text();
-
-      if (
-        response.status !== 429 &&
-        response.status !== 503
-      ) {
-        throw new Error(
-          `Gemini request failed: ${response.status} ${body}`
-        );
-      }
-
-      lastError = new Error(
-        `Gemini temporarily unavailable: ${response.status}`
-      );
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError || new Error('Gemini request failed');
+  return process.env.MOCK_EVALUATION_AI_ENABLED !== 'false' && aiAvailable(process.env, 'MOCK_EVALUATION');
 }
 
 function parseJsonFromText(text = '') {
   const raw = String(text || '').trim();
 
   if (!raw) {
-    throw new Error('Gemini returned an empty evaluation');
+    throw new Error('AI response invalid');
   }
 
   try {
@@ -100,7 +49,7 @@ function parseJsonFromText(text = '') {
     );
   }
 
-  throw new Error('Gemini did not return valid JSON');
+  throw new Error('AI response invalid');
 }
 
 function promptItem(item = {}) {
@@ -163,7 +112,7 @@ function validateAiEvaluations(payload, items, localFallback) {
       ? Math.max(0, Math.min(100, Math.round(rawAccuracy)))
       : Math.round((score / maxMarks) * 100);
 
-    return {
+    return applyNumericalScoreCap({
       questionId,
       score,
       maxMarks,
@@ -196,7 +145,7 @@ function validateAiEvaluations(payload, items, localFallback) {
           ? 'Approved student solution + question context'
           : 'Question/topic context',
       diagnostics: local.diagnostics,
-    };
+    }, entry, roundHalf);
   });
 
   return {
@@ -225,11 +174,12 @@ async function requestAiEvaluation(items = []) {
     JSON.stringify(compact),
   ].join('\n');
 
-  const text = await generateText(prompt, { temperature: 0.1, maxOutputTokens: 5000, json: true });
+  const text = await generateForTask('MOCK_EVALUATION', prompt,
+    { temperature: 0.1, maxOutputTokens: 5000, json: true });
 
   return {
     model: null,
-    payload: parseJsonFromText(text),
+    payload: parseAiJson(text, mockEvaluationSchema),
   };
 }
 
@@ -290,7 +240,6 @@ module.exports = {
   evaluateBatchWithMode,
   evaluationAiEnabled,
   evaluationAiModel,
-  fetchWithRetry,
   parseJsonFromText,
   promptItem,
   requestAiEvaluation,

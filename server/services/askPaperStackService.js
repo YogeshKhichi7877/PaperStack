@@ -1,4 +1,4 @@
-const { aiAvailable, generateText } = require('./aiService');
+const { aiAvailable, generateForTask } = require('./aiService');
 
 function normalizeText(value = '') {
   return String(value || '')
@@ -380,10 +380,11 @@ function buildFollowUps(intent = 'general', subjectLabel = 'this subject') {
   return generic;
 }
 
-async function askGemini({
+async function askAi({
   query,
   context,
   subjectLabel,
+  intent,
 }) {
   const prompt = [
     'You are Ask PaperStack, an academic archive assistant for IIIT Surat.',
@@ -398,7 +399,10 @@ async function askGemini({
     'Use Markdown and LaTeX ($...$ or $$...$$) for formulas. For numerical answers, show Given, Required, Formula, Substitution, Calculation, and Final Answer with units. Do not claim archive evidence that is absent.',
   ].join('\n\n');
 
-  return generateText(prompt, { temperature: 0.2, maxOutputTokens: 700 });
+  const task = intent === 'revision' ? 'STUDY_PLANNER'
+    : intent === 'topics' ? 'IMPORTANT_TOPIC_EXPLANATION'
+      : 'PYQ_EXPLANATION';
+  return generateForTask(task, prompt, { temperature: 0.2, maxOutputTokens: 700 });
 }
 
 function isAiConfigured() {
@@ -516,10 +520,11 @@ async function answerQuery(questions = [], query = '', options = {}) {
         })
         .join('\n\n');
 
-      const aiAnswer = await askGemini({
+      const aiAnswer = await askAi({
         query,
         context,
         subjectLabel,
+        intent,
       });
 
       if (aiAnswer) {
@@ -553,7 +558,8 @@ async function answerQuery(questions = [], query = '', options = {}) {
 
 module.exports = {
   answerQuery,
-  askGemini,
+  askAi,
+  askGemini: askAi,
   buildFollowUps,
   buildLocalAnswer,
   buildRepeatGroups,

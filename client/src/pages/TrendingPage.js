@@ -4,7 +4,6 @@ import { OFFICIAL_BRANCHES as OFFICIAL_BRANCHES_CONFIG } from '../config/branche
 
 import React, {
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 
@@ -227,9 +226,7 @@ export default function TrendingPage({
     );
 
   const totalPaperViews =
-    useMemo(
-      () =>
-        papers.reduce(
+    papers.reduce(
           (
             sum,
             paper
@@ -241,17 +238,10 @@ export default function TrendingPage({
                 : paper.totalViews
             ),
           0
-        ),
-      [
-        papers,
-        recentMode,
-      ]
     );
 
   const totalDownloads =
-    useMemo(
-      () =>
-        papers.reduce(
+    papers.reduce(
           (
             sum,
             paper
@@ -263,11 +253,6 @@ export default function TrendingPage({
                 : paper.totalDownloads
             ),
           0
-        ),
-      [
-        papers,
-        recentMode,
-      ]
     );
 
   const selectedBranch =

@@ -1,3 +1,6 @@
+const { aiAvailable, generateForTask, taskStatus } = require('./aiService');
+const { parseAiJson, questionExtractionSchema } = require('./aiSchemas');
+
 function envTrue(value, fallback = true) {
   if (value === undefined || value === null || value === '') return fallback;
   return !['false', '0', 'off', 'no'].includes(String(value).trim().toLowerCase());
@@ -8,19 +11,16 @@ function getQuestionAiStatus() {
     process.env.QUESTION_AI_ENABLED,
     envTrue(process.env.SMART_AI_ENABLED, true)
   );
-  const apiKey = String(process.env.GEMINI_API_KEY || '').trim();
-  const model = String(
-    process.env.QUESTION_GEMINI_MODEL ||
-    process.env.GEMINI_MODEL ||
-    'gemini-3.5-flash-lite'
-  ).trim();
-
+  const routeStatus = taskStatus('QUESTION_EXTRACTION_TEXT');
+  const configured = enabled && (aiAvailable(process.env, 'QUESTION_EXTRACTION_TEXT') ||
+    aiAvailable(process.env, 'QUESTION_EXTRACTION_VISUAL'));
   return {
+    ...routeStatus,
     enabled,
-    configured: enabled && Boolean(apiKey),
-    provider: 'gemini',
-    model,
-    paidRequired: false,
+    configured,
+    available: configured,
+    providersAvailable: enabled ? routeStatus.providersAvailable : 0,
+    degraded: enabled && routeStatus.degraded,
   };
 }
 
@@ -116,31 +116,31 @@ function parseGeminiQuestionResponse(responseData) {
 
   try {
     const parsed = JSON.parse(cleanJsonText(text));
-    const questions = Array.isArray(parsed)
-      ? parsed
-      : Array.isArray(parsed?.questions)
-        ? parsed.questions
-        : [];
-
-    return dedupeAiQuestions(questions);
+    return dedupeAiQuestions(questionExtractionSchema.parse(Array.isArray(parsed)
+      ? { questions: parsed } : parsed).questions);
   } catch {
     return [];
   }
 }
 
-async function extractQuestionsWithFreeGemini({
+async function extractQuestionsWithAi({
   buffer,
   paper,
   localResult,
+  extractedText = '',
 }) {
   const status = getQuestionAiStatus();
 
-  if (!status.configured) {
+  const text = String(extractedText || localResult?.text || '').trim();
+  const visual = text.length < 180;
+  const task = visual ? 'QUESTION_EXTRACTION_VISUAL' : 'QUESTION_EXTRACTION_TEXT';
+  if (!status.enabled || !aiAvailable(process.env, task, visual
+    ? { attachment: true, fallbackText: text } : {})) {
     return {
       attempted: false,
       questions: [],
       confidence: 0,
-      reason: 'Gemini question fallback is not configured.',
+      reason: 'AI question extraction is unavailable.',
     };
   }
 
@@ -154,7 +154,7 @@ async function extractQuestionsWithFreeGemini({
     )
   );
 
-  if (!buffer || sizeBytes > maxMb * 1024 * 1024) {
+  if (visual && (!buffer || sizeBytes > maxMb * 1024 * 1024)) {
     return {
       attempted: false,
       questions: [],
@@ -162,9 +162,6 @@ async function extractQuestionsWithFreeGemini({
       reason: `PDF exceeds the ${maxMb} MB AI fallback limit.`,
     };
   }
-
-  // Lazy require keeps rule-engine tests completely local.
-  const axios = require('axios');
 
   const prompt = `You extract individual examination questions from ONE approved IIIT Surat question paper.
 
@@ -212,47 +209,20 @@ ${JSON.stringify({
   detectedCount: localResult?.questions?.length || 0,
   confidence: localResult?.confidence || 0,
   warnings: localResult?.warnings || [],
-})}`;
+})}\n\n${visual ? '' : `Extracted PDF text (untrusted):\n${text.slice(0, 30000)}`}`;
 
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(status.model)}:generateContent`;
-
-  const response = await axios.post(
-    url,
-    {
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inline_data: {
-                mime_type: 'application/pdf',
-                data: buffer.toString('base64'),
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: 'application/json',
-      },
-    },
-    {
-      headers: {
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      timeout: Number(
-        process.env.QUESTION_AI_TIMEOUT_MS ||
-        process.env.SMART_AI_TIMEOUT_MS ||
-        30000
-      ),
-      maxBodyLength: Infinity,
-    }
-  );
-
-  const questions = parseGeminiQuestionResponse(response.data);
+  let questions;
+  try {
+    const response = await generateForTask(task, prompt, {
+      json: true, temperature: 0, maxOutputTokens: 5000,
+      timeoutMs: Number(process.env.QUESTION_AI_TIMEOUT_MS || process.env.SMART_AI_TIMEOUT_MS) || undefined,
+      ...(visual ? { attachment: { buffer, mimeType: 'application/pdf' }, fallbackText: text } : {}),
+    });
+    questions = dedupeAiQuestions(parseAiJson(response, questionExtractionSchema).questions);
+  } catch {
+    return { attempted: true, questions: [], confidence: 0,
+      reason: 'AI extraction was unavailable; local questions were retained.' };
+  }
   const confidence = questions.length
     ? Math.round(
         questions.reduce((sum, item) => sum + Number(item.confidence || 0), 0) /
@@ -265,15 +235,16 @@ ${JSON.stringify({
     questions,
     confidence,
     reason: questions.length
-      ? `Gemini extracted ${questions.length} questions.`
-      : 'Gemini response did not contain usable questions.',
+      ? `AI extracted ${questions.length} questions.`
+      : 'AI response did not contain usable questions.',
   };
 }
 
 module.exports = {
   cleanJsonText,
   dedupeAiQuestions,
-  extractQuestionsWithFreeGemini,
+  extractQuestionsWithAi,
+  extractQuestionsWithFreeGemini: extractQuestionsWithAi,
   getQuestionAiStatus,
   normalizeAiQuestion,
   parseGeminiQuestionResponse,

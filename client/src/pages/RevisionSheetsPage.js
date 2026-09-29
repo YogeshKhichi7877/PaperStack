@@ -1304,11 +1304,9 @@ export default function RevisionSheetsPage({
                             }
                           </strong>
 
-                          <p>
-                            {
-                              item.answer
-                            }
-                          </p>
+                          <React.Suspense fallback={<p>{item.answer}</p>}>
+                            <MathAnswer>{item.answer}</MathAnswer>
+                          </React.Suspense>
                         </article>
                       )
                     )}
@@ -1570,11 +1568,9 @@ export default function RevisionSheetsPage({
                         brief
                       </span>
 
-                      <p>
-                        {
-                          workspace.aiBriefing
-                        }
-                      </p>
+                      <React.Suspense fallback={<p>{workspace.aiBriefing}</p>}>
+                        <MathAnswer>{workspace.aiBriefing}</MathAnswer>
+                      </React.Suspense>
                     </div>
                   </section>
                 )}
@@ -1841,11 +1837,9 @@ export default function RevisionSheetsPage({
                                   )}
                                 </span>
 
-                                <p>
-                                  {
-                                    item.text
-                                  }
-                                </p>
+                                <React.Suspense fallback={<p>{item.text}</p>}>
+                                  <MathAnswer>{item.text}</MathAnswer>
+                                </React.Suspense>
 
                                 <Link
                                   to={`/questions/${item.sourceId}`}
@@ -1925,11 +1919,9 @@ export default function RevisionSheetsPage({
                                     }
                                   </strong>
 
-                                  <p>
-                                    {
-                                      item.answer
-                                    }
-                                  </p>
+                                  <React.Suspense fallback={<p>{item.answer}</p>}>
+                                    <MathAnswer>{item.answer}</MathAnswer>
+                                  </React.Suspense>
 
                                   <Link
                                     to={`/questions/${item.questionId}`}
@@ -2019,11 +2011,9 @@ export default function RevisionSheetsPage({
                                       item.prompt}
                                   </strong>
 
-                                  <p>
-                                    {
-                                      item.answer
-                                    }
-                                  </p>
+                                  <React.Suspense fallback={<p>{item.answer}</p>}>
+                                    <MathAnswer>{item.answer}</MathAnswer>
+                                  </React.Suspense>
 
                                   <Link
                                     to={`/questions/${item.questionId}`}
@@ -2095,11 +2085,9 @@ export default function RevisionSheetsPage({
                                   size={15}
                                 />
 
-                                <p>
-                                  {
-                                    item.text
-                                  }
-                                </p>
+                                <React.Suspense fallback={<p>{item.text}</p>}>
+                                  <MathAnswer>{item.text}</MathAnswer>
+                                </React.Suspense>
 
                                 <Link
                                   to={`/questions/${item.sourceId}`}

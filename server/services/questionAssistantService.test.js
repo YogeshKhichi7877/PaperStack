@@ -65,6 +65,18 @@ test('local hint does not expose a final numerical answer', () => {
   assert.doesNotMatch(result, /final answer is/i);
 });
 
+test('hint response does not attach approved full solutions', async () => {
+  const result = await answerSelectedQuestion({
+    query: 'Give me a hint only',
+    question: q('1', 'Calculate the transformed coordinates.', { marks: 5 }),
+    approvedSolutions: [{ _id: 's1', answerText: 'Final answer is 42.' }],
+    useAi: true,
+  });
+  assert.equal(result.mode, 'local');
+  assert.deepEqual(result.approvedSolutions, []);
+  assert.doesNotMatch(result.answer, /42/);
+});
+
 test('similarity rewards shared topics and wording', () => {
   const base = q(
     '1',

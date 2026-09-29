@@ -26,7 +26,6 @@ import {
   Sparkles,
   Target,
   Trophy,
-  Users,
   X,
 } from 'lucide-react';
 
@@ -366,23 +365,6 @@ export default function ContributorLeaderboardPage({
       [leaderboard]
     );
 
-  const totalSolutions =
-    useMemo(
-      () =>
-        leaderboard.reduce(
-          (
-            sum,
-            item
-          ) =>
-            sum +
-            Number(
-              item.approvedSolutions ||
-                0
-            ),
-          0
-        ),
-      [leaderboard]
-    );
 
   const topThree =
     useMemo(

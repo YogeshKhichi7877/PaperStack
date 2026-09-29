@@ -1,92 +1,90 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { aiAvailable, generateText, providerOrder } = require('./aiService');
+const { aiAvailable, generateForTask, generateText, providerOrder, taskStatus } = require('./aiService');
 
-const env = {
-  AI_ENABLED: 'true', AI_PRIMARY_PROVIDER: 'gemini', AI_FALLBACK_PROVIDER: 'groq',
-  GROQ_API_KEY: 'test-key', GROQ_MODEL: 'test-model', GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'test-model',
-};
+const env = { AI_ENABLED: 'true', GEMINI_API_KEY: 'test-gemini-key', GROQ_API_KEY: 'test-groq-key',
+  GEMINI_MODEL: 'test-gemini', GROQ_MODEL: 'test-groq', AI_MAX_RETRIES: '0' };
+const groqReply = (content = 'Answer') => ({ ok: true,
+  json: async () => ({ choices: [{ message: { content } }] }) });
+const geminiReply = (content = 'Answer') => ({ ok: true,
+  json: async () => ({ candidates: [{ content: { parts: [{ text: content }] } }] }) });
 
-test('provider order defaults to Gemini and does not require model overrides', () => {
-  assert.deepEqual(providerOrder(env), ['gemini', 'groq']);
-  assert.deepEqual(providerOrder({ GEMINI_API_KEY: 'key', GROQ_API_KEY: 'key' }), ['gemini', 'groq']);
-  assert.deepEqual(providerOrder({ ...env, GROQ_MODEL: '' }), ['gemini', 'groq']);
-  assert.deepEqual(providerOrder({ ...env, GROQ_API_KEY: '' }), ['gemini']);
-  assert.equal(aiAvailable({ GEMINI_API_KEY: ' ' }), false);
-  assert.equal(aiAvailable({ ...env, AI_ENABLED: 'false' }), false);
+test('routing is task based and reports provider availability', () => {
+  assert.deepEqual(providerOrder(env, 'QUESTION_TUTOR'), ['groq', 'gemini']);
+  assert.deepEqual(providerOrder(env, 'QUESTION_EXTRACTION_VISUAL'), ['gemini', 'groq']);
+  assert.deepEqual(providerOrder({ ...env, GROQ_API_KEY: '' }, 'QUESTION_TUTOR'), ['gemini']);
+  assert.equal(aiAvailable({ ...env, AI_ENABLED: 'false' }, 'QUESTION_TUTOR'), false);
+  assert.deepEqual(taskStatus('QUESTION_TUTOR', env),
+    { task: 'QUESTION_TUTOR', available: true, providersAvailable: 2, degraded: false });
 });
 
-test('falls back to second provider and keeps document instructions separate', async () => {
+test('text tutoring sends Groq first with separate trusted instructions', async () => {
   const requests = [];
-  const answer = await generateText('Explain x', {}, {
-    env,
-    fetch: async (url, options) => {
-      requests.push({ url, body: JSON.parse(options.body) });
-      if (requests.length === 1) return { ok: false, status: 503 };
-      return { ok: true, json: async () => ({ choices: [{ message: { content: 'Answer' } }] }) };
-    },
-  });
+  const answer = await generateForTask('QUESTION_TUTOR', 'Explain x', {}, { env,
+    fetch: async (url, options) => { requests.push({ url, body: JSON.parse(options.body) }); return groqReply(); } });
   assert.equal(answer, 'Answer');
-  assert.equal(requests.length, 2);
-  assert.match(requests[0].body.systemInstruction.parts[0].text, /untrusted academic source material/);
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].url, /api.groq.com/);
+  assert.match(requests[0].body.messages[0].content, /untrusted academic data/);
+  assert.equal(requests[0].body.messages[1].content, 'Explain x');
+});
+
+test('visual extraction sends PDF only to Gemini', async () => {
+  const requests = [];
+  const attachment = { buffer: Buffer.from('pdf'), mimeType: 'application/pdf' };
+  await generateForTask('QUESTION_EXTRACTION_VISUAL', 'Extract questions', { attachment }, { env,
+    fetch: async (url, options) => { requests.push({ url, body: JSON.parse(options.body) }); return geminiReply(); } });
   assert.match(requests[0].url, /generativelanguage/);
-  assert.match(requests[1].url, /api.groq.com/);
+  assert.equal(requests[0].body.contents[0].parts[1].inline_data.mime_type, 'application/pdf');
+  assert.equal(requests.length, 1);
+  assert.deepEqual(providerOrder(env, 'QUESTION_EXTRACTION_VISUAL', { attachment }), ['gemini']);
 });
 
-test('successful Gemini request does not call Groq', async () => {
-  const urls = [];
-  assert.equal(await generateText('Explain x', {}, { env, fetch: async (url) => {
-    urls.push(url);
-    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: 'Gemini answer' }] } }] }) };
-  } }), 'Gemini answer');
-  assert.equal(urls.length, 1);
-  assert.match(urls[0], /generativelanguage/);
-});
-
-for (const failure of [429, 503, 401, 'network', 'empty']) {
-  test(`Gemini ${failure} falls back to Groq before retrying`, async () => {
-    const requests = [];
-    const answer = await generateText('Return JSON explaining x', { json: true }, {
-      env: { ...env, AI_MAX_RETRIES: '2', GROQ_MODEL: '' },
-      fetch: async (url, options) => {
-        requests.push({ url, body: JSON.parse(options.body) });
-        if (requests.length > 1) return { ok: true, json: async () => ({ choices: [{ message: { content: 'Groq answer' } }] }) };
-        if (failure === 'network') throw new TypeError('fetch failed');
-        if (failure === 'empty') return { ok: true, json: async () => ({}) };
-        return { ok: false, status: failure };
-      },
-    });
-    assert.equal(answer, 'Groq answer');
-    assert.equal(requests.length, 2);
-    assert.match(requests[1].url, /api.groq.com/);
-    assert.equal(requests[1].body.model, 'openai/gpt-oss-120b');
-    assert.equal(requests[1].body.response_format.type, 'json_object');
+for (const status of [429, 503]) {
+  test(`provider fallback follows HTTP ${status} without delaying the other provider`, async () => {
+    const urls = [];
+    const answer = await generateForTask('QUESTION_TUTOR', 'Explain x', {}, { env: { ...env, AI_MAX_RETRIES: '2' },
+      fetch: async (url) => { urls.push(url); return urls.length === 1
+        ? { ok: false, status } : geminiReply('Fallback answer'); } });
+    assert.equal(answer, 'Fallback answer');
+    assert.match(urls[0], /api.groq.com/);
+    assert.match(urls[1], /generativelanguage/);
+    assert.equal(urls.length, 2);
   });
 }
 
-test('a stalled Gemini request is aborted and Groq gets a fresh signal', async () => {
-  const signals = [];
-  const answer = await generateText('Explain x', { timeoutMs: 1000 }, { env, fetch: async (url, options) => {
-    signals.push(options.signal);
-    if (url.includes('groq')) return { ok: true, json: async () => ({ choices: [{ message: { content: 'Groq answer' } }] }) };
-    return new Promise((resolve, reject) => options.signal.addEventListener('abort', () => {
-      const error = new Error('aborted'); error.name = 'AbortError'; reject(error);
-    }));
-  } });
-  assert.equal(answer, 'Groq answer');
-  assert.equal(signals[0].aborted, true);
-  assert.equal(signals[1].aborted, false);
-});
-
-test('unavailable error identifies missing fallback without exposing keys', async () => {
-  await assert.rejects(generateText('Explain x', {}, {
-    env: { GEMINI_API_KEY: 'secret-test-value' },
-    fetch: async () => ({ ok: false, status: 503 }),
+test('invalid key stops retries and exposes a sanitized error', async () => {
+  let requests = 0;
+  await assert.rejects(generateForTask('QUESTION_TUTOR', 'Private input', {}, {
+    env: { ...env, GEMINI_API_KEY: '', AI_MAX_RETRIES: '2' },
+    fetch: async () => { requests += 1; return { ok: false, status: 401 }; },
   }), (error) => {
     assert.equal(error.code, 'AI_UNAVAILABLE');
-    assert.match(error.message, /gemini: HTTP 503/);
-    assert.match(error.message, /groq API key not configured/);
-    assert.doesNotMatch(error.message, /secret-test-value/);
+    assert.equal(error.message, 'PaperStack AI is temporarily unavailable.');
+    assert.doesNotMatch(error.message, /test-groq-key|Private input|groq/i);
     return true;
   });
+  assert.equal(requests, 1);
+});
+
+test('visual fallback uses extracted text and never sends raw PDF to Groq', async () => {
+  const requests = [];
+  const answer = await generateForTask('QUESTION_EXTRACTION_VISUAL', 'Extract', {
+    attachment: { buffer: Buffer.from('pdf'), mimeType: 'application/pdf' },
+    fallbackText: 'Q1 Explain circuits', json: true,
+  }, { env, fetch: async (url, options) => {
+    requests.push({ url, body: JSON.parse(options.body) });
+    return requests.length === 1 ? { ok: false, status: 503 } : groqReply('{"questions":[]}');
+  } });
+  assert.equal(answer, '{"questions":[]}');
+  assert.match(requests[1].url, /api.groq.com/);
+  assert.match(requests[1].body.messages[1].content, /Q1 Explain circuits/);
+  assert.doesNotMatch(JSON.stringify(requests[1].body), /cGRm/);
+});
+
+test('generic compatibility route is text first', async () => {
+  const urls = [];
+  await generateText('Explain x', {}, { env,
+    fetch: async (url) => { urls.push(url); return groqReply(); } });
+  assert.match(urls[0], /api.groq.com/);
 });
