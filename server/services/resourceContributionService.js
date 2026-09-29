@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const Resource = require('../models/Resource');
 const ResourceContribution =
   require('../models/ResourceContribution');
+const { bestDuplicateCandidate } = require('./duplicateDetectionService');
 
 const {
   isValidResourceType,
@@ -257,6 +258,7 @@ async function findDuplicate({
   fileHash,
   subjectKey,
   kind,
+  title = '',
 }) {
   const pending =
     await ResourceContribution.findOne({
@@ -304,6 +306,17 @@ async function findDuplicate({
       item:
         activeResource,
     };
+  }
+
+  if (title) {
+    const [contributions, resources] = await Promise.all([
+      ResourceContribution.find({ subjectKey, kind, status: { $in: ['pending', 'approved', 'needs_correction'] } }).select('_id title').limit(50).lean(),
+      Resource.find({ subjectKey, kind, status: 'active' }).select('_id title').limit(50).lean(),
+    ]);
+    const probable = bestDuplicateCandidate({ title }, [...contributions, ...resources], (item) => item.title);
+    if (probable && ['probable', 'possible'].includes(probable.classification)) {
+      return { type: 'probable_resource', item: probable.candidate, review: probable };
+    }
   }
 
   return null;
@@ -456,9 +469,10 @@ async function createResourceContribution({
       subjectKey:
         subject.subjectKey,
       kind,
+      title,
     });
 
-  if (duplicate) {
+  if (duplicate && duplicate.type !== 'probable_resource') {
     const error =
       new Error(
         'This resource appears to have already been submitted or published.'
@@ -568,6 +582,14 @@ async function createResourceContribution({
             extensionOf(
               file.originalname
             ),
+          duplicateReview: duplicate?.review
+            ? {
+                classification: duplicate.review.classification,
+                matchedId: String(duplicate.review.candidate?._id || ''),
+                confidence: duplicate.review.confidence,
+                reason: duplicate.review.reason,
+              }
+            : null,
         },
       });
 

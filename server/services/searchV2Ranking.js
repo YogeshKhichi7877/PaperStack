@@ -1,3 +1,6 @@
+const { expandAliases, fuzzyTokenScore } = require('./searchNormalizationService');
+const { normalizeBranch } = require('../utils/branches');
+
 function normalizeText(value = '') {
   return String(value || '')
     .toLowerCase()
@@ -41,10 +44,13 @@ function detectExamType(query = '') {
 function detectBranch(query = '') {
   const text = normalizeText(query);
 
+  if (/\b(cse\s*(?:ai\s*ml|aiml)|ai\s*ml|aiml)\b/.test(text)) return 'CSE (AI-ML)';
+  if (/\b(cyber\s*security|cse\s*cyber|cyber)\b/.test(text)) return 'Cyber Security';
+  if (/\b(mnc|maths?\s+and\s+computing|mathematics\s+and\s+computing)\b/.test(text)) return 'Mathematics and Computing';
   if (/\bece\b/.test(text)) return 'ECE';
   if (/\bcse\b/.test(text)) return 'CSE';
 
-  return '';
+  return normalizeBranch(query) || '';
 }
 
 function detectSemester(query = '') {
@@ -111,6 +117,8 @@ function catalogSubjectMatch(
       ) {
         score = Math.max(score, 70);
       }
+      const fuzzy = fuzzyTokenScore(normalized, name);
+      if (fuzzy >= 0.8) score = Math.max(score, 72 + fuzzy * 18);
     });
 
     if (score > (best?.score || 0)) {
@@ -279,7 +287,17 @@ function matchQuality(
           )
         );
       }
+      const fuzzy = fuzzyTokenScore(normalizedQuery, normalizedField);
+      if (fuzzy >= 0.6) score = Math.max(score, Math.round(fuzzy * 62));
     });
+
+  expandAliases(normalizedQuery).forEach((alias) => {
+    fields.filter(Boolean).forEach((field) => {
+      const normalizedField = normalizeText(field);
+      if (normalizedField === alias) score = Math.max(score, 96);
+      else if (normalizedField.includes(alias) || alias.includes(normalizedField)) score = Math.max(score, 74);
+    });
+  });
 
   return score;
 }
@@ -348,6 +366,8 @@ function rankResult(
   if (result.type === 'subject') {
     score += 10;
   }
+
+  if (result.type === 'resource') score += Math.min(12, Number(result.qualityScore || 0) * 0.12);
 
   const engagement =
     Number(result.views || 0) +

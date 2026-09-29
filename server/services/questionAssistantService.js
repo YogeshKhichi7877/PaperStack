@@ -1,5 +1,12 @@
 const { aiAvailable, generateForTask, modelForProvider, providerOrder } = require('./aiService');
 const { answerNumericalQuestion, isNumericalQuestion } = require('./numericalReasoningService');
+const aiCache = require('./aiCacheService');
+const { questionContentVersion } = require('./contentVersionService');
+const {
+  findReusableAnswer,
+  storeReusableAnswer,
+} = require('./semanticAiAnswerService');
+const { rankRelatedQuestions } = require('./relatedQuestionService');
 
 function normalizeText(value = '') {
   return String(value || '')
@@ -59,6 +66,10 @@ function detectQuestionIntent(query = '') {
 
   if (/(solution|solve|full answer|answer this|worked answer)/.test(text)) {
     return 'solution';
+  }
+
+  if (/(formula|equation|identity|symbols)/.test(text)) {
+    return 'formula';
   }
 
   if (/(similar|related|same type|other pyq|another pyq)/.test(text)) {
@@ -183,18 +194,7 @@ function similarityScore(baseQuestion = {}, candidate = {}) {
 }
 
 function rankSimilarQuestions(baseQuestion = {}, candidates = [], limit = 6) {
-  return candidates
-    .filter((candidate) => String(candidate._id) !== String(baseQuestion._id))
-    .map((candidate) => ({
-      ...candidate,
-      similarity: similarityScore(baseQuestion, candidate),
-    }))
-    .filter((candidate) => candidate.similarity >= 15)
-    .sort((a, b) =>
-      b.similarity - a.similarity ||
-      Number(b.year || 0) - Number(a.year || 0)
-    )
-    .slice(0, limit);
+  return rankRelatedQuestions(baseQuestion, candidates, limit);
 }
 
 function publicQuestion(question = {}) {
@@ -318,6 +318,10 @@ function buildLocalAnswer({
     return localConcepts(question);
   }
 
+  if (intent === 'formula') {
+    return `${localConcepts(question)}\n\nUse only formulas that apply to the stated quantities, define each symbol, and verify units before substitution.`;
+  }
+
   if (intent === 'structure') {
     return expectedAnswerShape(question);
   }
@@ -378,7 +382,7 @@ function questionAiEnabled() {
   return aiAvailable(process.env, 'QUESTION_TUTOR');
 }
 
-function geminiModel() {
+function modelForTask() {
   const provider = providerOrder(process.env, 'QUESTION_TUTOR')[0];
   return provider ? modelForProvider(provider) : '';
 }
@@ -390,6 +394,25 @@ async function askAi({
   approvedSolutions = [],
   similarQuestions = [],
 }) {
+  const contentVersion = questionContentVersion(question, approvedSolutions);
+  const reusableInput = {
+    task: 'QUESTION_TUTOR',
+    mode: intent,
+    request: query,
+    subjectCode: question.subjectCode,
+    questionId: question._id,
+    topics: extractTopics(question),
+    contentVersion,
+    promptVersion: 'question-tutor-v3',
+  };
+  const durable = await findReusableAnswer(reusableInput);
+  if (durable) {
+    return {
+      answer: durable.entry.answer,
+      answerId: String(durable.entry._id),
+      cache: { hit: true, matchType: durable.matchType, similarity: durable.similarity },
+    };
+  }
   const solutionContext = approvedSolutions
     .slice(0, 3)
     .map((solution, index) =>
@@ -426,7 +449,25 @@ async function askAi({
     .filter(Boolean)
     .join('\n\n');
 
-  return generateForTask('QUESTION_TUTOR', prompt, { temperature: 0.25, maxOutputTokens: 1200 });
+  const cacheKey = aiCache.buildAiCacheKey('question-tutor', question._id || 'question', prompt, 'v3');
+  const cached = await aiCache.get(cacheKey);
+  if (cached && typeof cached === 'object' && cached.answer) return cached;
+  if (typeof cached === 'string' && cached) {
+    const stored = await storeReusableAnswer({ ...reusableInput, answer: cached, model: modelForTask() });
+    return { answer: cached, answerId: stored?._id ? String(stored._id) : '', cache: { hit: true, matchType: 'transient' } };
+  }
+  const answer = await generateForTask('QUESTION_TUTOR', prompt, {
+    temperature: 0.25,
+    maxOutputTokens: 1200,
+  });
+  const stored = await storeReusableAnswer({ ...reusableInput, answer, model: modelForTask() });
+  const result = {
+    answer,
+    answerId: stored?._id ? String(stored._id) : '',
+    cache: { hit: false, matchType: 'generated' },
+  };
+  await aiCache.set(cacheKey, result, Number(process.env.AI_CACHE_TUTOR_TTL_SECONDS) || 21600);
+  return result;
 }
 
 async function answerSelectedQuestion({
@@ -445,6 +486,9 @@ async function answerSelectedQuestion({
 
   let mode = 'local';
   let warnings = [];
+  let verification = isNumericalQuestion(question)
+    ? { status: 'unverified', details: ['Automatic calculation verification was not completed.'] }
+    : { status: 'not_applicable', details: [] };
 
   let answer = buildLocalAnswer({
     intent,
@@ -452,15 +496,50 @@ async function answerSelectedQuestion({
     approvedSolutions,
     similarQuestions,
   });
+  let answerId = '';
+  let cache = { hit: false, matchType: 'none' };
 
   if (intent === 'hint') {
     answer = localHint(question);
   } else if (useAi && questionAiEnabled() && !(intent === 'solution' && approvedSolutions.length)) {
     try {
-      const aiAnswer = isNumericalQuestion(question) &&
-        ['solution', 'general', 'explain'].includes(intent)
-        ? (await answerNumericalQuestion(question)).answer
-        : await askAi({ query, intent, question, approvedSolutions, similarQuestions });
+      let aiAnswer;
+      if (isNumericalQuestion(question) && ['solution', 'general', 'explain'].includes(intent)) {
+        const reusableInput = {
+          task: 'QUESTION_TUTOR', intent,
+          mode: intent,
+          request: query,
+          subjectCode: question.subjectCode,
+          questionId: question._id,
+          topics: extractTopics(question),
+          contentVersion: questionContentVersion(question, approvedSolutions),
+          promptVersion: 'question-tutor-v3',
+        };
+        const reused = await findReusableAnswer(reusableInput);
+        if (reused) {
+          aiAnswer = reused.entry.answer;
+          answerId = String(reused.entry._id);
+          cache = { hit: true, matchType: reused.matchType, similarity: reused.similarity };
+          verification = { status: reused.entry.status === 'verified' ? 'verified' : 'unverified', details: ['Reused from the versioned academic answer cache.'] };
+        } else {
+          const numerical = await answerNumericalQuestion(question);
+          aiAnswer = numerical.answer;
+          verification = numerical.verification || verification;
+          const stored = await storeReusableAnswer({
+            ...reusableInput,
+            answer: aiAnswer,
+            model: modelForTask(),
+            status: verification.status === 'verified' ? 'verified' : 'generated',
+          });
+          answerId = stored?._id ? String(stored._id) : '';
+          cache = { hit: false, matchType: 'generated' };
+        }
+      } else {
+        const aiResult = await askAi({ query, intent, question, approvedSolutions, similarQuestions });
+        aiAnswer = aiResult.answer;
+        answerId = aiResult.answerId || '';
+        cache = aiResult.cache || cache;
+      }
 
       if (aiAnswer) {
         answer = intent === 'solution' && !approvedSolutions.length
@@ -476,8 +555,15 @@ async function answerSelectedQuestion({
 
   return {
     mode,
+    status: mode === 'ai' ? 'high_confidence'
+      : warnings.length ? 'ai_unavailable' : 'local_only',
+    confidence: mode === 'ai' ? 'high' : 'medium',
+    degraded: warnings.length > 0,
+    verification,
     intent,
     answer,
+    answerId,
+    cache,
     warnings,
     aiAvailable: questionAiEnabled(),
     answerStructure: expectedAnswerShape(question),
@@ -497,7 +583,8 @@ module.exports = {
   detectQuestionIntent,
   expectedAnswerShape,
   extractTopics,
-  geminiModel,
+  modelForTask,
+  geminiModel: modelForTask,
   localConcepts,
   localExplanation,
   localHint,

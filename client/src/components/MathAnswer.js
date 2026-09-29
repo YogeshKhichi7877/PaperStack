@@ -5,7 +5,9 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import './MathAnswer.css';
 
-function normalizeMathDelimiters(value) {
+export const KATEX_OPTIONS = Object.freeze({ trust: false, throwOnError: false });
+
+export function normalizeMathDelimiters(value) {
   return String(value || '')
     .replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `\n$$\n${math}\n$$\n`)
     .replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
@@ -14,7 +16,7 @@ function normalizeMathDelimiters(value) {
 export default function MathAnswer({ children }) {
   return (
     <div className="ps-math-answer">
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex, { trust: false, throwOnError: false }]]}>
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex, KATEX_OPTIONS]]}>
         {normalizeMathDelimiters(children)}
       </ReactMarkdown>
     </div>

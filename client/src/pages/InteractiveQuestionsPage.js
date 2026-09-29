@@ -798,6 +798,10 @@ import {
 
 import QuestionSolutionsPanel from '../components/QuestionSolutionsPanel';
 import QuestionAssistantPanel from '../components/QuestionAssistantPanel';
+import SaveButton from '../components/SaveButton';
+import RelatedPyqs from '../components/RelatedPyqs';
+import { recordStudyProgressOnce } from '../services/studyProgressApi';
+import '../components/StudentUtility.css';
 
 import './InteractiveQuestionsPage.css';
 
@@ -911,6 +915,7 @@ function QuestionCard({
   question,
   onCopy,
   navigate,
+  toast,
 }) {
   const sourceUrl = sourcePdfUrl(question);
 
@@ -1013,6 +1018,8 @@ function QuestionCard({
             <Copy size={15} />
             Copy
           </button>
+
+          <SaveButton entityType="question" entityId={question._id} title={question.questionText} route={`/questions/${question._id}`} subjectCode={question.subjectCode} toast={toast} />
         </div>
       </div>
     </article>
@@ -1213,6 +1220,17 @@ function QuestionDetail({
 
         if (mounted) {
           setDetail(data || null);
+          if (data?.question) {
+            recordStudyProgressOnce({
+              entityType: 'question',
+              entityId: data.question._id,
+              title: `${data.question.subject || 'Question'} · ${data.question.questionLabel || ''}`,
+              route: `/questions/${data.question._id}`,
+              subjectCode: data.question.subjectCode || '',
+              status: 'in_progress',
+              progress: 10,
+            }).catch(() => {});
+          }
         }
       } catch (error) {
         const message =
@@ -1421,7 +1439,10 @@ function QuestionDetail({
               <Copy size={16} />
               Copy Link
             </button>
+
+            <SaveButton entityType="question" entityId={question._id} title={question.questionText} route={`/questions/${question._id}`} subjectCode={question.subjectCode} toast={toast} />
           </div>
+          <RelatedPyqs questions={detail.relatedQuestions || []} />
         </article>
 
         <section className="iq-detail-workspace">
@@ -2477,6 +2498,7 @@ export default function InteractiveQuestionsPage({
                     navigate={
                       navigate
                     }
+                    toast={toast}
                   />
                 )
               )}

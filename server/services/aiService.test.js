@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { aiAvailable, generateForTask, generateText, modelForProvider, providerOrder, taskStatus } = require('./aiService');
+const { aiAvailable, generateForTask, generateResultForTask, generateText, modelForProvider, providerOrder, taskStatus } = require('./aiService');
 
 const env = { AI_ENABLED: 'true', GEMINI_API_KEY: 'test-gemini-key', GROQ_API_KEY: 'test-groq-key',
   GEMINI_MODEL: 'test-gemini', GROQ_MODEL: 'test-groq', AI_MAX_RETRIES: '0' };
@@ -126,4 +126,16 @@ test('generic compatibility route is text first', async () => {
   await generateText('Explain x', {}, { env,
     fetch: async (url) => { urls.push(url); return groqReply(); } });
   assert.match(urls[0], /api.groq.com/);
+});
+
+test('provider-neutral result envelope records fallback only as internal diagnostics', async () => {
+  const result = await generateResultForTask('QUESTION_TUTOR', 'Explain x', {}, {
+    env,
+    fetch: async () => groqReply('Explanation'),
+  });
+  assert.equal(result.text, 'Explanation');
+  assert.equal(result.status, 'high_confidence');
+  assert.equal(result.degraded, false);
+  assert.equal(result.internal.provider, 'groq');
+  assert.equal('provider' in result, false);
 });

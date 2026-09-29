@@ -11,6 +11,9 @@ import {
 } from '../services/resourceApi';
 import './SubjectPage.css';
 import './SubjectPageCompact.css';
+import SaveButton from '../components/SaveButton';
+import { recordStudyProgress } from '../services/studyProgressApi';
+import '../components/StudentUtility.css';
 
 const RESOURCE_TABS = [
   { value: 'all', label: 'All Resources', short: 'All' },
@@ -55,6 +58,7 @@ function ResourceCard({ resource, user, toast, navigate }) {
     } catch (error) {
       console.warn('Resource view tracking failed:', error);
     }
+    recordStudyProgress({ entityType: 'resource', entityId: resource._id, title: resource.title || resource.subjectName || 'Resource', route: `/subject/${resource.subjectKey}`, subjectCode: resource.subjectCode || '', status: 'in_progress', progress: 10 }).catch(() => {});
     window.open(resource.fileUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -106,6 +110,8 @@ function ResourceCard({ resource, user, toast, navigate }) {
         <span>{Number(resource.downloads || 0).toLocaleString('en-IN')} downloads</span>
       </div>
 
+      {(resource.qualityBadges || []).length > 0 && <div className="resource-quality-badges">{resource.qualityBadges.slice(0, 3).map((badge) => <span key={badge}>{badge}</span>)}</div>}
+
       <div className="subject-hub-resource-actions">
         <button type="button" onClick={openResource} disabled={!canOpen}>
           {isPaper ? 'View Paper' : 'Open Resource'} <ArrowRight size={16} />
@@ -113,6 +119,7 @@ function ResourceCard({ resource, user, toast, navigate }) {
         <button type="button" className="secondary" onClick={downloadResource} disabled={!canOpen}>
           <Download size={16} /> Download
         </button>
+        <SaveButton entityType="resource" entityId={resource._id} title={resource.title} route={`/subject/${resource.subjectKey}`} subjectCode={resource.subjectCode} toast={toast} />
       </div>
     </article>
   );
@@ -129,9 +136,7 @@ function EmptyResources({
       <span>Nothing here yet</span>
       <h3>No {label.toLowerCase()} have been added for this subject.</h3>
       <p>Be the first student to help complete this category.</p>
-      <Link to={isPaperTab ? contributionPath : resourceContributionPath}>
-        {isPaperTab ? 'Upload a question paper' : `Upload ${label}`}
-      </Link>
+      <div><Link to={isPaperTab ? contributionPath : resourceContributionPath}>{isPaperTab ? 'Upload a question paper' : `Upload ${label}`}</Link><Link to="/questions">Practice available PYQs</Link><Link to="/ask-paperstack">Ask PaperStack</Link></div>
     </div>
   );
 }
@@ -315,6 +320,9 @@ export default function SubjectPage({ user, toast }) {
         <Link to={`/revision-sheets${studyQuery}`}>Revision sheet</Link>
         <Link to={`/exam-war-room${studyQuery}`}>Exam War Room</Link>
         <Link to={`/mock-exams${studyQuery}`}>Mock exam</Link>
+        <Link to={`/exam-war-room${studyQuery}&minutes=10`}>10-min sprint</Link>
+        <Link to={`/exam-war-room${studyQuery}&minutes=30`}>30-min revision</Link>
+        <Link to={`/exam-war-room${studyQuery}&minutes=60`}>60-min prep</Link>
       </nav>
 
       <section className="subject-hub-resources" id="resources">

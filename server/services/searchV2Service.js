@@ -14,6 +14,8 @@ const {
   residualSearchText,
   sortSearchResults,
 } = require('./searchV2Ranking');
+const { expandAliases } = require('./searchNormalizationService');
+const { resourceQuality } = require('./resourceQualityService');
 
 const VALID_TYPES = [
   'all',
@@ -45,7 +47,7 @@ function branchPaperFilter(branch) {
   };
 }
 
-function textRegex(query) {
+function textRegex(query, catalog = FLAT_SUBJECT_CATALOG) {
   const cleaned = String(query || '')
     .trim()
     .slice(0, 120);
@@ -58,8 +60,8 @@ function textRegex(query) {
 
   const terms = [
     ...new Set(
-      normalized
-        .split(' ')
+      expandAliases(normalized, catalog)
+        .flatMap((value) => value.split(' '))
         .filter(Boolean)
         .filter((token) => token.length >= 2)
         .slice(0, 8)
@@ -127,6 +129,7 @@ function publicResource(item) {
       ? `/subject/${encodeURIComponent(item.subjectKey)}`
       : '',
     fileUrl: item.fileUrl || '',
+    ...resourceQuality(item),
   };
 }
 
@@ -287,7 +290,8 @@ async function searchV2({
 
   const regex =
     textRegex(
-      searchableText
+      searchableText,
+      FLAT_SUBJECT_CATALOG
     );
 
   const perType = safeLimit(limit);
@@ -394,7 +398,7 @@ async function searchV2({
         })
         .limit(perType)
         .select(
-          'title kind subjectKey subjectCode subjectShortCode subjectName branches semesters examType year fileUrl views downloads topics tags'
+          'title kind subjectKey subjectCode subjectShortCode subjectName branches semesters examType year fileUrl views downloads topics tags sourceType metadata createdAt updatedAt'
         )
         .lean()
     );

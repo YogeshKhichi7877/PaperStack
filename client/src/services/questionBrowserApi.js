@@ -35,3 +35,13 @@ export async function getQuestionDetail(questionId) {
   const response = await axios.get(`${API_URL}/api/questions/${questionId}`);
   return response.data;
 }
+
+export async function getRelatedQuestions(questionId, limit = 6) {
+  const response = await axios.get(`${API_URL}/api/question-browser/${questionId}/related`, { params: { limit } });
+  return response.data;
+}
+
+export async function getMiniPractice(params = {}) {
+  const response = await axios.get(`${API_URL}/api/question-browser/mini-practice`, { params: cleanParams(params) });
+  return response.data;
+}

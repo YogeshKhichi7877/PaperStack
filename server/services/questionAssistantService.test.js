@@ -45,6 +45,10 @@ test('detects solution intent', () => {
   );
 });
 
+test('detects formula intent', () => {
+  assert.equal(detectQuestionIntent('Show the formula and define its symbols'), 'formula');
+});
+
 test('answer structure adapts to numerical questions', () => {
   const result = expectedAnswerShape(
     q('1', 'Calculate the transformed coordinates.', { marks: 5 })

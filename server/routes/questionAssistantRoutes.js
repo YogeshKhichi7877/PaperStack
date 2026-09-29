@@ -1,8 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 
-const Question = require('../models/Question');
-const QuestionSolution = require('../models/QuestionSolution');
+const { buildAcademicContext } = require('../services/academicContextService');
 
 const {
   answerSelectedQuestion,
@@ -21,43 +20,17 @@ function validObjectId(value) {
 }
 
 async function loadContext(questionId) {
-  const question = await Question.findById(questionId)
-    .populate(
-      'paperId',
-      '_id title filePath solutionPath'
-    )
-    .lean();
-
+  const academic = await buildAcademicContext({
+    questionId,
+    includeSolutions: true,
+    includeRelatedQuestions: true,
+  });
+  const question = academic.question;
   if (!question || question.status === 'rejected') {
     return null;
   }
-
-  const approvedSolutions = await QuestionSolution.find({
-    questionId: question._id,
-    status: 'approved',
-  })
-    .sort({
-      helpfulCount: -1,
-      approvedAt: 1,
-    })
-    .limit(5)
-    .lean();
-
-  const candidateQuestions = await Question.find({
-    _id: { $ne: question._id },
-    subjectCode: question.subjectCode,
-    status: { $ne: 'rejected' },
-  })
-    .sort({
-      year: -1,
-      sequence: 1,
-    })
-    .limit(180)
-    .populate(
-      'paperId',
-      '_id title filePath solutionPath'
-    )
-    .lean();
+  const approvedSolutions = academic.approvedSolutions || [];
+  const candidateQuestions = academic.relatedQuestions || [];
 
   const similarQuestions =
     rankSimilarQuestions(
@@ -71,6 +44,7 @@ async function loadContext(questionId) {
     approvedSolutions,
     candidateQuestions,
     similarQuestions,
+    academic,
   };
 }
 

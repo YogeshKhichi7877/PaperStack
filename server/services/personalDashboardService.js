@@ -3,6 +3,8 @@ const Contribution = require('../models/Contribution');
 const PaperRequest = require('../models/PaperRequest');
 const PaperVerification = require('../models/PaperVerification');
 const QuestionSolution = require('../models/QuestionSolution');
+const SavedItem = require('../models/SavedItem');
+const StudyProgress = require('../models/StudyProgress');
 
 const {
   getOwnContributorProfile,
@@ -85,6 +87,8 @@ async function getPersonalDashboard(userId) {
     recentContributions,
     recentSolutions,
     contributorProfile,
+    savedItems,
+    studyProgress,
   ] = await Promise.all([
     Contribution.aggregate([
       {
@@ -157,6 +161,16 @@ async function getPersonalDashboard(userId) {
       .lean(),
 
     getOwnContributorProfile(user._id),
+
+    SavedItem.find({ userId: user._id })
+      .sort({ updatedAt: -1 })
+      .limit(20)
+      .lean(),
+
+    StudyProgress.find({ userId: user._id })
+      .sort({ lastViewedAt: -1 })
+      .limit(12)
+      .lean(),
   ]);
 
   const contributionCounts = countByStatus(contributionRows);
@@ -171,7 +185,7 @@ async function getPersonalDashboard(userId) {
   const stats = impactSummary({
     contributionCounts,
     solutionCounts,
-    bookmarkCount: (user.bookmarks || []).length,
+    bookmarkCount: (user.bookmarks || []).length + savedItems.filter((item) => item.entityType !== 'paper').length,
     requestCount: requestTotal,
     verificationCount,
     contributorProfile: contributorProfile || {},
@@ -205,6 +219,26 @@ async function getPersonalDashboard(userId) {
       solutions: solutionCounts,
     },
     bookmarks,
+    savedItems: savedItems.map((item) => ({
+      _id: stringId(item),
+      entityType: item.entityType,
+      entityKey: item.entityKey,
+      title: item.title,
+      route: item.route,
+      subjectCode: item.subjectCode || '',
+      updatedAt: item.updatedAt || null,
+    })),
+    continueStudying: studyProgress.map((item) => ({
+      _id: stringId(item),
+      entityType: item.entityType,
+      entityKey: item.entityKey,
+      title: item.title,
+      route: item.route,
+      subjectCode: item.subjectCode || '',
+      status: item.status,
+      progress: Number(item.progress || 0),
+      lastViewedAt: item.lastViewedAt || null,
+    })),
     requests: requests.map(sanitizeRequest),
     recentContributions: recentContributions.map(publicContribution),
     recentSolutions: recentSolutions.map(publicSolution),

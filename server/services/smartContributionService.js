@@ -363,6 +363,8 @@ async function analyzeContributionFile(file) {
   if (!needsAi || !aiStatus.configured) {
     return {
       ...ruleAnalysis,
+      resultStatus: needsAi ? 'ai_unavailable' : 'local_only',
+      degraded: needsAi,
       ai: {
         ...aiStatus,
         attempted: false,
@@ -377,6 +379,8 @@ async function analyzeContributionFile(file) {
     if (!aiResult?.metadata) {
       return {
         ...ruleAnalysis,
+        resultStatus: 'partial',
+        degraded: true,
         ai: {
           ...aiStatus,
           attempted: Boolean(aiResult?.attempted),
@@ -389,6 +393,8 @@ async function analyzeContributionFile(file) {
     const merged = mergeAiAnalysis(ruleAnalysis, aiResult);
     return {
       ...merged,
+      resultStatus: merged.status === 'ready' ? 'high_confidence' : 'partial',
+      degraded: merged.status !== 'ready',
       ai: {
         ...aiStatus,
         attempted: true,
@@ -399,6 +405,8 @@ async function analyzeContributionFile(file) {
   } catch (error) {
     return {
       ...ruleAnalysis,
+      resultStatus: 'ai_unavailable',
+      degraded: true,
       ai: {
         ...aiStatus,
         attempted: true,

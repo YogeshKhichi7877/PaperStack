@@ -5,71 +5,45 @@ import React, {
 } from 'react';
 
 import {
-  Link,
-} from 'react-router-dom';
-
-import {
   askSelectedQuestion,
   getQuestionAssistantContext,
 } from '../services/questionAssistantApi';
+import { submitAiFeedback } from '../services/aiFeedbackApi';
+import { trackProductEvent } from '../services/productAnalyticsApi';
+import { getMiniPractice } from '../services/questionBrowserApi';
+import AcademicAiActions from './AcademicAiActions';
+import RelatedPyqs from './RelatedPyqs';
 
 import './QuestionAssistantPanel.css';
+import './StudentUtility.css';
 
 const MathAnswer = React.lazy(() => import('./MathAnswer'));
 
-const QUICK_ACTIONS = [
-  {
-    key: 'explain',
-    label: 'Explain this question',
-    query:
-      'Explain what this question is asking in simple words and tell me how to approach it in the exam.',
-  },
-  {
-    key: 'hint',
-    label: 'Give me a hint',
-    query:
-      'Give me a hint only. Do not give the full answer.',
-  },
-  {
-    key: 'concepts',
-    label: 'Concepts to revise',
-    query:
-      'What concepts and prerequisites should I revise before solving this?',
-  },
-  {
-    key: 'similar',
-    label: 'Similar PYQs',
-    query:
-      'Show me similar or related PYQs from the archive.',
-  },
-  {
-    key: 'solution',
-    label: 'Show solution',
-    query:
-      'Show me the approved solution if one exists. Otherwise tell me how to approach the answer.',
-  },
-];
-
-function sourceUrl(question) {
-  const base =
-    question?.paper?.filePath ||
-    '';
-
-  if (!base) {
-    return '';
-  }
-
-  const page =
-    Number(
-      question
-        ?.sourceLocation
-        ?.pageStart ||
-      0
-    );
-
-  return page > 0
-    ? `${base}#page=${page}`
-    : base;
+function AiFeedbackControls({ answerId, toast }) {
+  const [choice, setChoice] = useState('');
+  const [reason, setReason] = useState('incorrect');
+  const [busy, setBusy] = useState(false);
+  if (!answerId) return null;
+  const send = async (value, selectedReason = '') => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await submitAiFeedback(answerId, value, selectedReason);
+      setChoice(value);
+      trackProductEvent('ai_feedback', { routeKey: 'question_assistant', type: value }).catch(() => {});
+      toast?.('Thanks — your feedback will improve future answers.', 'success');
+    } catch (error) {
+      toast?.(error.response?.status === 401 ? 'Sign in to rate AI answers.' : 'Could not save feedback.', 'error');
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="ai-feedback">
+      <span>Was this useful?</span>
+      <button type="button" className={choice === 'helpful' ? 'active' : ''} disabled={busy} onClick={() => send('helpful')}>Helpful</button>
+      <button type="button" className={choice === 'not_helpful' ? 'active' : ''} disabled={busy} onClick={() => send('not_helpful', reason)}>Not helpful</button>
+      {choice === 'not_helpful' && <select aria-label="Why was this not helpful?" value={reason} onChange={(event) => { setReason(event.target.value); send('not_helpful', event.target.value); }}><option value="incorrect">Incorrect</option><option value="unclear">Unclear</option><option value="incomplete">Incomplete</option><option value="not_relevant">Not relevant</option><option value="other">Other</option></select>}
+    </div>
+  );
 }
 
 export default function QuestionAssistantPanel({
@@ -242,6 +216,8 @@ export default function QuestionAssistantPanel({
             similarQuestions:
               data.similarQuestions ||
               [],
+            answerId: data.answerId || '',
+            cache: data.cache || null,
           },
         ]
       );
@@ -257,6 +233,35 @@ export default function QuestionAssistantPanel({
     } finally {
       setSending(false);
     }
+  }
+
+  async function handleAcademicAction(action) {
+    if (action.key === 'similar') {
+      const related = context?.similarQuestions || [];
+      setMessages((current) => [...current,
+        { id: `user_${Date.now()}`, role: 'user', text: action.query },
+        { id: `assistant_${Date.now()}_related`, role: 'assistant', query: action.query, answer: related.length ? `I found ${related.length} related PYQ${related.length === 1 ? '' : 's'} in the archive.` : 'No strong related PYQ is indexed yet.', mode: 'local', intent: 'similar', similarQuestions: related, warnings: [], topics: [] },
+      ]);
+      onAnswered?.();
+      return;
+    }
+    if (action.key === 'practice') {
+      if (sending) return;
+      setSending(true);
+      try {
+        const data = await getMiniPractice({ questionId, limit: 5 });
+        const practice = data.questions || [];
+        setMessages((current) => [...current,
+          { id: `user_${Date.now()}`, role: 'user', text: action.query },
+          { id: `assistant_${Date.now()}_practice`, role: 'assistant', query: action.query, answer: practice.length ? `Here is a deterministic ${practice.length}-question practice set ranked from the PaperStack archive.` : 'There are not enough related indexed questions for a mini practice set yet.', mode: 'local', intent: 'practice', similarQuestions: practice, warnings: [], topics: [] },
+        ]);
+        trackProductEvent('mini_practice_start', { routeKey: 'question_assistant', type: 'question' }).catch(() => {});
+        onAnswered?.();
+      } catch { toast?.('Could not build a practice set.', 'error'); }
+      finally { setSending(false); }
+      return;
+    }
+    submit(action.query);
   }
 
   if (!questionId) {
@@ -314,28 +319,7 @@ export default function QuestionAssistantPanel({
       </div>
 
       <div className="qa-quick-actions">
-        {
-          QUICK_ACTIONS.map(
-            (action) => (
-              <button
-                type="button"
-                key={
-                  action.key
-                }
-                disabled={
-                  sending
-                }
-                onClick={() =>
-                  submit(
-                    action.query
-                  )
-                }
-              >
-                {action.label}
-              </button>
-            )
-          )
-        }
+        <AcademicAiActions disabled={sending} onAction={handleAcademicAction} />
         {!contextLoading && quickSummary.solutions === 0 && (
           <button type="button" disabled={sending} onClick={() => submit('Generate a complete worked practice answer for this question. Show all steps and verify numerical calculations.')}>
             Generate practice answer
@@ -456,6 +440,10 @@ export default function QuestionAssistantPanel({
                   <React.Suspense fallback={<p>{message.answer}</p>}>
                     <MathAnswer>{message.answer}</MathAnswer>
                   </React.Suspense>
+
+                  {message.cache?.hit && <small className="qa-cache-note">{message.cache.matchType === 'semantic' ? 'Reused a highly similar, positively rated answer.' : 'Reused the current versioned answer for this content.'}</small>}
+
+                  <AiFeedbackControls answerId={message.answerId} toast={toast} />
 
                   {
                     message
@@ -586,120 +574,13 @@ export default function QuestionAssistantPanel({
                     )
                   }
 
-                  {
-                    message
-                      .similarQuestions
-                      ?.length >
-                      0 && (
-                      <section className="qa-evidence">
-                        <h3>
-                          Similar PYQs
-                        </h3>
-
-                        <div className="qa-similar-list">
-                          {
-                            message.similarQuestions.map(
-                              (
-                                item
-                              ) => (
-                                <div
-                                  key={
-                                    item._id
-                                  }
-                                  className="qa-similar"
-                                >
-                                  <div>
-                                    <div className="qa-tags">
-                                      {
-                                        item.questionLabel && (
-                                          <span>
-                                            {
-                                              item.questionLabel
-                                            }
-                                          </span>
-                                        )
-                                      }
-
-                                      {
-                                        item.year && (
-                                          <span>
-                                            {
-                                              item.year
-                                            }
-                                          </span>
-                                        )
-                                      }
-
-                                      {
-                                        item.examType && (
-                                          <span>
-                                            {
-                                              item.examType
-                                            }
-                                          </span>
-                                        )
-                                      }
-
-                                      {
-                                        item.similarity != null && (
-                                          <span>
-                                            {
-                                              item.similarity
-                                            }
-                                            % related
-                                          </span>
-                                        )
-                                      }
-                                    </div>
-
-                                    <p>
-                                      {
-                                        item
-                                          .questionText
-                                      }
-                                    </p>
-                                  </div>
-
-                                  <div className="qa-similar-actions">
-                                    <Link
-                                      to={
-                                        `/questions/${item._id}`
-                                      }
-                                    >
-                                      Open
-                                    </Link>
-
-                                    {
-                                      sourceUrl(
-                                        item
-                                      ) && (
-                                        <a
-                                          href={
-                                            sourceUrl(
-                                              item
-                                            )
-                                          }
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                        >
-                                          PDF
-                                        </a>
-                                      )
-                                    }
-                                  </div>
-                                </div>
-                              )
-                            )
-                          }
-                        </div>
-                      </section>
-                    )
-                  }
+                  <RelatedPyqs questions={message.similarQuestions || []} empty={false} />
                 </article>
               )
           )
         }
       </div>
+      {!messages.length && <RelatedPyqs questions={context?.similarQuestions || []} />}
     </section>
   );
 }

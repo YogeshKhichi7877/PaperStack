@@ -217,6 +217,12 @@ const questionSchema = new mongoose.Schema({
     default: false,
     index: true,
   },
+  duplicateReview: {
+    classification: { type: String, enum: ['', 'exact', 'probable', 'possible'], default: '' },
+    matchedQuestionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question', default: null },
+    confidence: { type: Number, min: 0, max: 1, default: null },
+    reason: { type: String, default: '' },
+  },
 }, {
   timestamps: true,
 });
@@ -227,6 +233,8 @@ questionSchema.index({ subjectKey: 1, year: -1, examType: 1 });
 questionSchema.index({ subjectCode: 1, year: -1, examType: 1 });
 questionSchema.index({ branch: 1, semester: 1, year: -1 });
 questionSchema.index({ topics: 1 });
+questionSchema.index({ textHash: 1, subjectCode: 1 });
+questionSchema.index({ 'duplicateReview.classification': 1, needsReview: 1 });
 questionSchema.index(
   {
     questionText: 'text',

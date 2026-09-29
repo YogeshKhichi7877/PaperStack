@@ -713,6 +713,23 @@ export default function PersonalDashboardPage({
         0
     );
 
+  const savedRecords = useMemo(() => {
+    const generic = dashboard?.savedItems || [];
+    const papers = (dashboard?.bookmarks || []).map((paper) => ({
+      ...paper,
+      entityType: 'paper',
+      entityKey: String(paper._id),
+      route: paper.filePath || '',
+    }));
+    const seen = new Set();
+    return [...generic, ...papers].filter((item) => {
+      const key = `${item.entityType}:${item.entityKey || item._id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [dashboard]);
+
   const branchShort =
     BRANCHES.find(
       (item) =>
@@ -1673,6 +1690,13 @@ export default function PersonalDashboardPage({
             </header>
 
             <div className="pd-study-rows">
+              {(dashboard?.continueStudying || []).slice(0, 4).map((item, index) => (
+                <Link key={item._id} to={item.route} onClick={() => import('../services/productAnalyticsApi').then(({ trackProductEvent }) => trackProductEvent('study_resume', { routeKey: 'dashboard', type: item.entityType }).catch(() => {}))}>
+                  <span className="pd-study-number">{String(index + 1).padStart(2, '0')}</span>
+                  <div><span>{String(item.entityType || 'study').replace(/_/g, ' ')}</span><strong>{item.title}</strong><small>{item.subjectCode ? `${item.subjectCode} · ` : ''}{item.progress || 0}% progress</small></div>
+                  <ArrowRight size={13} />
+                </Link>
+              ))}
               <Link to="/revision-sheets">
                 <span className="pd-study-number">
                   01
@@ -2325,7 +2349,7 @@ export default function PersonalDashboardPage({
                 </span>
 
                 <h2>
-                  Saved papers
+                  Saved items
                 </h2>
               </div>
 
@@ -2334,11 +2358,9 @@ export default function PersonalDashboardPage({
               />
             </header>
 
-            {dashboard
-              ?.bookmarks
-              ?.length ? (
+            {savedRecords.length ? (
               <div className="pd-record-list">
-                {dashboard.bookmarks
+                {savedRecords
                   .slice(
                     0,
                     6
@@ -2364,15 +2386,10 @@ export default function PersonalDashboardPage({
                         </span>
 
                         <div>
-                          <strong>
-                            {paper.subject ||
-                              paper.title}
-                          </strong>
+                          <strong>{paper.title || paper.subject || 'Saved item'}</strong>
 
                           <small>
-                            {
-                              paper.subjectCode
-                            }
+                            {paper.entityType}{paper.subjectCode ? ` · ${paper.subjectCode}` : ''}
 
                             {paper.year
                               ? ` · ${paper.year}`
@@ -2384,7 +2401,10 @@ export default function PersonalDashboardPage({
                           </small>
                         </div>
 
-                        {paper.filePath && (
+                        {paper.entityType !== 'paper' && paper.route && (
+                          <Link to={paper.route}>Open</Link>
+                        )}
+                        {paper.entityType === 'paper' && paper.filePath && (
                           <a
                             href={
                               paper.filePath
@@ -2406,8 +2426,8 @@ export default function PersonalDashboardPage({
                 />
 
                 <p>
-                  Bookmark useful
-                  papers and they will
+                  Save useful papers,
+                  questions and resources and they will
                   appear here.
                 </p>
               </div>

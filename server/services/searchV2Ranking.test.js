@@ -49,11 +49,21 @@ test('subject matcher handles descriptive names', () => {
   assert.equal(match.code, 'CS502');
 });
 
+test('subject matcher tolerates bounded spelling errors', () => {
+  const match = catalogSubjectMatch('computr graphics', CATALOG);
+  assert.equal(match.code, 'CS502');
+});
+
 test('standalone detectors work', () => {
   assert.equal(detectBranch('ece paper'), 'ECE');
   assert.equal(detectSemester('semester 6'), 6);
   assert.equal(detectYear('paper 2024'), 2024);
   assert.equal(detectExamType('end sem'), 'End-Sem');
+});
+
+test('branch detector recognizes newer program aliases', () => {
+  assert.equal(detectBranch('CSE AIML sem 5'), 'CSE (AI-ML)');
+  assert.equal(detectBranch('MNC semester 3'), 'Mathematics and Computing');
 });
 
 

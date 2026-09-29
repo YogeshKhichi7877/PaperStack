@@ -38,3 +38,11 @@ export async function extractQuestionBatch(options = {}) {
   );
   return response.data;
 }
+
+export async function getQuestionExtractionJob(jobId) {
+  const response = await axios.get(
+    `${API_URL}/api/admin/question-extraction/jobs/${jobId}`,
+    { headers: adminHeader() }
+  );
+  return response.data;
+}

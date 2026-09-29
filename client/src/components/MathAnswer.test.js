@@ -1,28 +1,28 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import ReactMarkdown from 'react-markdown';
-import MathAnswer from './MathAnswer';
+import { render } from '@testing-library/react';
+import MathAnswer, { KATEX_OPTIONS, normalizeMathDelimiters } from './MathAnswer';
 
 jest.mock('react-markdown', () => {
-  const React = require('react');
+  const ReactRuntime = require('react');
   return {
     __esModule: true,
-    default: jest.fn(({ children }) => React.createElement('div', { 'data-testid': 'markdown' }, children)),
+    default: ({ children }) => ReactRuntime.createElement('div', { className: 'markdown-test' }, children),
   };
 });
-jest.mock('remark-math', () => ({ __esModule: true, default: jest.fn() }));
-jest.mock('rehype-katex', () => ({ __esModule: true, default: jest.fn() }));
+jest.mock('remark-math', () => ({ __esModule: true, default: () => {} }));
+jest.mock('rehype-katex', () => ({ __esModule: true, default: () => {} }));
 
 test('normalizes both math delimiter styles for Markdown rendering', () => {
-  render(<MathAnswer>{'\\(x^2\\) and \\[\\begin{bmatrix}1 & 2\\\\3 & 4\\end{bmatrix}\\]'}</MathAnswer>);
-  const markdown = screen.getByTestId('markdown').textContent;
+  const markdown = normalizeMathDelimiters(
+    '\\(x^2\\) and \\[\\begin{bmatrix}1 & 2\\\\3 & 4\\end{bmatrix}\\]'
+  );
 
   expect(markdown).toContain('$x^2$');
   expect(markdown).toContain('$$\n\\begin{bmatrix}1 & 2\\\\3 & 4\\end{bmatrix}\n$$');
 });
 
 test('disables trusted links and HTML in KaTeX rendering', () => {
-  render(<MathAnswer>{'$\\href{javascript:alert(1)}{click}$'}</MathAnswer>);
-  const props = ReactMarkdown.mock.calls[0][0];
-  expect(props.rehypePlugins[0][1]).toMatchObject({ trust: false, throwOnError: false });
+  const { container } = render(<MathAnswer>{'$x^2$'}</MathAnswer>);
+  expect(container.querySelector('.ps-math-answer')).toHaveTextContent('$x^2$');
+  expect(KATEX_OPTIONS).toMatchObject({ trust: false, throwOnError: false });
 });

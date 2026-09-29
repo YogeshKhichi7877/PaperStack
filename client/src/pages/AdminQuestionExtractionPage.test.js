@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import AdminQuestionExtractionPage from './AdminQuestionExtractionPage';
 import {
   extractQuestionsForPaper,
+  getQuestionExtractionJob,
   getQuestionExtractionPapers,
   getQuestionExtractionStatus,
 } from '../services/questionExtractionApi';
@@ -12,6 +13,7 @@ jest.mock('../services/questionExtractionApi', () => ({
   extractQuestionBatch: jest.fn(),
   extractQuestionsForPaper: jest.fn(),
   getQuestionExtractionPapers: jest.fn(),
+  getQuestionExtractionJob: jest.fn(),
   getQuestionExtractionStatus: jest.fn(),
 }));
 
@@ -21,6 +23,9 @@ beforeEach(() => {
   getQuestionExtractionPapers.mockResolvedValue({ papers: [{
     _id: 'paper-1', title: 'Example exam', hasPdf: true, questionExtractionStatus: 'not_started',
   }] });
+  getQuestionExtractionJob.mockResolvedValue({ job: { status: 'complete', result: {
+    extractionStatus: 'complete', totalQuestionCount: 2, detectedQuestions: 2,
+  } } });
 });
 
 test('uses configured AI fallback on the first extraction click', async () => {
@@ -34,7 +39,7 @@ test('uses configured AI fallback on the first extraction click', async () => {
   fireEvent.click(button);
 
   await waitFor(() => expect(extractQuestionsForPaper).toHaveBeenCalledWith('paper-1', {
-    force: false, allowAi: true,
+    force: false, allowAi: true, background: true,
   }));
 });
 

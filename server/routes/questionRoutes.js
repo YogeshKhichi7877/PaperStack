@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Paper = require('../models/Paper');
 const Question = require('../models/Question');
 const { publicQuestion } = require('../services/questionService');
+const { findRelatedQuestions } = require('../services/relatedQuestionService');
 
 const router = express.Router();
 
@@ -173,10 +174,12 @@ router.get('/:questionId', async (req, res) => {
       .select('_id title filePath solutionPath')
       .lean();
 
+    const relatedQuestions = await findRelatedQuestions(question, { limit: 6 });
     res.json({
       schemaVersion: 'question-v1',
       question: publicQuestion(question),
       paper,
+      relatedQuestions,
     });
   } catch (error) {
     console.error('Question detail failed:', error);

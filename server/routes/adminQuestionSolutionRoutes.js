@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 
 const QuestionSolution = require('../models/QuestionSolution');
+const { invalidateQuestionAnswers } = require('../services/semanticAiAnswerService');
 
 const {
   adminSolution,
@@ -121,6 +122,7 @@ module.exports = function createAdminQuestionSolutionRoutes({
       }
 
       await solution.save();
+      await invalidateQuestionAnswers(solution.questionId);
 
       const populated =
         await QuestionSolution.findById(

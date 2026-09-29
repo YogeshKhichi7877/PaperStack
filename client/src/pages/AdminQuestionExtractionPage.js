@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import {
   extractQuestionBatch,
   extractQuestionsForPaper,
+  getQuestionExtractionJob,
   getQuestionExtractionPapers,
   getQuestionExtractionStatus,
 } from '../services/questionExtractionApi';
@@ -12,6 +13,17 @@ function statusLabel(value) {
   return String(value || 'not_started')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+async function waitForExtractionJob(jobId) {
+  for (let attempt = 0; attempt < 400; attempt += 1) {
+    const response = await getQuestionExtractionJob(jobId);
+    const job = response?.job;
+    if (['complete', 'partial'].includes(job?.status)) return job.result;
+    if (job?.status === 'failed') throw new Error(job.error || 'Question extraction failed');
+    await new Promise((resolve) => setTimeout(resolve, 750));
+  }
+  throw new Error('Question extraction is still processing. Refresh this page to check its status.');
 }
 
 export default function AdminQuestionExtractionPage({ toast }) {
@@ -54,6 +66,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
     const result = {
       all: papers.length,
       not_started: 0,
+      queued: 0,
       processing: 0,
       complete: 0,
       partial: 0,
@@ -96,12 +109,15 @@ export default function AdminQuestionExtractionPage({ toast }) {
       const response = await extractQuestionsForPaper(paper._id, {
         force,
         allowAi: aiFallbackEnabled,
+        background: true,
       });
-
-      setLastResult(response?.result || null);
+      const result = response?.queued
+        ? await waitForExtractionJob(response.job?.id)
+        : response?.result;
+      setLastResult(result || null);
       if (toast) {
         toast(
-          `Extracted ${response?.result?.totalQuestionCount ?? response?.result?.questionCount ?? 0} questions.`,
+          `Extracted ${result?.totalQuestionCount ?? result?.questionCount ?? 0} questions.`,
           'success'
         );
       }
@@ -130,13 +146,16 @@ export default function AdminQuestionExtractionPage({ toast }) {
         limit: 5,
         allowAi: aiFallbackEnabled,
         force: false,
+        background: true,
       });
-
-      setLastResult(response?.result || null);
+      const result = response?.queued
+        ? await waitForExtractionJob(response.job?.id)
+        : response?.result;
+      setLastResult(result || null);
       if (toast) {
         toast(
-          `Batch completed: ${response?.result?.successful || 0} succeeded, ${response?.result?.failed || 0} failed.`,
-          response?.result?.failed ? 'error' : 'success'
+          `Batch completed: ${result?.successful || 0} succeeded, ${result?.failed || 0} failed.`,
+          result?.failed ? 'error' : 'success'
         );
       }
       await load();
@@ -185,6 +204,8 @@ export default function AdminQuestionExtractionPage({ toast }) {
           {[
             ['all', 'All papers'],
             ['not_started', 'Not started'],
+            ['queued', 'Queued'],
+            ['processing', 'Processing'],
             ['complete', 'Complete'],
             ['partial', 'Partial'],
             ['failed', 'Failed'],

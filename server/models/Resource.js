@@ -60,5 +60,6 @@ const resourceSchema = new mongoose.Schema({
 resourceSchema.index({ subjectKey: 1, kind: 1, year: -1, examType: 1 });
 resourceSchema.index({ branches: 1, semesters: 1, kind: 1, year: -1 });
 resourceSchema.index({ title: 'text', subjectName: 'text', subjectCode: 'text', subjectShortCode: 'text', tags: 'text' });
+resourceSchema.index({ 'metadata.fileHash': 1, subjectKey: 1, kind: 1 }, { sparse: true });
 
 module.exports = mongoose.model('Resource', resourceSchema);

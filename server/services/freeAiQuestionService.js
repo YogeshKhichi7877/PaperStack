@@ -1,6 +1,7 @@
 const { aiAvailable, generateForTask, taskStatus } = require('./aiService');
 const { parseAiJson, questionExtractionSchema } = require('./aiSchemas');
 const { PAGE_BREAK } = require('./questionExtractionRules');
+const aiCache = require('./aiCacheService');
 
 function readablePdfText(value) {
   return String(value || '').split(PAGE_BREAK).join(' ').replace(/\s+/g, ' ').trim();
@@ -218,12 +219,23 @@ ${JSON.stringify({
 
   let questions;
   try {
-    const response = await generateForTask(task, prompt, {
-      json: true, temperature: 0, maxOutputTokens: 5000,
-      timeoutMs: Number(process.env.QUESTION_AI_TIMEOUT_MS || process.env.SMART_AI_TIMEOUT_MS) || undefined,
-      ...(visual ? { attachment: { buffer, mimeType: 'application/pdf' }, fallbackText: text } : {}),
-    });
+    const cacheKey = aiCache.buildAiCacheKey('question-extraction', paper?._id || 'paper',
+      { prompt, file: buffer ? aiCache.hashContent(buffer) : '' }, 'v2');
+    let response = await aiCache.get(cacheKey);
+    let generated = false;
+    if (typeof response !== 'string' || !response) {
+      response = await generateForTask(task, prompt, {
+        json: true, temperature: 0, maxOutputTokens: 5000,
+        validateResponse: (value) => parseAiJson(value, questionExtractionSchema),
+        timeoutMs: Number(process.env.QUESTION_AI_TIMEOUT_MS || process.env.SMART_AI_TIMEOUT_MS) || undefined,
+        ...(visual ? { attachment: { buffer, mimeType: 'application/pdf' }, fallbackText: text } : {}),
+      });
+      generated = true;
+    }
     questions = dedupeAiQuestions(parseAiJson(response, questionExtractionSchema).questions);
+    if (generated) {
+      await aiCache.set(cacheKey, response, Number(process.env.AI_CACHE_EXTRACTION_TTL_SECONDS) || 86400);
+    }
   } catch {
     return { attempted: true, questions: [], confidence: 0,
       reason: 'AI extraction was unavailable; local questions were retained.' };

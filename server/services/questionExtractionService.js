@@ -230,6 +230,29 @@ async function persistQuestions({
     source: selected.source,
     version: EXTRACTION_VERSION,
   });
+  const { bestDuplicateCandidate } = require('./duplicateDetectionService');
+  const candidateQuestions = documents.length
+    ? await Question.find({
+        paperId: { $ne: paper._id },
+        subjectCode: documents[0].subjectCode,
+        status: { $ne: 'rejected' },
+      }).select('_id questionText textHash').sort({ year: -1 }).limit(180).lean()
+    : [];
+  documents.forEach((document) => {
+    const exact = candidateQuestions.find((candidate) => candidate.textHash && candidate.textHash === document.textHash);
+    const match = exact
+      ? { candidate: exact, classification: 'exact', confidence: 1, reason: 'matching question hash' }
+      : bestDuplicateCandidate(document, candidateQuestions);
+    if (match && ['exact', 'probable'].includes(match.classification)) document.needsReview = true;
+    if (match) {
+      document.duplicateReview = {
+        classification: match.classification,
+        matchedQuestionId: match.candidate._id,
+        confidence: match.confidence,
+        reason: match.reason,
+      };
+    }
+  });
 
   const protectedQuestions = await Question.find({
     paperId: paper._id,
@@ -250,6 +273,11 @@ async function persistQuestions({
   );
 
   if (writeDocuments.length) {
+    const existingIds = await Question.find({ paperId: paper._id, questionKey: { $in: writeDocuments.map((document) => document.questionKey) } }).distinct('_id');
+    if (existingIds.length) {
+      const { invalidateQuestionAnswers } = require('./semanticAiAnswerService');
+      await invalidateQuestionAnswers(existingIds);
+    }
     await Question.bulkWrite(
       writeDocuments.map((document) => ({
         updateOne: {
@@ -422,6 +450,16 @@ async function extractPaperQuestions({
       extractedTextLength: localResult.textLength,
       detectedQuestions: selected.questions.length,
       failureReason,
+      resultStatus: !selected.questions.length
+        ? 'failed'
+        : selected.engine === 'rules' && selected.aiAttempted
+          ? 'partial'
+          : selected.engine === 'rules'
+            ? 'local_only'
+            : selected.confidence >= threshold
+              ? 'high_confidence'
+              : 'partial',
+      degraded: selected.engine === 'rules' && selected.aiAttempted,
       ...persistence,
       ai: {
         ...getQuestionAiStatus(),

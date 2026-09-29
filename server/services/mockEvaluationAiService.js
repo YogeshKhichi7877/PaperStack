@@ -175,7 +175,8 @@ async function requestAiEvaluation(items = []) {
   ].join('\n');
 
   const text = await generateForTask('MOCK_EVALUATION', prompt,
-    { temperature: 0.1, maxOutputTokens: 5000, json: true });
+    { temperature: 0.1, maxOutputTokens: 5000, json: true,
+      validateResponse: (value) => parseAiJson(value, mockEvaluationSchema) });
 
   return {
     model: null,
@@ -190,12 +191,14 @@ async function evaluateBatchWithMode(
   const local = evaluateLocalBatch(items);
 
   if (mode !== 'ai') {
-    return local;
+    return { ...local, status: 'local_only', degraded: false };
   }
 
   if (!evaluationAiEnabled()) {
     return {
       ...local,
+      status: 'ai_unavailable',
+      degraded: true,
       warnings: [
         'PaperStack used local scoring because AI assistance was unavailable.',
       ],
@@ -217,6 +220,8 @@ async function evaluateBatchWithMode(
 
     return {
       mode: 'ai',
+      status: 'high_confidence',
+      degraded: false,
       model: null,
       warnings: [],
       items: validated.evaluations,
@@ -228,6 +233,8 @@ async function evaluateBatchWithMode(
   } catch (error) {
     return {
       ...local,
+      status: 'ai_unavailable',
+      degraded: true,
       warnings: [
         'PaperStack used local scoring because AI assistance was unavailable.',
       ],

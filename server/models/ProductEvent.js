@@ -4,6 +4,13 @@ const mongoose =
 const EVENT_NAMES = [
   'page_view',
   'search',
+  'save_item',
+  'unsave_item',
+  'ai_action',
+  'ai_feedback',
+  'related_open',
+  'mini_practice_start',
+  'study_resume',
 ];
 
 const productEventSchema =

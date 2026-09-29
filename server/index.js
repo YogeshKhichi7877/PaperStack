@@ -59,6 +59,9 @@ const semesterSurvivalRoutes = require('./routes/semesterSurvivalRoutes');
 const { createPersonalDashboardRoutes } = require('./routes/personalDashboardRoutes');
 const { createNotificationRoutes } = require('./routes/notificationRoutes');
 const { createStreakRoutes } = require('./routes/streakRoutes');
+const { createSavedItemRoutes } = require('./routes/savedItemRoutes');
+const { createStudyProgressRoutes } = require('./routes/studyProgressRoutes');
+const { createAiFeedbackRoutes } = require('./routes/aiFeedbackRoutes');
 const branchCompetitionRoutes = require('./routes/branchCompetitionRoutes');
 const trendingRoutes = require('./routes/trendingRoutes');
 const searchV2Routes = require('./routes/searchV2Routes');
@@ -83,6 +86,7 @@ const createFeedbackRoutes = require('./routes/feedbackRoutes');
 const { OFFICIAL_BRANCHES, normalizeBranch, normalizeBranchList } = require('./utils/branches');
 const { incrementResourceStatForPaper } = require('./services/resourceService');
 const { connectDatabase, requireDatabase } = require('./services/databaseConnection');
+const SavedItem = require('./models/SavedItem');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -332,6 +336,9 @@ app.use('/api/semester-survival', semesterSurvivalRoutes);
 app.use('/api/dashboard', createPersonalDashboardRoutes({ authenticate }));
 app.use('/api/notifications', createNotificationRoutes({ authenticate }));
 app.use('/api/streaks', createStreakRoutes({ authenticate }));
+app.use('/api/saved-items', createSavedItemRoutes({ authenticate }));
+app.use('/api/study-progress', createStudyProgressRoutes({ authenticate }));
+app.use('/api/ai-feedback', createAiFeedbackRoutes({ authenticate }));
 app.use('/api/branch-competition', branchCompetitionRoutes);
 app.use('/api/trending', trendingRoutes);
 app.use('/api/search/v2', searchV2Routes);
@@ -2609,8 +2616,19 @@ app.put('/api/user/bookmark/:id', authenticate, async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     const exists = user.bookmarks.some((id) => id.toString() === req.params.id);
-    if (exists) user.bookmarks = user.bookmarks.filter((id) => id.toString() !== req.params.id);
-    else user.bookmarks.push(req.params.id);
+    if (exists) {
+      user.bookmarks = user.bookmarks.filter((id) => id.toString() !== req.params.id);
+      await SavedItem.deleteOne({ userId: user._id, entityType: 'paper', entityKey: req.params.id });
+    } else {
+      const paper = await Paper.findById(req.params.id).select('_id title subject subjectCode').lean();
+      if (!paper) return res.status(404).json({ error: 'Paper not found' });
+      user.bookmarks.push(req.params.id);
+      await SavedItem.findOneAndUpdate(
+        { userId: user._id, entityType: 'paper', entityKey: req.params.id },
+        { $set: { entityId: paper._id, title: paper.title || paper.subject || 'Question paper', route: `/paper/${paper._id}`, subjectCode: paper.subjectCode || '' } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
     await user.save();
     res.json(user.bookmarks);
   } catch (err) {

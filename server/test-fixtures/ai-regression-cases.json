@@ -1,0 +1,15 @@
+[
+  { "id": "theory-explanation", "task": "QUESTION_TUTOR", "kind": "theory" },
+  { "id": "short-answer", "task": "QUESTION_TUTOR", "kind": "short-answer" },
+  { "id": "five-mark-answer", "task": "QUESTION_TUTOR", "kind": "five-mark" },
+  { "id": "arithmetic", "task": "NUMERICAL_REASONING", "expression": "(2+3)*4", "expected": 20 },
+  { "id": "matrix-product", "task": "NUMERICAL_REASONING", "expression": "multiply([[1,2],[3,4]],[[2,0],[1,2]])", "expected": [[4,4],[10,8]] },
+  { "id": "determinant", "task": "NUMERICAL_REASONING", "expression": "det([[1,2],[3,4]])", "expected": -2 },
+  { "id": "statistics", "task": "NUMERICAL_REASONING", "expression": "mean([2,4,6,8])", "expected": 5 },
+  { "id": "mock-generation", "task": "MOCK_GENERATION", "kind": "structured" },
+  { "id": "mock-evaluation", "task": "MOCK_EVALUATION", "kind": "structured" },
+  { "id": "question-extraction", "task": "QUESTION_EXTRACTION_TEXT", "kind": "structured" },
+  { "id": "metadata-extraction", "task": "METADATA_EXTRACTION_TEXT", "kind": "structured" },
+  { "id": "revision", "task": "REVISION_CONTENT", "kind": "structured" },
+  { "id": "war-room", "task": "WAR_ROOM_BRIEFING", "kind": "structured" }
+]

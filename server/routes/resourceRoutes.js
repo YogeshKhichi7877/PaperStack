@@ -3,6 +3,7 @@ const Resource = require('../models/Resource');
 const Paper = require('../models/Paper');
 const { RESOURCE_TYPES, isValidResourceType } = require('../data/resourceTypes');
 const { resolveResourceSubjectKey } = require('../services/subjectPageService');
+const { rankResources, resourceQuality } = require('../services/resourceQualityService');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ function escapeRegex(value) {
 }
 
 function publicResource(resource) {
-  return resource;
+  return { ...resource, ...resourceQuality(resource) };
 }
 
 router.get('/types', (req, res) => {
@@ -102,17 +103,16 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const [resources, total] = await Promise.all([
+    const [candidates, total] = await Promise.all([
       Resource.find(query)
         .sort({ year: -1, updatedAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
+        .limit(500)
         .lean(),
       Resource.countDocuments(query),
     ]);
 
     res.json({
-      resources: resources.map(publicResource),
+      resources: rankResources(candidates).slice((page - 1) * limit, page * limit),
       pagination: {
         page,
         limit,

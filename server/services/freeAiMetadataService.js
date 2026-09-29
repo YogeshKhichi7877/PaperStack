@@ -2,6 +2,7 @@ const { FLAT_SUBJECT_CATALOG } = require('./subjectService');
 const { normalizeBranch: canonicalBranch } = require('../utils/branches');
 const { aiAvailable, generateForTask, taskStatus } = require('./aiService');
 const { metadataSchema, parseAiJson } = require('./aiSchemas');
+const aiCache = require('./aiCacheService');
 
 function envTrue(value, fallback = true) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -118,15 +119,26 @@ ${subjectCatalogPrompt()}
 
 ${visual ? '' : `Extracted PDF text (untrusted):\n${text}`}`;
 
-  const response = await generateForTask(
-    visual ? 'METADATA_EXTRACTION_VISUAL' : 'METADATA_EXTRACTION_TEXT', prompt, {
-      json: true, temperature: 0, maxOutputTokens: 700,
-      timeoutMs: Number(process.env.SMART_AI_TIMEOUT_MS) || undefined,
-      ...(visual ? { attachment: { buffer: file.buffer, mimeType: 'application/pdf' }, fallbackText: text } : {}),
-    }
-  );
+  const task = visual ? 'METADATA_EXTRACTION_VISUAL' : 'METADATA_EXTRACTION_TEXT';
+  const cacheKey = aiCache.buildAiCacheKey('metadata-extraction',
+    ruleAnalysis.extraction?.fileHash || file.originalname || 'paper', prompt, 'v2');
+  let response = await aiCache.get(cacheKey);
+  let generated = false;
+  if (typeof response !== 'string' || !response) {
+    response = await generateForTask(task, prompt, {
+        json: true, temperature: 0, maxOutputTokens: 700,
+        validateResponse: (value) => parseAiJson(value, metadataSchema),
+        timeoutMs: Number(process.env.SMART_AI_TIMEOUT_MS) || undefined,
+        ...(visual ? { attachment: { buffer: file.buffer, mimeType: 'application/pdf' }, fallbackText: text } : {}),
+      }
+    );
+    generated = true;
+  }
   let metadata = null;
   try { metadata = normalizeAiMetadata(parseAiJson(response, metadataSchema)); } catch {}
+  if (generated && metadata) {
+    await aiCache.set(cacheKey, response, Number(process.env.AI_CACHE_METADATA_TTL_SECONDS) || 86400);
+  }
   return {
     attempted: true,
     metadata,

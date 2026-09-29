@@ -41,8 +41,11 @@ import {
   mockMistakes,
   readMockEvidence,
 } from '../utils/studyEvidence';
+import SaveButton from '../components/SaveButton';
+import { recordStudyProgressOnce } from '../services/studyProgressApi';
 
 import './RevisionSheetsPage.css';
+import '../components/StudentUtility.css';
 
 const MathAnswer = React.lazy(
   () =>
@@ -505,6 +508,15 @@ export default function RevisionSheetsPage({
         }
 
         setSheet(data);
+        recordStudyProgressOnce({
+          entityType: 'revision',
+          entityKey: `${subjectCode}:${examType || 'all'}`,
+          title: `${data?.subject?.subject || subjectCode} revision sheet`,
+          route: `/revision-sheets?subjectCode=${encodeURIComponent(subjectCode)}${examType ? `&examType=${encodeURIComponent(examType)}` : ''}`,
+          subjectCode,
+          status: 'in_progress',
+          progress: 10,
+        }).catch(() => {});
         setLoadError('');
       })
 
@@ -1144,6 +1156,14 @@ export default function RevisionSheetsPage({
                   {examType ||
                     'All exams'}
                 </small>
+                <SaveButton
+                  entityType="revision"
+                  entityId={`${subjectCode}:${examType || 'all'}`}
+                  title={`${sheet.subject?.subject || subjectCode} revision sheet`}
+                  route={`/revision-sheets?subjectCode=${encodeURIComponent(subjectCode)}${examType ? `&examType=${encodeURIComponent(examType)}` : ''}`}
+                  subjectCode={subjectCode}
+                  toast={toast}
+                />
               </div>
 
               <div>

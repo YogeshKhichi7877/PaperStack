@@ -273,6 +273,8 @@ function publicQuestion(question = {}) {
     },
     status: question.status || 'extracted',
     needsReview: Boolean(question.needsReview),
+    duplicateReview: question.duplicateReview || null,
+    similarity: question.similarity ?? null,
     createdAt: question.createdAt,
     updatedAt: question.updatedAt,
   };

@@ -31,7 +31,7 @@ const paperSchema = new mongoose.Schema({
     questionCount: { type: Number, default: 0, min: 0 },
     questionExtractionStatus: {
       type: String,
-      enum: ['not_started', 'processing', 'complete', 'partial', 'failed'],
+      enum: ['not_started', 'queued', 'processing', 'complete', 'partial', 'failed'],
       default: 'not_started',
       index: true
     },

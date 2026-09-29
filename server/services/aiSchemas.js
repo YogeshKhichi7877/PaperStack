@@ -58,5 +58,23 @@ function parseAiJson(text, schema) {
   return result.data;
 }
 
-module.exports = { metadataSchema, mockEvaluationSchema, mockGeneratedQuestionSchema, mockGenerationSchema, mockSelectionSchema,
-  numericalReasoningSchema, parseAiJson, questionExtractionSchema, revisionSchema, warRoomSchema };
+module.exports = {
+  MetadataExtractionSchema: metadataSchema,
+  MockEvaluationSchema: mockEvaluationSchema,
+  MockGenerationSchema: mockGenerationSchema,
+  NovelQuestionSchema: mockGeneratedQuestionSchema,
+  NumericalReasoningSchema: numericalReasoningSchema,
+  QuestionExtractionSchema: questionExtractionSchema,
+  RevisionAiSchema: revisionSchema,
+  WarRoomAiSchema: warRoomSchema,
+  metadataSchema,
+  mockEvaluationSchema,
+  mockGeneratedQuestionSchema,
+  mockGenerationSchema,
+  mockSelectionSchema,
+  numericalReasoningSchema,
+  parseAiJson,
+  questionExtractionSchema,
+  revisionSchema,
+  warRoomSchema,
+};

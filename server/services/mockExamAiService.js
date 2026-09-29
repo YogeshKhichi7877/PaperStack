@@ -297,7 +297,10 @@ async function requestAiSelection({
   );
 
   const text = await generateForTask('MOCK_GENERATION', prompt,
-    { temperature: 0.15, maxOutputTokens: 1200, json: true });
+    { temperature: 0.15, maxOutputTokens: 1200, json: true,
+      validateResponse: (value) => validateSelectedIds(
+        parseAiJson(value, mockSelectionSchema), questions, totalMarks
+      ) });
 
   const parsed =
     parseAiJson(text, mockSelectionSchema);

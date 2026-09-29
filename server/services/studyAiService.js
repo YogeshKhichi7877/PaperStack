@@ -1,6 +1,7 @@
 const { aiAvailable, generateForTask } = require('./aiService');
 const { parseAiJson, revisionSchema, warRoomSchema } = require('./aiSchemas');
 const { compact, parseRevisionAi } = require('./revisionWorkspaceService');
+const aiCache = require('./aiCacheService');
 
 async function revisionAiContent(sheet, solutions = [], resources = []) {
   if (!aiAvailable(process.env, 'REVISION_CONTENT') || (!solutions.length && !resources.length)) return null;
@@ -27,16 +28,27 @@ async function revisionAiContent(sheet, solutions = [], resources = []) {
     }),
   ].join('\n');
   try {
-    const text = await generateForTask('REVISION_CONTENT', prompt, {
-      json: true,
-      temperature: 0.1, maxOutputTokens: 800,
-    });
-    return parseRevisionAi(
+    const key = aiCache.buildAiCacheKey('revision', sheet.subject?.subjectCode || sheet.subject?.subject || 'subject', prompt, 'v2');
+    let text = await aiCache.get(key);
+    let generated = false;
+    if (typeof text !== 'string' || !text) {
+      text = await generateForTask('REVISION_CONTENT', prompt, {
+        json: true,
+        temperature: 0.1, maxOutputTokens: 800,
+        validateResponse: (value) => parseAiJson(value, revisionSchema),
+      });
+      generated = true;
+    }
+    const parsed = parseRevisionAi(
       JSON.stringify(parseAiJson(text, revisionSchema)),
       new Set(solutionSource.map((item) => item.sourceId)),
       new Map(source.map((item) => [item.sourceId, item.approvedAnswer])),
       new Map(resources.map((item) => [String(item._id), item.fileUrl || '']))
     );
+    if (generated) {
+      await aiCache.set(key, text, Number(process.env.AI_CACHE_REVISION_TTL_SECONDS) || 21600);
+    }
+    return parsed;
   } catch (error) {
     console.warn('Revision AI unavailable:', error.message);
     return null;
@@ -55,11 +67,21 @@ async function warAiBriefing(room) {
       rankedActions: room.command.actions.slice(0, 5) }),
   ].join('\n');
   try {
-    const text = await generateForTask('WAR_ROOM_BRIEFING', prompt, {
-      json: true,
-      temperature: 0.1, maxOutputTokens: 180,
-    });
+    const key = aiCache.buildAiCacheKey('war-room', room.subject?.subjectCode || room.subject?.subject || 'subject', prompt, 'v2');
+    let text = await aiCache.get(key);
+    let generated = false;
+    if (typeof text !== 'string' || !text) {
+      text = await generateForTask('WAR_ROOM_BRIEFING', prompt, {
+        json: true,
+        temperature: 0.1, maxOutputTokens: 180,
+        validateResponse: (value) => parseAiJson(value, warRoomSchema),
+      });
+      generated = true;
+    }
     const data = parseAiJson(text, warRoomSchema);
+    if (generated) {
+      await aiCache.set(key, text, Number(process.env.AI_CACHE_WAR_ROOM_TTL_SECONDS) || 10800);
+    }
     return compact(data.briefing, 400);
   } catch (error) {
     console.warn('War Room AI unavailable:', error.message);
