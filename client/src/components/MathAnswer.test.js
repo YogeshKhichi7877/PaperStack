@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import ReactMarkdown from 'react-markdown';
 import MathAnswer from './MathAnswer';
 
@@ -15,7 +15,7 @@ jest.mock('rehype-katex', () => ({ __esModule: true, default: jest.fn() }));
 
 test('normalizes both math delimiter styles for Markdown rendering', () => {
   render(<MathAnswer>{'\\(x^2\\) and \\[\\begin{bmatrix}1 & 2\\\\3 & 4\\end{bmatrix}\\]'}</MathAnswer>);
-  const markdown = ReactMarkdown.mock.calls[0][0].children;
+  const markdown = screen.getByTestId('markdown').textContent;
 
   expect(markdown).toContain('$x^2$');
   expect(markdown).toContain('$$\n\\begin{bmatrix}1 & 2\\\\3 & 4\\end{bmatrix}\n$$');
