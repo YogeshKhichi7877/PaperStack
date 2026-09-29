@@ -16,6 +16,8 @@ import {
 
 import './AdminQuestionSolutionsPage.css';
 
+const MathAnswer = React.lazy(() => import('../components/MathAnswer'));
+
 function formatDate(value) {
   if (!value) return '';
 
@@ -320,7 +322,9 @@ export default function AdminQuestionSolutionsPage({
                       Student answer
                     </strong>
                     <div>
-                      {solution.answerText}
+                      <React.Suspense fallback={<p>{solution.answerText}</p>}>
+                        <MathAnswer>{solution.answerText}</MathAnswer>
+                      </React.Suspense>
                     </div>
                   </div>
 

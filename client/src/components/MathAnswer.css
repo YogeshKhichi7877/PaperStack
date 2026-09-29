@@ -1,7 +1,120 @@
-.ps-math-answer { min-width: 0; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; color: var(--color-text); }
+.ps-math-answer {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
 .ps-math-answer > :first-child { margin-top: 0; }
 .ps-math-answer > :last-child { margin-bottom: 0; }
-.ps-math-answer pre { max-width: 100%; overflow-x: auto; padding: 12px; border-radius: 6px; background: var(--color-secondary); }
+
+.ps-math-answer h1,
+.ps-math-answer h2,
+.ps-math-answer h3,
+.ps-math-answer h4 {
+  margin: 1.25em 0 .5em;
+  color: var(--color-text);
+  font-weight: 800;
+  line-height: 1.28;
+}
+
+.ps-math-answer h1 { font-size: 1.4em; }
+.ps-math-answer h2 { font-size: 1.25em; }
+.ps-math-answer h3 { font-size: 1.12em; }
+.ps-math-answer h4 { font-size: 1em; }
+
+.ps-math-answer p,
+.ps-math-answer ul,
+.ps-math-answer ol,
+.ps-math-answer blockquote { margin: .7em 0; }
+
+.ps-math-answer ul,
+.ps-math-answer ol { padding-left: 1.45em; }
+.ps-math-answer li + li { margin-top: .3em; }
+.ps-math-answer li > p { margin: .25em 0; }
+
+.ps-math-answer blockquote {
+  padding: .15em 0 .15em .9em;
+  border-left: 3px solid var(--color-primary);
+  color: var(--color-text-secondary);
+}
+
+.ps-math-answer hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ps-math-answer a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ps-math-answer pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--color-secondary);
+}
+
 .ps-math-answer code { font-size: .9em; }
-.ps-math-answer .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding-block: 4px; }
-.ps-math-answer p, .ps-math-answer ul, .ps-math-answer ol { margin: 8px 0; }
+
+.ps-math-answer :not(pre) > code {
+  padding: .12em .35em;
+  border-radius: 4px;
+  background: var(--color-secondary);
+}
+
+.ps-math-answer .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 4px;
+}
+
+.ps-table-scroll {
+  max-width: 100%;
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.ps-table-scroll:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ps-table-scroll table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  background: var(--color-surface, #fff);
+  font-size: .92em;
+}
+
+.ps-table-scroll th,
+.ps-table-scroll td {
+  padding: .65em .75em;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ps-table-scroll th {
+  background: var(--color-secondary);
+  font-weight: 800;
+}
+
+.ps-table-scroll tr:last-child td { border-bottom: 0; }
+.ps-table-scroll th:last-child,
+.ps-table-scroll td:last-child { border-right: 0; }
+
+@media (max-width: 640px) {
+  .ps-math-answer { font-size: 14px; }
+  .ps-table-scroll table { min-width: 440px; }
+}

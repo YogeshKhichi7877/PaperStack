@@ -4,6 +4,16 @@ function compact(value, limit = 420) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
 }
 
+function compactAcademicText(value, limit = 420) {
+  return String(value || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, limit)
+    .trim();
+}
+
 function sourceId(value) {
   return String(value?._id || value || '');
 }
@@ -26,7 +36,7 @@ function buildRevisionWorkspace(sheet, { questions = [], solutions = [], resourc
   for (const solution of solutions) {
     const key = sourceId(solution.questionId);
     if (key && !solutionByQuestion.has(key) && solution.answerText) {
-      solutionByQuestion.set(key, compact(solution.answerText, 1200));
+      solutionByQuestion.set(key, compactAcademicText(solution.answerText, 1200));
     }
   }
 
@@ -68,12 +78,12 @@ function buildRevisionWorkspace(sheet, { questions = [], solutions = [], resourc
     const item = {
       questionId: id,
       prompt: compact(question.questionText, 280),
-      answer: answer ? compact(answer, 520) : '',
+      answer: answer ? compactAcademicText(answer, 520) : '',
       topic: question.matchedTopic || question.primaryTopic || '',
     };
     rapidRecall.push(item);
     if (answer && /\b(define|what is|state the meaning)\b/i.test(item.prompt)) {
-      definitions.push({ ...item, answer: compact(answer, 320) });
+      definitions.push({ ...item, answer: compactAcademicText(answer, 320) });
     }
     if (answer && /\b(algorithm|procedure|steps)\b/i.test(item.prompt)) {
       algorithms.push(item);
@@ -114,7 +124,7 @@ function parseRevisionAi(text, validIds, sourceAnswers = new Map(), resourceUrls
     const data = JSON.parse(String(text).replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
     const valid = (rows) => (Array.isArray(rows) ? rows : [])
       .filter((row) => validIds.has(String(row.sourceId || '')))
-      .map((row) => ({ sourceId: String(row.sourceId), text: compact(row.text, 240) }))
+      .map((row) => ({ sourceId: String(row.sourceId), text: compactAcademicText(row.text, 240) }))
       .filter((row) => row.text)
       .slice(0, 5);
     const formulas = (Array.isArray(data.formulas) ? data.formulas : [])
@@ -133,10 +143,16 @@ function parseRevisionAi(text, validIds, sourceAnswers = new Map(), resourceUrls
         : { questionId: String(row.sourceId), latex: row.latex.trim().slice(0, 320),
             source: 'approved solution (AI-formatted)' })
       .slice(0, 8);
-    return { briefing: compact(data.briefing, 400), notes: valid(data.notes), mistakes: valid(data.mistakes), formulas };
+    return { briefing: compactAcademicText(data.briefing, 400), notes: valid(data.notes), mistakes: valid(data.mistakes), formulas };
   } catch {
     return { briefing: '', notes: [], mistakes: [], formulas: [] };
   }
 }
 
-module.exports = { buildRevisionWorkspace, compact, extractFormulas, parseRevisionAi };
+module.exports = {
+  buildRevisionWorkspace,
+  compact,
+  compactAcademicText,
+  extractFormulas,
+  parseRevisionAi,
+};

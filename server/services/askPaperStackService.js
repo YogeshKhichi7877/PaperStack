@@ -396,7 +396,7 @@ async function askAi({
     'Context:',
     context,
     'Write a concise answer in simple student-friendly language. If the archive context is insufficient, say so clearly.',
-    'Use Markdown and LaTeX ($...$ or $$...$$) for formulas. For numerical answers, show Given, Required, Formula, Substitution, Calculation, and Final Answer with units. Do not claim archive evidence that is absent.',
+    'Use standard Markdown and LaTeX ($...$ or $$...$$) for formulas. Separate sections with blank lines, use real Markdown lists and valid GFM tables where useful, and never emit HTML or <br> tags. For numerical answers, show Given, Required, Formula, Substitution, Calculation, and Final Answer with units. Do not claim archive evidence that is absent.',
   ].join('\n\n');
 
   const task = intent === 'revision' ? 'STUDY_PLANNER'

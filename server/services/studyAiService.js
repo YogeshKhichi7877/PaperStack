@@ -1,17 +1,21 @@
 const { aiAvailable, generateForTask } = require('./aiService');
 const { parseAiJson, revisionSchema, warRoomSchema } = require('./aiSchemas');
-const { compact, parseRevisionAi } = require('./revisionWorkspaceService');
+const {
+  compact,
+  compactAcademicText,
+  parseRevisionAi,
+} = require('./revisionWorkspaceService');
 const aiCache = require('./aiCacheService');
 
 async function revisionAiContent(sheet, solutions = [], resources = []) {
   if (!aiAvailable(process.env, 'REVISION_CONTENT') || (!solutions.length && !resources.length)) return null;
   const solutionSource = solutions.slice(0, 10).map((item) => ({
     sourceId: String(item.questionId),
-    approvedAnswer: compact(item.answerText, 900),
+    approvedAnswer: compactAcademicText(item.answerText, 900),
   })).filter((item) => item.approvedAnswer);
   const resourceSource = resources.filter((item) => item.contentText).slice(0, 4).map((item) => ({
     sourceId: String(item._id),
-    approvedAnswer: compact(item.contentText, 900),
+    approvedAnswer: compactAcademicText(item.contentText, 900),
   }));
   const source = [...solutionSource, ...resourceSource];
   if (!source.length) return null;
@@ -21,6 +25,7 @@ async function revisionAiContent(sheet, solutions = [], resources = []) {
     'Return JSON only: {"briefing":"...","notes":[{"sourceId":"...","text":"..."}],"mistakes":[{"sourceId":"...","text":"..."}],"formulas":[{"sourceId":"...","sourceExpression":"exact substring from approvedAnswer","latex":"LaTeX rendering of that expression"}]}.',
     'Only include formulas that are explicitly written in an approved answer. The sourceExpression must be copied exactly. Do not derive or invent formulas. Use valid LaTeX for rendering.',
     'Every note or mistake must be directly supported by its source. Never invent formulas, PYQ counts, marks, student progress, or exam predictions. Omit unsupported items.',
+    'Inside JSON text values, use standard Markdown only: preserve blank lines between sections, use real Markdown lists or valid GFM tables when useful, and never emit HTML or <br> tags.',
     JSON.stringify({
       subject: sheet.subject,
       topics: (sheet.workspace?.mustRevise || []).slice(0, 8),
@@ -28,7 +33,7 @@ async function revisionAiContent(sheet, solutions = [], resources = []) {
     }),
   ].join('\n');
   try {
-    const key = aiCache.buildAiCacheKey('revision', sheet.subject?.subjectCode || sheet.subject?.subject || 'subject', prompt, 'v2');
+    const key = aiCache.buildAiCacheKey('revision', sheet.subject?.subjectCode || sheet.subject?.subject || 'subject', prompt, 'v3');
     let text = await aiCache.get(key);
     let generated = false;
     if (typeof text !== 'string' || !text) {

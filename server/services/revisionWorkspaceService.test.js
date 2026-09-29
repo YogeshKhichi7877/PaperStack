@@ -1,6 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildRevisionWorkspace, parseRevisionAi } = require('./revisionWorkspaceService');
+const {
+  buildRevisionWorkspace,
+  compactAcademicText,
+  parseRevisionAi,
+} = require('./revisionWorkspaceService');
 
 test('revision workspace only includes formulas and answers from approved source text', () => {
   const sheet = {
@@ -45,4 +49,30 @@ test('resource-backed AI formulas retain the resource link', () => {
   ] }), new Set(), new Map([['r1', 'Use x^2+y^2']]), new Map([['r1', '/notes.pdf']]));
   assert.equal(parsed.formulas[0].resourceId, 'r1');
   assert.equal(parsed.formulas[0].url, '/notes.pdf');
+});
+
+test('academic text compaction preserves Markdown structure and removes excess blank lines', () => {
+  const text = compactAcademicText('## Heading\r\n\r\n\r\n- First\r\n- Second   ', 200);
+  assert.equal(text, '## Heading\n\n- First\n- Second');
+});
+
+test('revision answers and AI notes retain headings, lists, and table rows', () => {
+  const sheet = {
+    priorityTopics: [{ topic: 'PESTLE', occurrences: 2 }],
+    mustPracticeQuestions: [{ _id: 'q1', questionText: 'Explain PESTLE.', matchedTopic: 'PESTLE' }],
+  };
+  const answer = '## Checklist\n\n- Political\n- Economic\n\n| Factor | Recall |\n| --- | --- |\n| P | Policy |';
+  const workspace = buildRevisionWorkspace(sheet, {
+    questions: [{ _id: 'q1' }],
+    solutions: [{ questionId: 'q1', answerText: answer }],
+  });
+  const parsed = parseRevisionAi(JSON.stringify({
+    briefing: '## Focus\n\n- Review factors',
+    notes: [{ sourceId: 'q1', text: '**PESTLE**\n\n1. Political\n2. Economic' }],
+  }), new Set(['q1']));
+
+  assert.equal(workspace.rapidRecall[0].answer.includes('\n- Political'), true);
+  assert.equal(workspace.rapidRecall[0].answer.includes('\n| --- | --- |'), true);
+  assert.equal(parsed.briefing, '## Focus\n\n- Review factors');
+  assert.equal(parsed.notes[0].text.includes('\n1. Political'), true);
 });

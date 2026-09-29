@@ -19,6 +19,8 @@ import {
 
 import './QuestionSolutionsPanel.css';
 
+const MathAnswer = React.lazy(() => import('./MathAnswer'));
+
 function formatDate(value) {
   if (!value) return '';
 
@@ -416,7 +418,7 @@ export default function QuestionSolutionsPanel({
 
             <div className="qs-compose-foot">
               <p>
-                Plain text only. Do not include
+                Markdown is supported. Do not include
                 passwords, personal data, or
                 copied private material.
               </p>
@@ -505,7 +507,9 @@ export default function QuestionSolutionsPanel({
                   </div>
 
                   <div className="qs-answer">
-                    {solution.answerText}
+                    <React.Suspense fallback={<p>{solution.answerText}</p>}>
+                      <MathAnswer>{solution.answerText}</MathAnswer>
+                    </React.Suspense>
                   </div>
 
                   <button

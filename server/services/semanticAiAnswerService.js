@@ -55,7 +55,7 @@ async function findReusableAnswer(input, dependencies = {}) {
   if (!reusableAcademicRequest(input)) return null;
   const Model = dependencies.Model || AiAnswerCache;
   const exactHash = exactRequestHash(input);
-  const promptVersion = input.promptVersion || 'question-tutor-v3';
+  const promptVersion = input.promptVersion || 'question-tutor-v4';
   const exact = await Model.findOne({ exactHash, contentVersion: input.contentVersion, promptVersion }).lean();
 
   if (answerReusable(exact)) {
@@ -88,7 +88,7 @@ async function storeReusableAnswer(input, dependencies = {}) {
   const exactHash = exactRequestHash(input);
   const answer = String(input.answer).trim();
   return Model.findOneAndUpdate(
-    { exactHash, contentVersion: input.contentVersion, promptVersion: input.promptVersion || 'question-tutor-v3' },
+    { exactHash, contentVersion: input.contentVersion, promptVersion: input.promptVersion || 'question-tutor-v4' },
     {
       $setOnInsert: {
         exactHash,
@@ -99,7 +99,7 @@ async function storeReusableAnswer(input, dependencies = {}) {
         questionId: input.questionId || null,
         topics: input.topics || [],
         contentVersion: input.contentVersion,
-        promptVersion: input.promptVersion || 'question-tutor-v3',
+        promptVersion: input.promptVersion || 'question-tutor-v4',
         answer,
         answerHash: crypto.createHash('sha256').update(answer).digest('hex'),
         provider: input.provider || '',

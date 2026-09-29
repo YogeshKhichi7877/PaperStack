@@ -156,7 +156,7 @@ async function generateNovelQuestions(templates, archive, options = {},
       options.difficulty === 'easy' || options.difficulty === 'hard'
         ? `Every question must have ${options.difficulty} difficulty.`
         : 'Match each source question’s approximate difficulty.',
-      'Each markingScheme must sum exactly to the source marks. Include at least two keyPoints and a complete expectedAnswer.',
+      'Each markingScheme must sum exactly to the source marks. Include at least two keyPoints and a complete expectedAnswer. Format expectedAnswer with standard Markdown and blank lines; never use HTML or <br> tags.',
       'For numerical questions, include numericCheck.expression and numericCheck.result; the result must appear in expectedAnswer. Do not invent unverifiable answers.',
       'Return only JSON: {"questions":[{"sourceQuestionId":"source id","questionText":"new question","questionType":"theory","difficulty":"easy|moderate|hard","expectedAnswer":"worked answer","keyPoints":["point 1","point 2"],"markingScheme":[{"criterion":"criterion","marks":2}],"numericCheck":{"expression":"(2+3)*4","result":20}}]}. Omit numericCheck for non-numerical questions.',
       JSON.stringify({

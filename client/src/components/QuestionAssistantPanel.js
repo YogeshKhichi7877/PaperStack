@@ -560,12 +560,9 @@ export default function QuestionAssistantPanel({
                                   </span>
                                 </div>
 
-                                <pre>
-                                  {
-                                    solution
-                                      .answerText
-                                  }
-                                </pre>
+                                <React.Suspense fallback={<p>{solution.answerText}</p>}>
+                                  <MathAnswer>{solution.answerText}</MathAnswer>
+                                </React.Suspense>
                               </div>
                             )
                           )

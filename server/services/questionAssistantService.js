@@ -403,7 +403,7 @@ async function askAi({
     questionId: question._id,
     topics: extractTopics(question),
     contentVersion,
-    promptVersion: 'question-tutor-v3',
+    promptVersion: 'question-tutor-v4',
   };
   const durable = await findReusableAnswer(reusableInput);
   if (durable) {
@@ -443,13 +443,13 @@ async function askAi({
     `Metadata: subject=${question.subject} (${question.subjectCode}), year=${question.year || 'unknown'}, exam=${question.examType || 'unknown'}, marks=${question.marks ?? 'unknown'}, topics=${extractTopics(question).join(', ') || 'unknown'}`,
     solutionContext || 'Approved solutions: none available.',
     similarContext || 'Related PYQs: none available.',
-    'Use Markdown with LaTeX for mathematical expressions: inline $...$ and display $$...$$. For numerical problems, organize Given, Required, Formula, Substitution, Calculation, Final Answer, and a short interpretation when useful. Check arithmetic carefully and state units.',
+    'Use standard Markdown with LaTeX for mathematical expressions: inline $...$ and display $$...$$. Use blank lines between sections, real Markdown headings and lists, and valid GFM table syntax when a table helps. Never use HTML or <br> tags, and never compress a checklist into one paragraph. For numerical problems, organize Given, Required, Formula, Substitution, Calculation, Final Answer, and a short interpretation when useful. Check arithmetic carefully and state units.',
     'Keep the answer structured and concise. If solving, show reasoning/steps clearly. If a formula is needed, write it explicitly.',
   ]
     .filter(Boolean)
     .join('\n\n');
 
-  const cacheKey = aiCache.buildAiCacheKey('question-tutor', question._id || 'question', prompt, 'v3');
+  const cacheKey = aiCache.buildAiCacheKey('question-tutor', question._id || 'question', prompt, 'v4');
   const cached = await aiCache.get(cacheKey);
   if (cached && typeof cached === 'object' && cached.answer) return cached;
   if (typeof cached === 'string' && cached) {
@@ -513,7 +513,7 @@ async function answerSelectedQuestion({
           questionId: question._id,
           topics: extractTopics(question),
           contentVersion: questionContentVersion(question, approvedSolutions),
-          promptVersion: 'question-tutor-v3',
+          promptVersion: 'question-tutor-v4',
         };
         const reused = await findReusableAnswer(reusableInput);
         if (reused) {
