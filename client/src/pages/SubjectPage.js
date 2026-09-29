@@ -218,6 +218,7 @@ export default function SubjectPage({ user, toast }) {
   const resourceContributionParams = new URLSearchParams();
   if (summary?.subjectName) resourceContributionParams.set('subject', summary.subjectName);
   if (summary?.subjectCode) resourceContributionParams.set('subjectCode', summary.subjectCode);
+  if (!summary && subjectKey) resourceContributionParams.set('subject', subjectKey);
   if (summary?.subjectShortCode) resourceContributionParams.set('shortCode', summary.subjectShortCode);
   if (firstBranch) resourceContributionParams.set('branch', firstBranch);
   if (firstSemester) resourceContributionParams.set('semester', String(firstSemester));
@@ -260,7 +261,7 @@ export default function SubjectPage({ user, toast }) {
           <p>{error || 'No resources are available yet.'}</p>
           <div>
             <Link to="/">Back to papers</Link>
-            <Link to={contributionPath}>Contribute</Link>
+            <Link to={resourceContributionPath}>Contribute</Link>
           </div>
         </section>
       </main>
@@ -301,8 +302,7 @@ export default function SubjectPage({ user, toast }) {
           <p className="subject-hub-description">{summary.kindCounts?.question_paper || 0} papers · {summary.kindCounts?.solution || 0} solutions · {(summary.years || []).length} years in the archive</p>
           <div className="subject-hub-hero-actions">
             <Link to={examModePath} className="subject-hub-primary-action">Open Exam Mode</Link>
-            <Link to={contributionPath} className="subject-hub-secondary-action">Contribute Paper</Link>
-            <Link to={resourceContributionPath} className="subject-hub-secondary-action subject-hub-resource-upload-action">Upload Resource</Link>
+            <Link to={resourceContributionPath} className="subject-hub-secondary-action subject-hub-resource-upload-action">Contribute Resource</Link>
           </div>
         </div>
 

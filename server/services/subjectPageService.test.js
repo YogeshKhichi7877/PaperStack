@@ -9,6 +9,11 @@ test('subject page resolver accepts canonical subject code', () => {
   assert.equal(resolveResourceSubjectKey('cs502'), 'CS502');
 });
 
+test('subject page resolver maps the hyphenated paper code to the resource key', () => {
+  assert.equal(resolveResourceSubjectKey('HM-505'), 'HM505');
+  assert.equal(resolveResourceSubjectKey('Innovation and Entrepreneurship'), 'HM505');
+});
+
 test('subject page resolver accepts short code', () => {
   assert.equal(resolveResourceSubjectKey('CG'), 'CS502');
 });

@@ -27,4 +27,18 @@ test('resource categories stay named and visible, including empty ones, and filt
   fireEvent.click(within(categories).getByRole('button', { name: /Quizzes/ }));
   expect(screen.getByText('No quizzes have been added for this subject.')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Upload Quizzes' }).getAttribute('href')).toContain('kind=quiz');
+  expect(screen.getByRole('link', { name: 'Contribute Resource' }).getAttribute('href')).toContain('/contribute-resource?');
+});
+
+test('the subject hub error contribute link opens resource upload', async () => {
+  fetchSubjectSummary.mockRejectedValue({ response: { data: { error: 'No resources found for this subject' } } });
+  fetchSubjectResources.mockResolvedValue({ resources: [] });
+  const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    render(<HelmetProvider><SubjectPage /></HelmetProvider>);
+    const contribute = await screen.findByRole('link', { name: 'Contribute' });
+    expect(contribute.getAttribute('href')).toBe('/contribute-resource?subject=Computer+Graphics');
+  } finally {
+    log.mockRestore();
+  }
 });

@@ -31,8 +31,14 @@ test('short subject codes still resolve exactly', () => {
   assert.equal(resolveSubject({ subject: 'ML' }).key, 'CS601');
 });
 
+test('resolves a hyphenated subject code used by paper uploads', () => {
+  assert.equal(resolveSubject({ subjectCode: 'HM-505', branch: 'ECE', semester: 5 }).key, 'HM505');
+  assert.equal(resolveSubject({ subject: 'HM-505' }).key, 'HM505');
+});
+
 test('creates stable custom key for unknown subject', () => {
   assert.equal(resolveSubject({ subject: 'Future Computing' }).key, 'custom:future-computing');
+  assert.equal(resolveSubject({ subject: 'Future Computing', branch: 'ECE', semester: 5 }).key, 'custom:future-computing');
 });
 
 test('normalizes common branch values', () => {

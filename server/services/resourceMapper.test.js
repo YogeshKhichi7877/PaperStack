@@ -30,6 +30,17 @@ test('maps legacy paper into canonical question-paper resource', () => {
   assert.equal(resource.views, 10);
 });
 
+test('maps a paper with a hyphenated catalog code to the same subject as approved notes', () => {
+  const resource = buildQuestionPaperResource({
+    ...samplePaper,
+    subject: 'Innovation and entrepreneurship',
+    subjectCode: 'HM-505',
+    branch: 'ECE',
+  });
+  assert.equal(resource.subjectKey, 'HM505');
+  assert.equal(resource.subjectCode, 'HM505');
+});
+
 test('maps a linked solution when solution exists', () => {
   const solution = buildSolutionResource(samplePaper, 'parent-id');
   assert.equal(solution.kind, 'solution');

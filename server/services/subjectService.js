@@ -10,6 +10,10 @@ function normalizeSubjectText(value) {
     .trim();
 }
 
+function normalizeSubjectCode(value) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 function slugifySubject(value) {
   return normalizeSubjectText(value).replace(/\s+/g, '-');
 }
@@ -74,17 +78,18 @@ function phraseIncludes(haystack, needle) {
 }
 
 function scoreSubjectCandidate(candidate, input) {
-  const normalizedCode = String(input.subjectCode || '').trim().toUpperCase();
-  const normalizedShortCode = String(input.shortCode || '').trim().toUpperCase();
-  const normalizedSubject = normalizeSubjectText(input.subject || input.subjectName);
+  const normalizedCode = normalizeSubjectCode(input.subjectCode);
+  const normalizedShortCode = normalizeSubjectCode(input.shortCode);
+  const rawSubject = input.subject || input.subjectName;
+  const normalizedSubject = normalizeSubjectText(rawSubject);
   const branches = normalizeBranchList(input.branch || input.branches);
   const semester = Number(input.semester || input.semesters?.[0]) || null;
 
   let score = 0;
 
   // Explicit structured metadata is strongest.
-  if (normalizedCode && candidate.code === normalizedCode) score += 120;
-  if (normalizedShortCode && candidate.shortCode === normalizedShortCode) score += 110;
+  if (normalizedCode && normalizeSubjectCode(candidate.code) === normalizedCode) score += 120;
+  if (normalizedShortCode && normalizeSubjectCode(candidate.shortCode) === normalizedShortCode) score += 110;
 
   if (normalizedSubject) {
     const candidateCode = normalizeSubjectText(candidate.code);
@@ -92,8 +97,8 @@ function scoreSubjectCandidate(candidate, input) {
     const names = descriptiveAliases(candidate);
 
     // A subject field may itself contain only CS502 or CG.
-    if (candidateCode && normalizedSubject === candidateCode) score += 100;
-    if (candidateShortCode && normalizedSubject === candidateShortCode) score += 95;
+    if (candidateCode && normalizeSubjectCode(rawSubject) === normalizeSubjectCode(candidate.code)) score += 100;
+    if (candidateShortCode && normalizeSubjectCode(rawSubject) === normalizeSubjectCode(candidate.shortCode)) score += 95;
 
     // Exact descriptive names/aliases are preferred.
     if (names.includes(normalizedSubject)) {
@@ -109,6 +114,10 @@ function scoreSubjectCandidate(candidate, input) {
       score += 40;
     }
   }
+
+  // Branch and semester choose between matching subjects; they cannot identify
+  // a subject on their own when its name or code is missing from the catalog.
+  if (!score) return 0;
 
   if (branches.length && branches.some((branch) => candidate.branches.includes(branch))) score += 10;
   if (semester && candidate.semesters.includes(semester)) score += 10;
