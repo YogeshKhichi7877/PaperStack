@@ -408,6 +408,15 @@
     var(--me-primary);
 }
 
+.me-source-hint {
+  display: block;
+  max-width: 360px;
+  margin-top: 7px;
+  color: var(--me-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .me-option-buttons button[aria-pressed="true"] {
   border-color:
     var(--me-primary);
@@ -707,6 +716,16 @@
 /* =========================================================
    HISTORY
 ========================================================= */
+
+.me-generation-error {
+  margin: 14px 0;
+  padding: 14px 18px;
+  border: 1px solid rgba(185, 62, 48, .3);
+  border-radius: 12px;
+  background: #fff4ef;
+  color: #9d3329;
+  font-weight: 700;
+}
 
 .me-history {
   display: grid;

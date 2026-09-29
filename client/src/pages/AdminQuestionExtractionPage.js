@@ -22,8 +22,9 @@ export default function AdminQuestionExtractionPage({ toast }) {
   const [loading, setLoading] = useState(true);
   const [runningId, setRunningId] = useState('');
   const [batchRunning, setBatchRunning] = useState(false);
-  const [useAiFallback, setUseAiFallback] = useState(false);
+  const [useAiFallback, setUseAiFallback] = useState(null);
   const [lastResult, setLastResult] = useState(null);
+  const aiFallbackEnabled = useAiFallback ?? Boolean(system?.ai?.configured);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,7 +95,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
     try {
       const response = await extractQuestionsForPaper(paper._id, {
         force,
-        allowAi: useAiFallback,
+        allowAi: aiFallbackEnabled,
       });
 
       setLastResult(response?.result || null);
@@ -106,6 +107,10 @@ export default function AdminQuestionExtractionPage({ toast }) {
       }
       await load();
     } catch (error) {
+      if (error.response?.data?.result) {
+        setLastResult(error.response.data.result);
+        await load();
+      }
       const message =
         error.response?.data?.error ||
         error.message ||
@@ -123,15 +128,15 @@ export default function AdminQuestionExtractionPage({ toast }) {
     try {
       const response = await extractQuestionBatch({
         limit: 5,
-        allowAi: useAiFallback,
+        allowAi: aiFallbackEnabled,
         force: false,
       });
 
       setLastResult(response?.result || null);
       if (toast) {
         toast(
-          `Batch processed ${response?.result?.processed || 0} papers.`,
-          'success'
+          `Batch completed: ${response?.result?.successful || 0} succeeded, ${response?.result?.failed || 0} failed.`,
+          response?.result?.failed ? 'error' : 'success'
         );
       }
       await load();
@@ -206,12 +211,12 @@ export default function AdminQuestionExtractionPage({ toast }) {
           <label className="qe-ai-toggle">
             <input
               type="checkbox"
-              checked={useAiFallback}
+              checked={aiFallbackEnabled}
               onChange={(event) => setUseAiFallback(event.target.checked)}
               disabled={!system?.ai?.configured}
             />
             <span>
-              Allow AI extraction
+              Allow AI extraction for difficult or scanned PDFs
               {!system?.ai?.configured ? ' (not configured)' : ''}
             </span>
           </label>
@@ -229,6 +234,9 @@ export default function AdminQuestionExtractionPage({ toast }) {
         {lastResult && (
           <section className="qe-result">
             <strong>Latest extraction result</strong>
+            {lastResult.failureReason && (
+              <p className="qe-failure-reason" role="alert">{lastResult.failureReason}</p>
+            )}
             {'engine' in lastResult && (
               <p>
                 Engine: {lastResult.engine || '—'} · Confidence: {lastResult.confidence ?? '—'}%
@@ -246,9 +254,14 @@ export default function AdminQuestionExtractionPage({ toast }) {
               </div>
             )}
             {Array.isArray(lastResult.results) && (
-              <p>
-                Successful: {lastResult.successful || 0} · Failed: {lastResult.failed || 0}
-              </p>
+              <>
+                <p>Successful: {lastResult.successful || 0} · Failed: {lastResult.failed || 0}</p>
+                {lastResult.results.filter((item) => !item.success).map((item) => (
+                  <p className="qe-failure-reason" key={item.paperId}>
+                    {item.title || 'Paper'}: {item.error || 'No questions were identified.'}
+                  </p>
+                ))}
+              </>
             )}
           </section>
         )}

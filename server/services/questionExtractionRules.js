@@ -259,6 +259,7 @@ function buildOverallConfidence(questions, textLength) {
 
 function extractQuestionsFromText(rawText) {
   const text = cleanPdfText(rawText);
+  const textLength = text.split(PAGE_BREAK).join('').replace(/\s+/g, ' ').trim().length;
   if (!text) {
     return {
       questions: [],
@@ -349,7 +350,7 @@ function extractQuestionsFromText(rawText) {
   flush();
 
   const questions = dedupeQuestions(candidates);
-  const confidence = buildOverallConfidence(questions, text.length);
+  const confidence = buildOverallConfidence(questions, textLength);
   const warnings = [];
 
   if (questions.length === 0) {
@@ -360,7 +361,7 @@ function extractQuestionsFromText(rawText) {
     warnings.push('Few question boundaries were detected; this may be a partial extraction.');
   }
 
-  if (text.length < 180) {
+  if (textLength < 180) {
     warnings.push('Very little PDF text was extracted; the paper may be scanned.');
   }
 
@@ -372,7 +373,7 @@ function extractQuestionsFromText(rawText) {
     questions,
     confidence,
     warnings,
-    textLength: text.length,
+    textLength,
   };
 }
 

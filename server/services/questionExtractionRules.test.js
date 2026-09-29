@@ -68,6 +68,13 @@ test('low-information text produces low confidence instead of invented questions
   assert.equal(result.confidence, 0);
 });
 
+test('page markers alone do not count as searchable text', () => {
+  const result = extractQuestionsFromText(Array(12).fill(PAGE_BREAK).join('\n'));
+  assert.equal(result.questions.length, 0);
+  assert.equal(result.textLength, 0);
+  assert.match(result.warnings.join(' '), /scanned/);
+});
+
 test('extractMarks removes common trailing mark annotations', () => {
   assert.deepEqual(
     extractMarks('Explain boundary fill algorithm. [5 Marks]'),

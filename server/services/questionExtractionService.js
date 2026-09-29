@@ -203,6 +203,23 @@ function chooseExtraction({ localResult, aiResult, allowAi }) {
   };
 }
 
+function extractionFailureReason({ localResult, aiResult, allowAi }) {
+  const scanned = Number(localResult.textLength || 0) < 180;
+  if (!allowAi) {
+    return scanned
+      ? 'No selectable question text was found in this PDF. Enable AI extraction for scanned papers and retry.'
+      : 'PDF text was read, but no questions were identified. Enable AI extraction and retry.';
+  }
+  if (!aiResult?.attempted) {
+    return scanned
+      ? 'No selectable question text was found, and AI extraction was unavailable. Configure AI or upload a searchable PDF.'
+      : 'No questions were identified, and AI extraction was unavailable. Configure AI or check the paper text.';
+  }
+  return scanned
+    ? 'No readable questions were found in this PDF, even with AI extraction. Try a clearer or searchable PDF.'
+    : 'No questions were identified from the PDF text or AI extraction. Check that this file is an exam paper.';
+}
+
 async function persistQuestions({
   paper,
   selected,
@@ -367,6 +384,19 @@ async function extractPaperQuestions({
       allowAi: shouldTryAi,
     });
 
+    const failureReason = selected.questions.length ? '' : extractionFailureReason({
+      localResult, aiResult, allowAi: shouldTryAi,
+    });
+    if (failureReason) {
+      console.warn('Question extraction found no questions', {
+        paperId: String(paper._id),
+        parsedPages: parsedPdf.pages,
+        extractedTextLength: localResult.textLength,
+        aiAttempted: Boolean(aiResult.attempted),
+        aiEnabledForRequest: shouldTryAi,
+      });
+    }
+
     const persistence = await persistQuestions({
       paper,
       selected,
@@ -391,6 +421,7 @@ async function extractPaperQuestions({
       parsedPages: parsedPdf.pages,
       extractedTextLength: localResult.textLength,
       detectedQuestions: selected.questions.length,
+      failureReason,
       ...persistence,
       ai: {
         ...getQuestionAiStatus(),
@@ -457,11 +488,12 @@ async function extractQuestionBatch({
       results.push({
         paperId: String(paper._id),
         title: paper.title,
-        success: true,
+        success: result.extractionStatus !== 'failed',
         engine: result.engine || '',
         questionCount: result.totalQuestionCount ?? result.questionCount ?? 0,
         extractionStatus: result.extractionStatus || '',
         confidence: result.confidence ?? null,
+        ...(result.failureReason ? { error: result.failureReason } : {}),
       });
     } catch (error) {
       results.push({
@@ -527,6 +559,7 @@ module.exports = {
   AUTO_SOURCES,
   EXTRACTION_VERSION,
   chooseExtraction,
+  extractionFailureReason,
   downloadPaperBuffer,
   extractPaperQuestions,
   extractQuestionBatch,

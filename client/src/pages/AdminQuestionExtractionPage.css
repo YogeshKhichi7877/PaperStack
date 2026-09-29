@@ -155,6 +155,11 @@
   color: var(--color-text-secondary);
 }
 
+.qe-result .qe-failure-reason {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
 .qe-preview {
   display: grid;
   gap: 7px;

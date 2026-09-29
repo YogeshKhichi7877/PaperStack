@@ -203,6 +203,12 @@ router.post(
           });
       }
 
+      if (mockType === 'new' && !mockAiEnabled()) {
+        return res.status(503).json({
+          error: 'Fresh Only requires AI question generation, which is unavailable right now. Try again later or choose PYQ + New.',
+        });
+      }
+
       const filter = {
         subjectCode,
         status: {
@@ -344,9 +350,19 @@ router.post(
           const byId = new Map(enriched.map((item) => [String(item._id), item]));
           const selected = baseMock.questions.map((item) => byId.get(String(item._id))).filter(Boolean);
           const templates = mockType === 'new' ? selected : selected.filter((_, index) => index % 2 === 0);
+          if (!templates.length) {
+            return res.status(422).json({
+              error: 'No suitable source questions were found for fresh practice. Choose another subject or exam scope.',
+            });
+          }
           const generated = await generateNovelQuestions(templates, enriched, {
             subject: baseMock.subject, examType, difficulty,
           });
+          if (mockType === 'new' && generated.length !== templates.length) {
+            return res.status(503).json({
+              error: `Only ${generated.length} of ${templates.length} fresh questions passed validation. Try again, choose fewer marks, or select PYQ + New.`,
+            });
+          }
           if (generated.length) {
             await GeneratedMock.findOneAndUpdate(
               { mockId: baseMock.mockId },
@@ -364,6 +380,11 @@ router.post(
           }
         } catch (error) {
           console.warn('Generated mock fallback:', error.message);
+          if (mockType === 'new') {
+            return res.status(503).json({
+              error: 'Fresh question generation is temporarily unavailable. Try again or choose PYQ + New.',
+            });
+          }
           mock.warnings = ['New questions were unavailable; this mock uses verified archived questions.'];
         }
       } else if (mockType !== 'pyq') {

@@ -22,13 +22,14 @@ const questionSchema = z.object({
 const questionExtractionSchema = z.object({ questions: z.array(questionSchema).max(80) });
 const mockSelectionSchema = z.object({ selectedQuestionIds: z.array(z.string().min(1).max(80)).max(90), rationale: optionalText });
 const markingCriterionSchema = z.object({ criterion: shortText, marks: z.number().positive().max(100) });
-const mockGenerationSchema = z.object({ questions: z.array(z.object({
+const mockGeneratedQuestionSchema = z.object({
   sourceQuestionId: shortText, questionText: shortText, questionType: optionalText,
   difficulty: z.enum(['easy', 'moderate', 'hard']), expectedAnswer: shortText,
   keyPoints: z.array(shortText).min(2).max(8), formulas: z.array(z.string()).max(5).optional(),
   markingScheme: z.array(markingCriterionSchema).min(1).max(12),
   numericCheck: z.object({ expression: shortText, result: z.number().finite() }).optional(),
-})).max(30) });
+});
+const mockGenerationSchema = z.object({ questions: z.array(mockGeneratedQuestionSchema).max(30) });
 const mockEvaluationSchema = z.object({ items: z.array(z.object({
   questionId: shortText, score: z.number().min(0).max(100),
   estimatedAccuracy: z.number().min(0).max(100), feedback: shortText,
@@ -57,5 +58,5 @@ function parseAiJson(text, schema) {
   return result.data;
 }
 
-module.exports = { metadataSchema, mockEvaluationSchema, mockGenerationSchema, mockSelectionSchema,
+module.exports = { metadataSchema, mockEvaluationSchema, mockGeneratedQuestionSchema, mockGenerationSchema, mockSelectionSchema,
   numericalReasoningSchema, parseAiJson, questionExtractionSchema, revisionSchema, warRoomSchema };

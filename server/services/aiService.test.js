@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { aiAvailable, generateForTask, generateText, providerOrder, taskStatus } = require('./aiService');
+const { aiAvailable, generateForTask, generateText, modelForProvider, providerOrder, taskStatus } = require('./aiService');
 
 const env = { AI_ENABLED: 'true', GEMINI_API_KEY: 'test-gemini-key', GROQ_API_KEY: 'test-groq-key',
   GEMINI_MODEL: 'test-gemini', GROQ_MODEL: 'test-groq', AI_MAX_RETRIES: '0' };
@@ -16,6 +16,12 @@ test('routing is task based and reports provider availability', () => {
   assert.equal(aiAvailable({ ...env, AI_ENABLED: 'false' }, 'QUESTION_TUTOR'), false);
   assert.deepEqual(taskStatus('QUESTION_TUTOR', env),
     { task: 'QUESTION_TUTOR', available: true, providersAvailable: 2, degraded: false });
+});
+
+test('a Prompt Guard classifier configured as the Groq generation model uses the text model', () => {
+  assert.equal(modelForProvider('groq', {
+    GROQ_MODEL: 'meta-llama/llama-prompt-guard-2-86m',
+  }), 'openai/gpt-oss-120b');
 });
 
 test('text tutoring sends Groq first with separate trusted instructions', async () => {
@@ -65,6 +71,39 @@ test('invalid key stops retries and exposes a sanitized error', async () => {
     return true;
   });
   assert.equal(requests, 1);
+});
+
+test('invalid structured output falls back to the next provider', async () => {
+  const urls = [];
+  const answer = await generateForTask('NOVEL_QUESTION_GENERATION', 'Generate', {
+    validateResponse: (text) => {
+      if (text !== '{"questions":[]}') throw new TypeError('AI response invalid');
+    },
+  }, { env, fetch: async (url) => {
+    urls.push(url);
+    return urls.length === 1 ? groqReply('not JSON') : geminiReply('{"questions":[]}');
+  } });
+  assert.equal(answer, '{"questions":[]}');
+  assert.match(urls[0], /api.groq.com/);
+  assert.match(urls[1], /generativelanguage/);
+});
+
+test('truncated generation falls back before returning partial JSON', async () => {
+  const urls = [];
+  const answer = await generateForTask('NOVEL_QUESTION_GENERATION', 'Generate', {
+    json: true, reasoningEffort: 'low',
+  }, { env: { ...env, GROQ_MODEL: 'openai/gpt-oss-120b' }, fetch: async (url, options) => {
+    urls.push(url);
+    if (urls.length === 1) {
+      assert.equal(JSON.parse(options.body).reasoning_effort, 'low');
+      return { ok: true, json: async () => ({ choices: [{
+        finish_reason: 'length', message: { content: '{"questions":[' },
+      }] }) };
+    }
+    return geminiReply('{"questions":[]}');
+  } });
+  assert.equal(answer, '{"questions":[]}');
+  assert.equal(urls.length, 2);
 });
 
 test('visual fallback uses extracted text and never sends raw PDF to Groq', async () => {

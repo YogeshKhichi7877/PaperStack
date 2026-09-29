@@ -1,5 +1,10 @@
 const { aiAvailable, generateForTask, taskStatus } = require('./aiService');
 const { parseAiJson, questionExtractionSchema } = require('./aiSchemas');
+const { PAGE_BREAK } = require('./questionExtractionRules');
+
+function readablePdfText(value) {
+  return String(value || '').split(PAGE_BREAK).join(' ').replace(/\s+/g, ' ').trim();
+}
 
 function envTrue(value, fallback = true) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -131,7 +136,7 @@ async function extractQuestionsWithAi({
 }) {
   const status = getQuestionAiStatus();
 
-  const text = String(extractedText || localResult?.text || '').trim();
+  const text = readablePdfText(extractedText || localResult?.text || '');
   const visual = text.length < 180;
   const task = visual ? 'QUESTION_EXTRACTION_VISUAL' : 'QUESTION_EXTRACTION_TEXT';
   if (!status.enabled || !aiAvailable(process.env, task, visual
@@ -147,11 +152,11 @@ async function extractQuestionsWithAi({
   const sizeBytes = Number(buffer?.length || 0);
   const maxMb = Math.max(
     1,
-    Number(
+    Math.min(12, Number(
       process.env.QUESTION_AI_INLINE_PDF_MAX_MB ||
       process.env.SMART_AI_INLINE_PDF_MAX_MB ||
       12
-    )
+    ))
   );
 
   if (visual && (!buffer || sizeBytes > maxMb * 1024 * 1024)) {
@@ -248,4 +253,5 @@ module.exports = {
   getQuestionAiStatus,
   normalizeAiQuestion,
   parseGeminiQuestionResponse,
+  readablePdfText,
 };

@@ -72,6 +72,14 @@ module.exports = function createQuestionExtractionRouter({ authenticateAdmin }) 
         allowAi: req.body?.allowAi !== false,
       });
 
+      if (result.extractionStatus === 'failed' && !result.skipped) {
+        return res.status(422).json({
+          success: false,
+          error: result.failureReason || 'No questions were identified in this PDF.',
+          result,
+        });
+      }
+
       res.json({
         success: true,
         result,

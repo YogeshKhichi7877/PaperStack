@@ -5,7 +5,13 @@ const {
   cleanJsonText,
   dedupeAiQuestions,
   parseGeminiQuestionResponse,
+  readablePdfText,
 } = require('./freeAiQuestionService');
+const { PAGE_BREAK } = require('./questionExtractionRules');
+
+test('removes page markers before deciding whether PDF text is usable', () => {
+  assert.equal(readablePdfText(Array(12).fill(PAGE_BREAK).join('\n')), '');
+});
 
 test('cleans JSON code fences', () => {
   assert.equal(cleanJsonText('```json\n{"questions":[]}\n```'), '{"questions":[]}');

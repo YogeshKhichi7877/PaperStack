@@ -254,6 +254,7 @@ export default function MockExamGeneratorPage({
     generating,
     setGenerating,
   ] = useState(false);
+  const [generationError, setGenerationError] = useState('');
 
   const [
     replacingQuestionId,
@@ -444,6 +445,7 @@ export default function MockExamGeneratorPage({
     }
 
     setGenerating(true);
+    setGenerationError('');
 
     try {
       const result =
@@ -514,15 +516,15 @@ export default function MockExamGeneratorPage({
         'success'
       );
     } catch (error) {
+      const message = error.response?.data?.error || 'Failed to generate mock exam.';
+      setGenerationError(message);
       console.error(
         'Mock generation failed:',
         error
       );
 
       toast?.(
-        error.response?.data
-          ?.error ||
-          'Failed to generate mock exam.',
+        message,
         'error'
       );
     } finally {
@@ -879,6 +881,11 @@ export default function MockExamGeneratorPage({
                 Fresh Only
               </OptionButton>
             </div>
+            {mockType === 'new' && (
+              <small className="me-source-hint">
+                Fresh Only uses AI questions at your selected difficulty. If a complete paper cannot be verified, generation will fail instead of substituting PYQs.
+              </small>
+            )}
           </fieldset>
 
           <fieldset>
@@ -1230,6 +1237,12 @@ export default function MockExamGeneratorPage({
             </button>
           </div>
         </section>
+
+        {generationError && (
+          <div className="me-generation-error me-no-print" role="alert">
+            {generationError}
+          </div>
+        )}
 
         {/* =================================================
             HISTORY
