@@ -325,7 +325,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
       items: [
         { to: '/missing-papers', label: 'Missing Papers' },
         { to: '/contribute-resource', label: 'Upload Resource' },
-        { to: '/contributors', label: 'Contributors' },
+        { to: '/contributors', label: 'Leaderboard' },
         { to: '/verify-archive', label: 'Verify Archive' },
         { to: '/branch-competition', label: 'Branch Competition' },
         { to: '/trending', label: 'Trending' },

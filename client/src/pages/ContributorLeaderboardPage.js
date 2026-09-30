@@ -20,7 +20,6 @@ import {
   BookOpen,
   Crown,
   FileText,
-  Flame,
   FolderUp,
   LibraryBig,
   Medal,
@@ -689,22 +688,22 @@ export default function ContributorLeaderboardPage({
 
         <div className="cl-arena-copy">
           <span className="cl-kicker">
-            <Flame size={16} />
-            PaperStack rankings
+            <Trophy size={16} />
+            Campus leaderboard
           </span>
 
           <h1>
-            Build the archive.
+            Helpful work deserves
             <span>
-              Climb the ranks.
+              the spotlight.
             </span>
           </h1>
 
           <p>
-            Earn XP by sharing the
-            papers, solutions and study
-            resources that move the
-            whole campus forward.
+            See the students strengthening
+            PaperStack with useful papers,
+            clear solutions and dependable
+            study resources.
           </p>
 
           <div className="cl-hero-actions">
@@ -712,7 +711,7 @@ export default function ContributorLeaderboardPage({
               className="cl-action cl-action--primary"
               to="/contribute"
             >
-              Start competing
+              Contribute and earn XP
               <ArrowRight size={16} />
             </Link>
 
@@ -738,7 +737,7 @@ export default function ContributorLeaderboardPage({
           <div className="cl-spotlight-head">
             <span>
               <span className="cl-live-dot" />
-              Current leader
+              Leading contributor
             </span>
 
             <Trophy size={20} />
@@ -772,7 +771,7 @@ export default function ContributorLeaderboardPage({
               </div>
 
               <div className="cl-spotlight-score">
-                <span>Score to beat</span>
+                <span>Contribution score</span>
                 <strong>
                   {formatNumber(
                     leader.xp
@@ -785,7 +784,7 @@ export default function ContributorLeaderboardPage({
                 to={`/contributors/${leader.userId}`}
                 className="cl-spotlight-link"
               >
-                See champion profile
+                View contributor profile
                 <ArrowRight size={15} />
               </Link>
             </>
@@ -800,7 +799,7 @@ export default function ContributorLeaderboardPage({
         <div className="cl-arena-stats">
           <div>
             <Users size={18} />
-            <span>Competitors</span>
+            <span>Contributors</span>
             <strong>
               {formatNumber(
                 leaderboard.length
@@ -845,7 +844,7 @@ export default function ContributorLeaderboardPage({
           <Zap size={18} />
           <span>
             <small>How to earn XP</small>
-            Make every upload count.
+            Useful work moves you up.
           </span>
         </div>
 
@@ -1038,18 +1037,18 @@ export default function ContributorLeaderboardPage({
             <div>
               <span className="cl-kicker cl-kicker--light">
                 <Trophy size={15} />
-                Hall of champions
+                Community standouts
               </span>
 
               <h2>
-                The podium
+                Top contributors
               </h2>
             </div>
 
             <p>
-              The top three contributors
-              in the current all-time
-              standings.
+              The students currently leading
+              the all-time board by verified
+              contribution XP.
             </p>
           </header>
 
