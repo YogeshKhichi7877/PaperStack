@@ -14,8 +14,8 @@ function envTrue(value, fallback = true) {
 
 function getQuestionAiStatus() {
   const enabled = envTrue(
-    process.env.QUESTION_AI_ENABLED,
-    envTrue(process.env.SMART_AI_ENABLED, true)
+    process.env.QUESTION_EXTRACTION_AI_ENABLED,
+    envTrue(process.env.QUESTION_AI_ENABLED, envTrue(process.env.SMART_AI_ENABLED, true))
   );
   const routeStatus = taskStatus('QUESTION_EXTRACTION_TEXT');
   const configured = enabled && (aiAvailable(process.env, 'QUESTION_EXTRACTION_TEXT') ||
@@ -154,6 +154,7 @@ async function extractQuestionsWithAi({
   const maxMb = Math.max(
     1,
     Math.min(12, Number(
+      process.env.QUESTION_EXTRACTION_AI_INLINE_PDF_MAX_MB ||
       process.env.QUESTION_AI_INLINE_PDF_MAX_MB ||
       process.env.SMART_AI_INLINE_PDF_MAX_MB ||
       12
@@ -226,8 +227,13 @@ ${JSON.stringify({
     if (typeof response !== 'string' || !response) {
       response = await generateForTask(task, prompt, {
         json: true, temperature: 0, maxOutputTokens: 5000,
+        inflightKey: `${String(paper?._id || 'paper')}:${buffer ? aiCache.hashContent(buffer) : aiCache.hashContent(text)}`,
         validateResponse: (value) => parseAiJson(value, questionExtractionSchema),
-        timeoutMs: Number(process.env.QUESTION_AI_TIMEOUT_MS || process.env.SMART_AI_TIMEOUT_MS) || undefined,
+        timeoutMs: Number(
+          process.env.QUESTION_EXTRACTION_AI_TIMEOUT_MS ||
+          process.env.QUESTION_AI_TIMEOUT_MS ||
+          process.env.SMART_AI_TIMEOUT_MS
+        ) || undefined,
         ...(visual ? { attachment: { buffer, mimeType: 'application/pdf' }, fallbackText: text } : {}),
       });
       generated = true;

@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const { recordAiMetric } = require('./aiMetricsService');
 
 const memory = new Map();
 let redisClient;
@@ -62,16 +63,27 @@ async function get(key, env = process.env) {
   if (!enabled(env)) return null;
   pruneMemory(env);
   const local = memory.get(key);
-  if (local) return local.value;
+  if (local) {
+    recordAiMetric('AI_CACHE_HIT', { backend: 'memory' });
+    return local.value;
+  }
 
   const redis = getRedis(env);
-  if (!redis) return null;
+  if (!redis) {
+    recordAiMetric('AI_CACHE_MISS');
+    return null;
+  }
   try {
     if (redis.status === 'wait') await redis.connect();
     const value = await redis.get(key);
-    if (!value) return null;
+    if (!value) {
+      recordAiMetric('AI_CACHE_MISS');
+      return null;
+    }
+    recordAiMetric('AI_CACHE_HIT', { backend: 'redis' });
     return JSON.parse(value);
   } catch {
+    recordAiMetric('AI_CACHE_MISS');
     return null;
   }
 }

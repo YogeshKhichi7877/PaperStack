@@ -56,3 +56,35 @@ test('shows the reason returned for a zero-question extraction', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent(reason);
   expect(toast).toHaveBeenCalledWith(reason, 'error');
 });
+
+test('suppresses a duplicate extraction click while the first request is active', async () => {
+  let finishRequest;
+  extractQuestionsForPaper.mockReturnValue(new Promise((resolve) => {
+    finishRequest = resolve;
+  }));
+  render(<HelmetProvider><AdminQuestionExtractionPage toast={jest.fn()} /></HelmetProvider>);
+
+  const button = await screen.findByRole('button', { name: 'Extract questions' });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  expect(extractQuestionsForPaper).toHaveBeenCalledTimes(1);
+
+  finishRequest({ result: { extractionStatus: 'complete', totalQuestionCount: 2 } });
+  await waitFor(() => expect(getQuestionExtractionPapers).toHaveBeenCalledTimes(2));
+});
+
+test('uses structured retry timing for an extraction limiter response', async () => {
+  extractQuestionsForPaper.mockRejectedValue({ response: { data: {
+    code: 'QUESTION_EXTRACTION_RATE_LIMITED',
+    message: 'Question extraction is receiving too many new jobs.',
+    retryAfterSeconds: 12,
+  } } });
+  const toast = jest.fn();
+  render(<HelmetProvider><AdminQuestionExtractionPage toast={toast} /></HelmetProvider>);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Extract questions' }));
+  await waitFor(() => expect(toast).toHaveBeenCalledWith(
+    'Question extraction is receiving too many new jobs. Retry in about 12 seconds.',
+    'error'
+  ));
+});

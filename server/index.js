@@ -75,6 +75,7 @@ const createQuestionSolutionRoutes = require('./routes/questionSolutionRoutes');
 const createAdminQuestionSolutionRoutes = require('./routes/adminQuestionSolutionRoutes');
 const { createContributorProfileRoutes } = require('./routes/contributorProfileRoutes');
 const { createAuthMiddleware } = require('./middleware/auth');
+const { createRateLimiters } = require('./middleware/aiRateLimiters');
 const { PHOTO_TYPES, normalizeDisplayName, validDisplayName, validPhoto } = require('./services/profileValidation');
 const { parseCsvLine } = require('./utils/csv');
 const { findHardestSubject } = require('./utils/analytics');
@@ -103,6 +104,11 @@ if (process.env.NODE_ENV === 'production') {
 }
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 const { authenticate, authenticateAdmin } = createAuthMiddleware(JWT_SECRET);
+const {
+  generalApiLimiter,
+  studentAiBurstLimiter,
+  studentAiQuotaLimiter,
+} = createRateLimiters(process.env);
 const ALLOWED_EMAIL_DOMAIN = 'iiitsurat.ac.in';
 
 function maskValue(value) {
@@ -299,7 +305,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  exposedHeaders: ['Content-Disposition'],
+  exposedHeaders: ['Content-Disposition', 'Retry-After', 'RateLimit', 'RateLimit-Policy'],
 }));
 app.use(express.json({ limit: '2mb' }));
 app.use(
@@ -309,14 +315,22 @@ app.use(
     },
   })
 );
-app.use('/api/', rateLimit({
-  windowMs: 2 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-}));
-const aiRequestLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'AI request limit reached. Please try again later.' } });
-app.use(['/api/ask-paperstack/query', '/api/question-assistant/:questionId/query', '/api/mock-exams/generate', '/api/mock-exams/regenerate-question', '/api/mock-evaluation/evaluate'], (req, res, next) => req.method === 'POST' ? authenticate(req, res, () => aiRequestLimit(req, res, next)) : next());
+app.use('/api/', generalApiLimiter);
+const studentAiPaths = [
+  '/api/ask-paperstack/query',
+  '/api/question-assistant/:questionId/query',
+  '/api/mock-exams/generate',
+  '/api/mock-exams/regenerate-question',
+  '/api/mock-evaluation/evaluate',
+];
+app.use(studentAiPaths, (req, res, next) => {
+  if (req.method !== 'POST') return next();
+  return authenticate(req, res, () => studentAiBurstLimiter(
+    req,
+    res,
+    () => studentAiQuotaLimiter(req, res, next)
+  ));
+});
 app.use(['/api/important-topics/cache/clear', '/api/pyq-intelligence/cache/clear', '/api/revision-sheets/cache/clear', '/api/exam-war-room/cache/clear'], authenticateAdmin);
 app.use(compression());
 app.use('/api', requireDatabase(mongoose.connection));

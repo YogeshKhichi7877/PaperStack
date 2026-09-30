@@ -1,6 +1,7 @@
 import React, {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -78,6 +79,7 @@ export default function QuestionAssistantPanel({
     sending,
     setSending,
   ] = useState(false);
+  const requestActive = useRef(false);
 
 
   useEffect(() => {
@@ -158,7 +160,7 @@ export default function QuestionAssistantPanel({
 
     if (
       !query ||
-      sending ||
+      sending || requestActive.current ||
       !questionId
     ) {
       return;
@@ -177,6 +179,7 @@ export default function QuestionAssistantPanel({
     );
 
     setInput('');
+    requestActive.current = true;
     setSending(true);
 
     try {
@@ -231,6 +234,7 @@ export default function QuestionAssistantPanel({
         );
       }
     } finally {
+      requestActive.current = false;
       setSending(false);
     }
   }
@@ -246,7 +250,8 @@ export default function QuestionAssistantPanel({
       return;
     }
     if (action.key === 'practice') {
-      if (sending) return;
+      if (sending || requestActive.current) return;
+      requestActive.current = true;
       setSending(true);
       try {
         const data = await getMiniPractice({ questionId, limit: 5 });
@@ -258,7 +263,7 @@ export default function QuestionAssistantPanel({
         trackProductEvent('mini_practice_start', { routeKey: 'question_assistant', type: 'question' }).catch(() => {});
         onAnswered?.();
       } catch { toast?.('Could not build a practice set.', 'error'); }
-      finally { setSending(false); }
+      finally { requestActive.current = false; setSending(false); }
       return;
     }
     submit(action.query);

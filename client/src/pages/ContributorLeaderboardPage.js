@@ -18,14 +18,19 @@ import {
   ArrowRight,
   Award,
   BookOpen,
+  Crown,
   FileText,
+  Flame,
   FolderUp,
-  HeartHandshake,
   LibraryBig,
+  Medal,
   Search,
   Sparkles,
   Target,
   Trophy,
+  TrendingUp,
+  Users,
+  Zap,
   X,
 } from 'lucide-react';
 
@@ -35,6 +40,7 @@ import {
 } from '../services/contributorApi';
 
 import './ContributorPages.css';
+import './ContributorLeaderboardPage.css';
 
 /* =========================================================
    HELPERS
@@ -125,6 +131,119 @@ function getPrimaryBadge(
   return (
     profile?.badges?.[0] ||
     'Contributor'
+  );
+}
+
+function PodiumCard({
+  profile,
+  leaderXp,
+}) {
+  const rank = Number(
+    profile.rank
+  );
+
+  const xpPercent = Math.max(
+    5,
+    Math.min(
+      100,
+      Math.round(
+        (Number(
+          profile.xp || 0
+        ) /
+          Math.max(
+            1,
+            leaderXp
+          )) *
+          100
+      )
+    )
+  );
+
+  return (
+    <Link
+      to={`/contributors/${profile.userId}`}
+      className={`cl-podium-card cl-podium-card--${rank}`}
+    >
+      <div className="cl-podium-rank">
+        {rank === 1 ? (
+          <Crown size={20} />
+        ) : (
+          <Medal size={18} />
+        )}
+
+        <span>
+          #{rank}
+        </span>
+      </div>
+
+      <Avatar
+        profile={profile}
+        large
+      />
+
+      <span className="cl-podium-badge">
+        {getPrimaryBadge(
+          profile
+        )}
+      </span>
+
+      <h3>{profile.name}</h3>
+
+      <div className="cl-podium-xp">
+        <strong>
+          {formatNumber(
+            profile.xp
+          )}
+        </strong>
+
+        <span>XP</span>
+      </div>
+
+      <div
+        className="cl-podium-progress"
+        aria-label={`${xpPercent}% of the leading XP total`}
+      >
+        <i
+          style={{
+            width: `${xpPercent}%`,
+          }}
+        />
+      </div>
+
+      <div className="cl-podium-stats">
+        <span>
+          <b>
+            {formatNumber(
+              profile.approvedPapers
+            )}
+          </b>
+          Papers
+        </span>
+
+        <span>
+          <b>
+            {formatNumber(
+              profile.approvedResources
+            )}
+          </b>
+          Resources
+        </span>
+
+        <span>
+          <b>
+            {formatNumber(
+              profile.totalImpact
+            )}
+          </b>
+          Impact
+        </span>
+      </div>
+
+      <span className="cl-podium-open">
+        View profile
+        <ArrowRight size={14} />
+      </span>
+    </Link>
   );
 }
 
@@ -408,6 +527,89 @@ export default function ContributorLeaderboardPage({
       [leaderboard]
     );
 
+  const leader =
+    topThree[0] ||
+    null;
+
+  const podiumProfiles =
+    useMemo(() => {
+      if (
+        topThree.length < 2
+      ) {
+        return topThree;
+      }
+
+      return [
+        topThree[1],
+        topThree[0],
+        ...topThree.slice(
+          2
+        ),
+      ];
+    }, [topThree]);
+
+  const nextRival =
+    useMemo(() => {
+      const rank = Number(
+        myProfile?.rank ||
+          0
+      );
+
+      if (rank <= 1) {
+        return null;
+      }
+
+      return (
+        leaderboard.find(
+          (profile) =>
+            Number(
+              profile.rank
+            ) ===
+            rank - 1
+        ) || null
+      );
+    }, [
+      leaderboard,
+      myProfile,
+    ]);
+
+  const xpToNextRank =
+    nextRival
+      ? Math.max(
+          1,
+          Number(
+            nextRival.xp ||
+              0
+          ) -
+            Number(
+              myProfile?.xp ||
+                0
+            ) +
+            1
+        )
+      : 0;
+
+  const myLeaderProgress =
+    myProfile
+      ? Math.max(
+          2,
+          Math.min(
+            100,
+            Math.round(
+              (Number(
+                myProfile.xp ||
+                  0
+              ) /
+                Math.max(
+                  1,
+                  maxXp
+                )) *
+                100
+            )
+          )
+        )
+      : 0;
+
   /* =========================================================
      FILTERED BOARD
   ========================================================= */
@@ -472,94 +674,133 @@ export default function ContributorLeaderboardPage({
     <main className="contributor-page-shell">
       <Helmet>
         <title>
-          Contributors -
+          Contributor Leaderboard -
           PaperStack
         </title>
 
         <meta
           name="description"
-          content="PaperStack contributor honor board for students building the IIIT Surat academic archive."
+          content="Climb the PaperStack contributor leaderboard by sharing useful papers, solutions and study resources."
         />
       </Helmet>
 
-      {/* ===================================================
-          EDITORIAL HEADER
-      =================================================== */}
+      <section className="cl-arena-hero">
+        <div className="cl-arena-glow" />
 
-      <section className="contributor-honor-header">
-        <div className="contributor-honor-copy">
-          <span className="contributor-eyebrow">
-            <HeartHandshake
-              size={15}
-            />
-
-            PaperStack Community
+        <div className="cl-arena-copy">
+          <span className="cl-kicker">
+            <Flame size={16} />
+            PaperStack rankings
           </span>
 
           <h1>
-            The people
-            <br />
-
+            Build the archive.
             <span>
-              behind the archive.
+              Climb the ranks.
             </span>
           </h1>
 
           <p>
-            Every approved paper,
-            solution and study resource
-            adds something useful to the
-            archive. This board
-            recognizes the students who
-            keep building it.
+            Earn XP by sharing the
+            papers, solutions and study
+            resources that move the
+            whole campus forward.
           </p>
 
-          <div className="contributor-hero-actions">
+          <div className="cl-hero-actions">
             <Link
-              className="contributor-primary-action"
+              className="cl-action cl-action--primary"
               to="/contribute"
             >
-              Contribute paper
-
-              <ArrowRight
-                size={14}
-              />
+              Start competing
+              <ArrowRight size={16} />
             </Link>
 
-            <Link
-              className="contributor-secondary-action"
-              to="/contribute-resource"
-            >
-              Share resource
-            </Link>
-
-            {user && (
+            {user ? (
               <Link
-                className="contributor-secondary-action"
+                className="cl-action cl-action--ghost"
                 to="/contributors/me"
               >
-                My profile
+                View my profile
+              </Link>
+            ) : (
+              <Link
+                className="cl-action cl-action--ghost"
+                to="/contribute-resource"
+              >
+                Share a resource
               </Link>
             )}
           </div>
         </div>
 
-        <div className="contributor-archive-ledger">
-          <header>
+        <aside className="cl-leader-spotlight">
+          <div className="cl-spotlight-head">
             <span>
-              Community ledger
+              <span className="cl-live-dot" />
+              Current leader
             </span>
 
-            <LibraryBig
-              size={18}
-            />
-          </header>
+            <Trophy size={20} />
+          </div>
 
+          {loading ? (
+            <div className="cl-spotlight-loading">
+              Loading standings…
+            </div>
+          ) : leader ? (
+            <>
+              <div className="cl-spotlight-player">
+                <div className="cl-spotlight-avatar">
+                  <Avatar
+                    profile={leader}
+                    large
+                  />
+                  <Crown size={18} />
+                </div>
+
+                <div>
+                  <span>
+                    {getPrimaryBadge(
+                      leader
+                    )}
+                  </span>
+                  <strong>
+                    {leader.name}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="cl-spotlight-score">
+                <span>Score to beat</span>
+                <strong>
+                  {formatNumber(
+                    leader.xp
+                  )}
+                  <small> XP</small>
+                </strong>
+              </div>
+
+              <Link
+                to={`/contributors/${leader.userId}`}
+                className="cl-spotlight-link"
+              >
+                See champion profile
+                <ArrowRight size={15} />
+              </Link>
+            </>
+          ) : (
+            <div className="cl-spotlight-loading">
+              The first contributor can
+              take the lead.
+            </div>
+          )}
+        </aside>
+
+        <div className="cl-arena-stats">
           <div>
-            <span>
-              Contributors
-            </span>
-
+            <Users size={18} />
+            <span>Competitors</span>
             <strong>
               {formatNumber(
                 leaderboard.length
@@ -568,10 +809,8 @@ export default function ContributorLeaderboardPage({
           </div>
 
           <div>
-            <span>
-              Papers
-            </span>
-
+            <BookOpen size={18} />
+            <span>Approved papers</span>
             <strong>
               {formatNumber(
                 totalApproved
@@ -580,10 +819,8 @@ export default function ContributorLeaderboardPage({
           </div>
 
           <div>
-            <span>
-              Resources
-            </span>
-
+            <LibraryBig size={18} />
+            <span>Study resources</span>
             <strong>
               {formatNumber(
                 totalResources
@@ -592,10 +829,8 @@ export default function ContributorLeaderboardPage({
           </div>
 
           <div>
-            <span>
-              Community impact
-            </span>
-
+            <TrendingUp size={18} />
+            <span>Community impact</span>
             <strong>
               {formatNumber(
                 archiveImpact
@@ -605,79 +840,45 @@ export default function ContributorLeaderboardPage({
         </div>
       </section>
 
-      {/* ===================================================
-          WHAT COUNTS
-      =================================================== */}
-
-      <section className="contributor-score-strip">
-        <div className="contributor-score-title">
+      <section className="cl-scoring-strip">
+        <div className="cl-scoring-intro">
+          <Zap size={18} />
           <span>
-            What builds XP?
+            <small>How to earn XP</small>
+            Make every upload count.
           </span>
-
-          <strong>
-            Useful work,
-            not activity for
-            activity's sake.
-          </strong>
         </div>
 
-        <div className="contributor-score-items">
-          <div>
-            <BookOpen
-              size={16}
-            />
+        <div className="cl-scoring-rule">
+          <BookOpen size={17} />
+          <span>
+            <strong>Papers</strong>
+            Approved PYQs
+          </span>
+        </div>
 
-            <span>
-              <strong>
-                Papers
-              </strong>
+        <div className="cl-scoring-rule">
+          <FileText size={17} />
+          <span>
+            <strong>Solutions</strong>
+            Helpful answers
+          </span>
+        </div>
 
-              Approved PYQs
-            </span>
-          </div>
+        <div className="cl-scoring-rule">
+          <FolderUp size={17} />
+          <span>
+            <strong>Resources</strong>
+            Notes and sheets
+          </span>
+        </div>
 
-          <div>
-            <FileText
-              size={16}
-            />
-
-            <span>
-              <strong>
-                Solutions
-              </strong>
-
-              Helpful answers
-            </span>
-          </div>
-
-          <div>
-            <FolderUp
-              size={16}
-            />
-
-            <span>
-              <strong>
-                Resources
-              </strong>
-
-              Notes & sheets
-            </span>
-          </div>
-
-          <div>
-            <Target
-              size={16}
-            />
-
-            <span>
-              <strong>
-                Requests
-              </strong>
-
-              Filled gaps
-            </span>
-          </div>
+        <div className="cl-scoring-rule">
+          <Target size={17} />
+          <span>
+            <strong>Requests</strong>
+            Fill archive gaps
+          </span>
         </div>
       </section>
 
@@ -685,39 +886,26 @@ export default function ContributorLeaderboardPage({
           MY CONTRIBUTOR PASS
       =================================================== */}
 
-      {myProfile && (
-        <section className="my-impact-card">
-          <div className="my-impact-rank">
-            <span>
-              My rank
-            </span>
+      {myProfile ? (
+        <section className="cl-rank-chase">
+          <div className="cl-rank-identity">
+            <div className="cl-rank-number">
+              <small>Your rank</small>
+              <strong>
+                {myProfile.rank
+                  ? `#${myProfile.rank}`
+                  : '—'}
+              </strong>
+            </div>
 
-            <strong>
-              {myProfile.rank
-                ? `#${myProfile.rank}`
-                : '—'}
-            </strong>
-          </div>
-
-          <div className="my-impact-identity">
             <Avatar
-              profile={
-                myProfile
-              }
+              profile={myProfile}
               large
             />
 
-            <div>
-              <span>
-                Contributor pass
-              </span>
-
-              <h2>
-                {
-                  myProfile.name
-                }
-              </h2>
-
+            <div className="cl-rank-name">
+              <span>Your position</span>
+              <h2>{myProfile.name}</h2>
               <p>
                 {getPrimaryBadge(
                   myProfile
@@ -726,67 +914,116 @@ export default function ContributorLeaderboardPage({
             </div>
           </div>
 
-          <div className="my-impact-metrics">
-            <div>
+          <div className="cl-rank-progress-wrap">
+            <div className="cl-rank-progress-copy">
+              <span>
+                {Number(
+                  myProfile.rank
+                ) === 1
+                  ? 'You set the pace'
+                  : nextRival
+                    ? `Next target: ${nextRival.name}`
+                    : 'Progress to the leader'}
+              </span>
+
               <strong>
+                {Number(
+                  myProfile.rank
+                ) === 1
+                  ? 'Defend the top spot'
+                  : nextRival
+                    ? `${formatNumber(
+                        xpToNextRank
+                      )} XP to overtake`
+                    : `${myLeaderProgress}% of leader XP`}
+              </strong>
+            </div>
+
+            <div
+              className="cl-rank-progress"
+              aria-label={`${myLeaderProgress}% of the leading XP total`}
+            >
+              <i
+                style={{
+                  width: `${myLeaderProgress}%`,
+                }}
+              />
+            </div>
+
+            <div className="cl-rank-xp-line">
+              <span>
                 {formatNumber(
                   myProfile.xp
-                )}
-              </strong>
-
-              <span>
+                )}{' '}
                 XP
               </span>
-            </div>
-
-            <div>
-              <strong>
-                {formatNumber(
-                  myProfile.approvedPapers
-                )}
-              </strong>
-
               <span>
-                Papers
-              </span>
-            </div>
-
-            <div>
-              <strong>
                 {formatNumber(
-                  myProfile.approvedResources
-                )}
-              </strong>
-
-              <span>
-                Resources
-              </span>
-            </div>
-
-            <div>
-              <strong>
-                {formatNumber(
-                  myProfile.totalImpact
-                )}
-              </strong>
-
-              <span>
-                Impact
+                  maxXp
+                )}{' '}
+                leader XP
               </span>
             </div>
           </div>
 
+          <div className="cl-rank-metrics">
+            <span>
+              <b>
+                {formatNumber(
+                  myProfile.approvedPapers
+                )}
+              </b>
+              Papers
+            </span>
+            <span>
+              <b>
+                {formatNumber(
+                  myProfile.approvedResources
+                )}
+              </b>
+              Resources
+            </span>
+            <span>
+              <b>
+                {formatNumber(
+                  myProfile.totalImpact
+                )}
+              </b>
+              Impact
+            </span>
+          </div>
+
           <Link
             to="/contributors/me"
-            className="contributor-inline-link"
+            className="cl-rank-link"
           >
             Open profile
-
-            <ArrowRight
-              size={13}
-            />
+            <ArrowRight size={15} />
           </Link>
         </section>
+      ) : (
+        !loading && (
+          <section className="cl-rank-chase cl-rank-chase--starter">
+            <span className="cl-starter-icon">
+              <Zap size={20} />
+            </span>
+            <div>
+              <small>Your climb starts here</small>
+              <strong>
+                Make your first approved
+                contribution and enter the
+                standings.
+              </strong>
+            </div>
+            <Link
+              to="/contribute"
+              className="cl-rank-link"
+            >
+              Enter the race
+              <ArrowRight size={15} />
+            </Link>
+          </section>
+        )
       )}
 
       {/* ===================================================
@@ -797,140 +1034,33 @@ export default function ContributorLeaderboardPage({
         topThree.length >
           0 && (
         <section className="contributor-recognition-section">
-          <header className="contributor-section-heading">
+          <header className="cl-section-heading">
             <div>
-              <span>
-                Archive Honor Board
+              <span className="cl-kicker cl-kicker--light">
+                <Trophy size={15} />
+                Hall of champions
               </span>
 
               <h2>
-                Leading contributors
+                The podium
               </h2>
             </div>
 
             <p>
-              The current top three by
-              contribution XP.
+              The top three contributors
+              in the current all-time
+              standings.
             </p>
           </header>
 
-          <div className="contributor-honor-board">
-            {topThree.map(
-              (
-                profile,
-                index
-              ) => (
-                <Link
-                  key={
-                    profile.userId
-                  }
-                  to={`/contributors/${profile.userId}`}
-                  className={`contributor-honor-row rank-${profile.rank}`}
-                >
-                  <div className="contributor-honor-position">
-                    <RankMark
-                      rank={
-                        profile.rank
-                      }
-                      large
-                    />
-
-                    {index ===
-                      0 && (
-                      <Trophy
-                        size={17}
-                      />
-                    )}
-                  </div>
-
-                  <Avatar
-                    profile={
-                      profile
-                    }
-                    large
-                  />
-
-                  <div className="contributor-honor-name">
-                    <span>
-                      {getPrimaryBadge(
-                        profile
-                      )}
-                    </span>
-
-                    <h3>
-                      {
-                        profile.name
-                      }
-                    </h3>
-
-                    <p>
-                      {
-                        profile.approvedPapers ||
-                        0
-                      }{' '}
-                      papers
-                      {' · '}
-                      {
-                        profile.approvedResources ||
-                        0
-                      }{' '}
-                      resources
-                    </p>
-                  </div>
-
-                  <div className="contributor-honor-xp">
-                    <span>
-                      Contribution XP
-                    </span>
-
-                    <strong>
-                      {formatNumber(
-                        profile.xp
-                      )}
-                    </strong>
-
-                    <div>
-                      <i
-                        style={{
-                          width:
-                            `${Math.max(
-                              6,
-                              Math.min(
-                                100,
-                                Math.round(
-                                  (
-                                    Number(
-                                      profile.xp ||
-                                        0
-                                    ) /
-                                    maxXp
-                                  ) *
-                                    100
-                                )
-                              )
-                            )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="contributor-honor-impact">
-                    <span>
-                      Impact
-                    </span>
-
-                    <strong>
-                      {formatNumber(
-                        profile.totalImpact
-                      )}
-                    </strong>
-                  </div>
-
-                  <ArrowRight
-                    className="contributor-honor-arrow"
-                    size={15}
-                  />
-                </Link>
+          <div className="cl-podium">
+            {podiumProfiles.map(
+              (profile) => (
+                <PodiumCard
+                  key={profile.userId}
+                  profile={profile}
+                  leaderXp={maxXp}
+                />
               )
             )}
           </div>
@@ -943,22 +1073,23 @@ export default function ContributorLeaderboardPage({
 
       <section className="contributor-board-section">
         <div className="contributor-board-toolbar">
-          <div className="contributor-section-heading">
+          <div className="cl-section-heading cl-section-heading--board">
             <div>
-              <span>
-                Full Ledger
+              <span className="cl-kicker cl-kicker--light">
+                <TrendingUp size={15} />
+                All-time standings
               </span>
 
               <h2>
-                Contributor board
+                Chase the next rank
               </h2>
             </div>
 
             <p>
-              Search the community or
-              compare contributors by
-              XP, archive impact,
-              papers or resources.
+              Every approved contribution
+              changes the board. Search
+              players or compare the stats
+              behind their position.
             </p>
           </div>
 
@@ -1168,7 +1299,12 @@ export default function ContributorLeaderboardPage({
                           profile.userId
                         }
                         to={`/contributors/${profile.userId}`}
-                        className="contributor-ledger-row"
+                        className={`contributor-ledger-row ${
+                          myProfile?.userId ===
+                          profile.userId
+                            ? 'is-current-user'
+                            : ''
+                        }`}
                       >
                         <div className="contributor-ledger-rank">
                           <RankMark
@@ -1302,7 +1438,12 @@ export default function ContributorLeaderboardPage({
                   profile
                 ) => (
                   <Link
-                    className="contributor-mobile-card"
+                    className={`contributor-mobile-card ${
+                      myProfile?.userId ===
+                      profile.userId
+                        ? 'is-current-user'
+                        : ''
+                    }`}
                     to={`/contributors/${profile.userId}`}
                     key={
                       profile.userId
@@ -1411,20 +1552,19 @@ export default function ContributorLeaderboardPage({
           />
 
           <span>
-            PaperStack belongs to the
-            students who keep improving
-            it.
+            Your next upload could change
+            the standings.
           </span>
         </div>
 
         <p>
-          Have a paper, solution,
-          formula sheet or notes that
-          could help someone else?
+          Share a paper, solution, formula
+          sheet or notes. Help the next
+          student and earn your place.
         </p>
 
         <Link to="/contribute-resource">
-          Add to the archive
+          Make your move
 
           <ArrowRight
             size={14}

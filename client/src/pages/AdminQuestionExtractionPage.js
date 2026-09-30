@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   extractQuestionBatch,
@@ -21,7 +21,7 @@ async function waitForExtractionJob(jobId) {
     const job = response?.job;
     if (['complete', 'partial'].includes(job?.status)) return job.result;
     if (job?.status === 'failed') throw new Error(job.error || 'Question extraction failed');
-    await new Promise((resolve) => setTimeout(resolve, 750));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
   }
   throw new Error('Question extraction is still processing. Refresh this page to check its status.');
 }
@@ -36,6 +36,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
   const [batchRunning, setBatchRunning] = useState(false);
   const [useAiFallback, setUseAiFallback] = useState(null);
   const [lastResult, setLastResult] = useState(null);
+  const activeRequests = useRef(new Set());
   const aiFallbackEnabled = useAiFallback ?? Boolean(system?.ai?.configured);
 
   const load = useCallback(async () => {
@@ -102,7 +103,10 @@ export default function AdminQuestionExtractionPage({ toast }) {
   }, [papers, filter, search]);
 
   const runOne = async (paper, force = false) => {
-    setRunningId(String(paper._id));
+    const paperId = String(paper._id);
+    if (activeRequests.current.has(paperId)) return;
+    activeRequests.current.add(paperId);
+    setRunningId(paperId);
     setLastResult(null);
 
     try {
@@ -111,6 +115,9 @@ export default function AdminQuestionExtractionPage({ toast }) {
         allowAi: aiFallbackEnabled,
         background: true,
       });
+      setPapers((current) => current.map((item) => String(item._id) === paperId
+        ? { ...item, questionExtractionStatus: response?.job?.status || 'queued' }
+        : item));
       const result = response?.queued
         ? await waitForExtractionJob(response.job?.id)
         : response?.result;
@@ -128,11 +135,14 @@ export default function AdminQuestionExtractionPage({ toast }) {
         await load();
       }
       const message =
+        error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
         'Question extraction failed';
-      if (toast) toast(message, 'error');
+      const retryAfter = Number(error.response?.data?.retryAfterSeconds || 0);
+      if (toast) toast(retryAfter ? `${message} Retry in about ${retryAfter} seconds.` : message, 'error');
     } finally {
+      activeRequests.current.delete(paperId);
       setRunningId('');
     }
   };
@@ -161,6 +171,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
       await load();
     } catch (error) {
       const message =
+        error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
         'Batch extraction failed';
@@ -294,6 +305,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
             {filtered.map((paper) => {
               const paperStatus = paper.questionExtractionStatus || 'not_started';
               const isRunning = runningId === String(paper._id);
+              const isQueued = ['queued', 'processing'].includes(paperStatus);
 
               return (
                 <article className="qe-paper" key={paper._id}>
@@ -318,10 +330,12 @@ export default function AdminQuestionExtractionPage({ toast }) {
                     <button
                       type="button"
                       onClick={() => runOne(paper, paperStatus === 'complete')}
-                      disabled={isRunning || !paper.hasPdf}
+                      disabled={isRunning || isQueued || !paper.hasPdf}
                     >
                       {isRunning
-                        ? 'Extracting…'
+                        ? 'Queued / Processing…'
+                        : isQueued
+                          ? paperStatus === 'queued' ? 'Queued…' : 'Processing…'
                         : paperStatus === 'complete'
                           ? 'Re-extract'
                           : 'Extract questions'}

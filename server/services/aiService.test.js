@@ -1,9 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { aiAvailable, generateForTask, generateResultForTask, generateText, modelForProvider, providerOrder, taskStatus } = require('./aiService');
+const { aiAvailable, generateForTask, generateResultForTask, generateText, modelForProvider,
+  providerOrder, resetAiRuntimeState, taskStatus } = require('./aiService');
 
 const env = { AI_ENABLED: 'true', GEMINI_API_KEY: 'test-gemini-key', GROQ_API_KEY: 'test-groq-key',
-  GEMINI_MODEL: 'test-gemini', GROQ_MODEL: 'test-groq', AI_MAX_RETRIES: '0' };
+  GEMINI_MODEL: 'test-gemini', GROQ_MODEL: 'test-groq', AI_MAX_RETRIES: '0',
+  QUESTION_EXTRACTION_AI_ENABLED: 'true',
+  QUESTION_EXTRACTION_GEMINI_API_KEY: 'test-extraction-key',
+  QUESTION_EXTRACTION_GEMINI_MODEL: 'test-extraction-model',
+  QUESTION_EXTRACTION_AI_MAX_RETRIES: '0' };
 const groqReply = (content = 'Answer') => ({ ok: true,
   json: async () => ({ choices: [{ message: { content } }] }) });
 const geminiReply = (content = 'Answer') => ({ ok: true,
@@ -11,7 +16,7 @@ const geminiReply = (content = 'Answer') => ({ ok: true,
 
 test('routing is task based and reports provider availability', () => {
   assert.deepEqual(providerOrder(env, 'QUESTION_TUTOR'), ['groq', 'gemini']);
-  assert.deepEqual(providerOrder(env, 'QUESTION_EXTRACTION_VISUAL'), ['gemini', 'groq']);
+  assert.deepEqual(providerOrder(env, 'QUESTION_EXTRACTION_VISUAL'), ['gemini']);
   assert.deepEqual(providerOrder({ ...env, GROQ_API_KEY: '' }, 'QUESTION_TUTOR'), ['gemini']);
   assert.equal(aiAvailable({ ...env, AI_ENABLED: 'false' }, 'QUESTION_TUTOR'), false);
   assert.deepEqual(taskStatus('QUESTION_TUTOR', env),
@@ -39,8 +44,12 @@ test('visual extraction sends PDF only to Gemini', async () => {
   const requests = [];
   const attachment = { buffer: Buffer.from('pdf'), mimeType: 'application/pdf' };
   await generateForTask('QUESTION_EXTRACTION_VISUAL', 'Extract questions', { attachment }, { env,
-    fetch: async (url, options) => { requests.push({ url, body: JSON.parse(options.body) }); return geminiReply(); } });
+    fetch: async (url, options) => {
+      requests.push({ url, headers: options.headers, body: JSON.parse(options.body) });
+      return geminiReply();
+    } });
   assert.match(requests[0].url, /generativelanguage/);
+  assert.equal(requests[0].headers['x-goog-api-key'], 'test-extraction-key');
   assert.equal(requests[0].body.contents[0].parts[1].inline_data.mime_type, 'application/pdf');
   assert.equal(requests.length, 1);
   assert.deepEqual(providerOrder(env, 'QUESTION_EXTRACTION_VISUAL', { attachment }), ['gemini']);
@@ -106,19 +115,87 @@ test('truncated generation falls back before returning partial JSON', async () =
   assert.equal(urls.length, 2);
 });
 
-test('visual fallback uses extracted text and never sends raw PDF to Groq', async () => {
+test('question extraction never falls back to a general Groq or Gemini credential', async () => {
   const requests = [];
-  const answer = await generateForTask('QUESTION_EXTRACTION_VISUAL', 'Extract', {
+  await assert.rejects(generateForTask('QUESTION_EXTRACTION_VISUAL', 'Extract', {
     attachment: { buffer: Buffer.from('pdf'), mimeType: 'application/pdf' },
     fallbackText: 'Q1 Explain circuits', json: true,
   }, { env, fetch: async (url, options) => {
     requests.push({ url, body: JSON.parse(options.body) });
-    return requests.length === 1 ? { ok: false, status: 503 } : groqReply('{"questions":[]}');
-  } });
-  assert.equal(answer, '{"questions":[]}');
-  assert.match(requests[1].url, /api.groq.com/);
-  assert.match(requests[1].body.messages[1].content, /Q1 Explain circuits/);
-  assert.doesNotMatch(JSON.stringify(requests[1].body), /cGRm/);
+    return { ok: false, status: 503 };
+  } }), /temporarily unavailable/i);
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].url, /generativelanguage/);
+});
+
+test('question extraction uses only its dedicated Gemini key and model', async () => {
+  const requests = [];
+  await generateForTask('QUESTION_EXTRACTION_TEXT', 'Extract', {}, { env,
+    fetch: async (url, options) => {
+      requests.push({ url, options });
+      return geminiReply('{"questions":[]}');
+    } });
+  assert.match(requests[0].url, /test-extraction-model/);
+  assert.equal(requests[0].options.headers['x-goog-api-key'], 'test-extraction-key');
+  assert.notEqual(requests[0].options.headers['x-goog-api-key'], env.GEMINI_API_KEY);
+});
+
+test('student AI cannot use the question extraction credential', () => {
+  const extractionOnly = {
+    AI_ENABLED: 'true',
+    QUESTION_EXTRACTION_AI_ENABLED: 'true',
+    QUESTION_EXTRACTION_GEMINI_API_KEY: 'private-extraction-key',
+  };
+  assert.equal(aiAvailable(extractionOnly, 'QUESTION_TUTOR'), false);
+  assert.equal(aiAvailable(extractionOnly, 'QUESTION_EXTRACTION_TEXT'), true);
+});
+
+test('identical in-flight generation reuses one provider request', async () => {
+  resetAiRuntimeState();
+  let requests = 0;
+  const dependencies = { env, fetch: async () => {
+    requests += 1;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    return groqReply('Shared answer');
+  } };
+  const options = { inflightKey: 'public-question:q1:explain' };
+  const [first, second] = await Promise.all([
+    generateForTask('QUESTION_TUTOR', 'Explain', options, dependencies),
+    generateForTask('QUESTION_TUTOR', 'Explain', options, dependencies),
+  ]);
+  assert.equal(first, 'Shared answer');
+  assert.equal(second, 'Shared answer');
+  assert.equal(requests, 1);
+});
+
+test('repeated transient failures open a short circuit and skip the unhealthy provider', async () => {
+  resetAiRuntimeState();
+  const urls = [];
+  const healthEnv = { ...env, AI_CIRCUIT_FAILURE_THRESHOLD: '3' };
+  const request = async (url) => {
+    urls.push(url);
+    return url.includes('groq.com') ? { ok: false, status: 503 } : geminiReply('Fallback');
+  };
+  for (let index = 0; index < 4; index += 1) {
+    await generateForTask('QUESTION_TUTOR', 'Explain', {}, { env: healthEnv, fetch: request });
+  }
+  assert.equal(urls.filter((url) => url.includes('groq.com')).length, 3);
+  assert.equal(urls.filter((url) => url.includes('generativelanguage')).length, 4);
+  resetAiRuntimeState();
+});
+
+test('exhausted providers return a provider-neutral final error', async () => {
+  resetAiRuntimeState();
+  await assert.rejects(generateForTask('QUESTION_TUTOR', 'Explain', {}, {
+    env,
+    fetch: async () => ({ ok: false, status: 429 }),
+  }), (error) => {
+    assert.equal(error.code, 'AI_UNAVAILABLE');
+    assert.equal(error.message, 'PaperStack AI is temporarily unavailable.');
+    assert.doesNotMatch(error.message, /groq|gemini|429/i);
+    return true;
+  });
+  resetAiRuntimeState();
 });
 
 test('generic compatibility route is text first', async () => {

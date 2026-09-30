@@ -459,6 +459,7 @@ async function askAi({
   const answer = await generateForTask('QUESTION_TUTOR', prompt, {
     temperature: 0.25,
     maxOutputTokens: 1200,
+    inflightKey: aiCache.hashContent(reusableInput),
   });
   const stored = await storeReusableAnswer({ ...reusableInput, answer, model: modelForTask() });
   const result = {
