@@ -1917,7 +1917,7 @@ export default function InteractiveQuestionsPage({
                 className="iq-intelligence-link"
               >
                 <Sparkles size={17} />
-                PYQ Intelligence
+                Repeated topics
               </Link>
             </div>
           </div>

@@ -69,8 +69,8 @@ const CATEGORY_META = {
   },
 
   war_room: {
-    label: 'War Room',
-    short: 'War Room',
+    label: 'Exam Planner',
+    short: 'Planner',
     path: '/exam-war-room',
     icon: Target,
   },
@@ -447,7 +447,7 @@ export default function StreaksBadgesPage({
       <main className="sb-page">
         <Helmet>
           <title>
-            Study Progress -
+            My Progress -
             PaperStack
           </title>
         </Helmet>
@@ -461,7 +461,7 @@ export default function StreaksBadgesPage({
             </span>
 
             <span className="sb-kicker">
-              Study Progress
+              My Progress
             </span>
 
             <h1>
@@ -1616,11 +1616,11 @@ export default function StreaksBadgesPage({
                 </Link>
 
                 <Link to="/revision-sheets">
-                  Revision sheet
+                  Revision Notes
                 </Link>
 
                 <Link to="/exam-war-room">
-                  War Room
+                  Exam Planner
                 </Link>
 
                 <Link to="/mock-exams">

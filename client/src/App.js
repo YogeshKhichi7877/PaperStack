@@ -253,8 +253,8 @@ function Footer() {
               <li><Link to="/archive">Archive</Link></li>
               <li><Link to="/search">Search</Link></li>
               <li><Link to="/questions">Questions</Link></li>
-              <li><Link to="/revision-sheets">Revision Sheets</Link></li>
-              <li><Link to="/exam-war-room">Exam War Room</Link></li>
+              <li><Link to="/revision-sheets">Revision Notes</Link></li>
+              <li><Link to="/exam-war-room">Exam Planner</Link></li>
               <li><Link to="/mock-exams">Mock Exams</Link></li>
             </ul>
           </div>
@@ -265,8 +265,8 @@ function Footer() {
               <li><Link to="/contribute">Contribute</Link></li>
               <li><Link to="/faq">FAQ</Link></li>
               <li><Link to="/contact">Contact</Link></li>
-              <li><Link to="/testimonials">Student Experiences</Link></li>
-              <li><Link to="/report" className="footer-report-link"><TriangleAlert size={16} /> Report a Problem</Link></li>
+              <li><Link to="/testimonials">Student Stories</Link></li>
+              <li><Link to="/report" className="footer-report-link"><TriangleAlert size={16} /> Report Issue</Link></li>
             </ul>
           </div>
           <div className="footer-links">
@@ -322,11 +322,11 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     {
       title: 'Study & AI',
       items: [
-        { to: '/exam-mode', label: 'Exam Mode' },
-        { to: '/pyq-intelligence', label: 'PYQ Intelligence' },
-        { to: '/important-topics', label: 'Important Topics' },
-        { to: '/revision-sheets', label: 'Revision Sheets' },
-        { to: '/exam-war-room', label: 'Exam War Room' },
+        { to: '/exam-mode', label: 'ZIP download' },
+        { to: '/pyq-intelligence', label: 'Repeated topics' },
+        { to: '/important-topics', label: 'Top Exam Topics' },
+        { to: '/revision-sheets', label: 'Revision Notes' },
+        { to: '/exam-war-room', label: 'Exam Planner' },
         { to: '/ask-paperstack', label: 'Ask PaperStack' },
       ],
     },
@@ -334,14 +334,14 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
       title: 'Community',
       items: [
         { to: '/missing-papers', label: 'Missing Papers' },
-        { to: '/contribute-resource', label: 'Upload Resource' },
+        { to: '/contribute-resource', label: 'Upload Notes & Resources' },
         { to: '/contributors', label: 'Leaderboard' },
-        { to: '/verify-archive', label: 'Verify Archive' },
-        { to: '/branch-competition', label: 'Branch Competition' },
-        { to: '/trending', label: 'Trending' },
-        { to: '/streaks', label: 'Study Progress' },
-        { to: '/testimonials', label: 'Student Experiences' },
-        { to: '/report', label: 'Report a Problem' },
+        { to: '/verify-archive', label: 'Verify Papers' },
+        { to: '/branch-competition', label: 'Branch Rankings' },
+        { to: '/trending', label: 'Trending Papers' },
+        { to: '/streaks', label: 'My Progress' },
+        { to: '/testimonials', label: 'Student Stories' },
+        { to: '/report', label: 'Report Issue' },
       ],
     },
     {
@@ -1867,7 +1867,7 @@ function ExamModePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
         if (mounted) setPapers(list);
       } catch (error) {
         console.error('Exam mode papers load failed:', error);
-        if (toast) toast('Failed to load papers for Exam Mode', 'error');
+        if (toast) toast('Failed to load papers for ZIP download', 'error');
         if (mounted) setPapers([]);
       } finally {
         if (mounted) setLoading(false);
@@ -2091,8 +2091,8 @@ function ExamModePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
         </Link>
 
         <section className="exam-hero-panel">
-          <span className="exam-label">Exam Mode</span>
-          <h1>Subject Exam Prep Mode</h1>
+          <span className="exam-label">ZIP download</span>
+          <h1>Download a paper pack</h1>
           <p>
             Select your branch, semester, subject, and exam type to find available papers,
             missing years, and recommended practice papers.
@@ -2173,7 +2173,7 @@ function ExamModePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
 
         {loading ? (
           <section className="exam-result-card">
-            <PaperStackLoader label="Loading exam mode papers..." />
+            <PaperStackLoader label="Loading papers..." />
           </section>
         ) : (
           <section className="exam-results-section">

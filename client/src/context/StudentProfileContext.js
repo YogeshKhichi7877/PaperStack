@@ -149,9 +149,18 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
                 <span>{saving ? 'Saving…' : onboarding ? 'Continue' : 'Save changes'}</span>
                 {onboarding && !saving && <ArrowRight size={17} aria-hidden="true" />}
               </button>
+              {onboarding && (
+                <button type="button" className="student-profile-skip" onClick={onClose}>
+                  Skip for now
+                </button>
+              )}
             </div>
           </form>
-          <small>You can change this anytime later.</small>
+          <small>
+            {onboarding
+              ? 'Skip to browse papers from every semester.'
+              : 'You can change this anytime later.'}
+          </small>
         </div>
       </section>
     </div>

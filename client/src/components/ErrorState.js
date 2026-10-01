@@ -17,7 +17,7 @@ export function ErrorState({ notFound = false, onRetry }) {
           <a className={notFound ? 'primary' : ''} href="/"><Home size={18} /> Back to home</a>
           {notFound && <a href="/archive">Browse archive <ArrowRight size={18} /></a>}
         </div>
-        {!notFound && <a className="ps-error-report" href="/report">Report a problem</a>}
+        {!notFound && <a className="ps-error-report" href="/report">Report Issue</a>}
       </div>
       <div className="ps-error-scene" aria-hidden="true"><img src={notFound ? '/404_not_found.png' : '/oops.png'} alt="" /></div>
     </section>

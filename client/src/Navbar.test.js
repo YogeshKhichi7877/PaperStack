@@ -28,6 +28,23 @@ test('primary navigation has no Dashboard, More, or theme toggle', () => {
   expect(screen.queryByRole('button', { name: /toggle theme|dark mode|light mode/i })).not.toBeInTheDocument();
   expect(screen.getAllByRole('searchbox', { name: 'Search PaperStack' })).toHaveLength(2);
   expect(screen.getByRole('button', { name: 'Open site menu' })).toHaveAttribute('aria-controls', 'psnav-feature-menu');
+
+  for (const label of [
+    'ZIP download',
+    'Repeated topics',
+    'Top Exam Topics',
+    'Revision Notes',
+    'Exam Planner',
+    'Upload Notes & Resources',
+    'Verify Papers',
+    'Branch Rankings',
+    'Trending Papers',
+    'My Progress',
+    'Student Stories',
+    'Report Issue',
+  ]) {
+    expect(screen.getByText(label)).toBeInTheDocument();
+  }
 });
 
 test('account navigation keeps profile and semester editing inside Dashboard', () => {

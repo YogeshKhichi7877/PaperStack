@@ -547,7 +547,7 @@ export default function BranchCompetitionPage({
             error.response
               ?.data
               ?.error ||
-              'Could not load branch competition.',
+              'Could not load branch rankings.',
             'error'
           );
         }
@@ -662,13 +662,13 @@ export default function BranchCompetitionPage({
     <main className="bc-page">
       <Helmet>
         <title>
-          Branch League -
+          Branch Rankings -
           PaperStack
         </title>
 
         <meta
           name="description"
-          content="PaperStack community archive competition across IIIT Surat branches."
+          content="PaperStack contribution rankings across IIIT Surat branches."
         />
       </Helmet>
 
@@ -684,8 +684,7 @@ export default function BranchCompetitionPage({
                 size={15}
               />
 
-              IIIT Surat Archive
-              League
+              Branch Rankings
             </span>
 
             <h1>
@@ -941,7 +940,7 @@ export default function BranchCompetitionPage({
               </span>
 
               <h2>
-                Archive league table
+                Branch rankings
               </h2>
 
               <p>
@@ -1354,7 +1353,7 @@ export default function BranchCompetitionPage({
             </Link>
 
             <Link to="/verify-archive">
-              Verify archive
+              Verify Papers
             </Link>
           </div>
         </section>

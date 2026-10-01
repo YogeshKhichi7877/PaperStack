@@ -471,7 +471,7 @@ export default function PyqIntelligencePage({
         );
 
         toast?.(
-          'Failed to load subjects for PYQ Intelligence.',
+          'Failed to load subjects for Repeated topics.',
           'error'
         );
       })
@@ -535,7 +535,7 @@ export default function PyqIntelligencePage({
         toast?.(
           error.response?.data
             ?.error ||
-            'Failed to calculate PYQ Intelligence.',
+            'Failed to calculate Repeated topics.',
           'error'
         );
 
@@ -638,7 +638,7 @@ export default function PyqIntelligencePage({
     <main className="pi-page">
       <Helmet>
         <title>
-          PYQ Intelligence -
+          Repeated topics -
           PaperStack
         </title>
 
@@ -659,7 +659,7 @@ export default function PyqIntelligencePage({
               <GitCompareArrows
                 size={15}
               />
-              PYQ Intelligence
+              Repeated topics
             </span>
 
             <h1>

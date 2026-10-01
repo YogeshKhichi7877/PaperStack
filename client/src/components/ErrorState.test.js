@@ -23,5 +23,5 @@ test('recovery screen retries and links to support', () => {
   render(<ErrorState onRetry={onRetry} />);
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(onRetry).toHaveBeenCalledTimes(1);
-  expect(screen.getByRole('link', { name: 'Report a problem' })).toHaveAttribute('href', '/report');
+  expect(screen.getByRole('link', { name: 'Report Issue' })).toHaveAttribute('href', '/report');
 });

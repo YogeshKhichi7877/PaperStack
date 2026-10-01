@@ -812,7 +812,7 @@ export default function PaperStackHomePage({ user }) {
               </span>
 
               <div>
-                <h2>Exam War Room</h2>
+                <h2>Exam Planner</h2>
                 <p>
                   Decide what you should study next.
                 </p>
@@ -845,7 +845,7 @@ export default function PaperStackHomePage({ user }) {
               to="/exam-war-room"
               className="home-feature-button"
             >
-              Enter War Room
+              Open Exam Planner
               <ArrowRight size={18} />
             </Link>
           </div>
@@ -874,7 +874,7 @@ export default function PaperStackHomePage({ user }) {
                   size={20}
                   className="home-flame-icon"
                 />
-                Trending This Week
+                Trending Papers
               </h2>
 
               <p>
@@ -883,7 +883,7 @@ export default function PaperStackHomePage({ user }) {
             </div>
 
             <Link to="/trending">
-              View Trending
+              View Trending Papers
               <ArrowRight size={15} />
             </Link>
           </div>
@@ -958,7 +958,7 @@ export default function PaperStackHomePage({ user }) {
             </span>
 
             <div>
-              <h2>PYQ Intelligence</h2>
+              <h2>Repeated topics</h2>
 
               <p>
                 Understand what previous papers actually
@@ -1062,7 +1062,7 @@ export default function PaperStackHomePage({ user }) {
               </span>
 
               <span>
-                <strong>Important Topics</strong>
+                <strong>Top Exam Topics</strong>
                 <small>
                   Focus on concepts that deserve
                   attention
@@ -1149,7 +1149,7 @@ export default function PaperStackHomePage({ user }) {
           to="/contribute-resource"
           className="home-feature-button home-resource-button"
         >
-          Upload Resources
+          Upload Notes &amp; Resources
           <ArrowRight size={18} />
         </Link>
 
@@ -1197,14 +1197,14 @@ export default function PaperStackHomePage({ user }) {
         </div>
         <div className="home-whats-new-grid">
           {[
-            { title: 'Exam Mode', intro: 'Gather the papers for an upcoming exam in one focused view.' },
+            { title: 'ZIP download', intro: 'Gather the papers for an upcoming exam in one focused view.' },
             { title: 'Practice Questions', intro: 'Work through questions extracted from past papers.' },
             { title: 'Archive Analytics', intro: 'See how papers are viewed and downloaded across the archive.' },
             { title: 'Missing Papers', intro: 'Spot gaps in the archive and request papers students need.' },
             { title: 'Archive Progress', intro: 'See which subjects and exam years are covered or still missing.' },
-            { title: 'Verify Archive', intro: 'Check paper details and PDF quality to keep the archive reliable.' },
-            { title: 'Branch Competition', intro: 'See how each branch contributes to the shared library.' },
-            { title: 'Study Progress', intro: 'Follow your study activity and keep a consistent streak.' },
+            { title: 'Verify Papers', intro: 'Check paper details and PDF quality to keep the archive reliable.' },
+            { title: 'Branch Rankings', intro: 'See how each branch contributes to the shared library.' },
+            { title: 'My Progress', intro: 'Follow your study activity and keep a consistent streak.' },
             { title: 'Notifications', intro: 'Stay updated on contributions and activity that matters to you.' },
           ].map(({ title, intro }) => <div key={title} className="home-new-feature"><strong>{title}</strong><small>{intro}</small></div>)}
         </div>
@@ -1266,7 +1266,7 @@ export default function PaperStackHomePage({ user }) {
         onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setReviewsPaused(false); }}
       >
         <div className="landing-testimonials-heading">
-          <div><span>STUDENT VOICES</span><h2 id="landing-testimonials-heading">Latest student experiences</h2><p>Reviews from the PaperStack community, newest first.</p></div>
+          <div><span>STUDENT VOICES</span><h2 id="landing-testimonials-heading">Latest student stories</h2><p>Reviews from the PaperStack community, newest first.</p></div>
           <Link to="/testimonials">All reviews <ArrowRight size={17} /></Link>
         </div>
         <div className="landing-testimonials-grid" aria-live="off" key={activeTestimonialIndex}>

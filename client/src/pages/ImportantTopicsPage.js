@@ -754,7 +754,7 @@ export default function ImportantTopicsPage({
         );
 
         toast?.(
-          'Failed to load subjects for Important Topics.',
+          'Failed to load subjects for Top Exam Topics.',
           'error'
         );
       })
@@ -822,7 +822,7 @@ export default function ImportantTopicsPage({
         toast?.(
           error.response?.data
             ?.error ||
-            'Failed to calculate Important Topics.',
+            'Failed to calculate Top Exam Topics.',
           'error'
         );
 
@@ -1024,7 +1024,7 @@ export default function ImportantTopicsPage({
     <main className="it-page">
       <Helmet>
         <title>
-          Important Topics -
+          Top Exam Topics -
           PaperStack
         </title>
 
@@ -1044,7 +1044,7 @@ export default function ImportantTopicsPage({
             <span className="it-eyebrow">
               <Target size={15} />
 
-              Important Topics
+              Top Exam Topics
             </span>
 
             <h1>
@@ -1450,7 +1450,7 @@ export default function ImportantTopicsPage({
             />
 
             <strong>
-              Important Topics could not
+              Top Exam Topics could not
               be loaded.
             </strong>
 

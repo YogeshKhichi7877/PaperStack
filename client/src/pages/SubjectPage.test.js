@@ -19,15 +19,15 @@ test('resource categories stay named and visible, including empty ones, and filt
   render(<HelmetProvider><SubjectPage /></HelmetProvider>);
   const categories = await screen.findByRole('group', { name: 'Filter by resource type' });
   for (const label of ['Papers', 'Notes', 'Quizzes', 'Lab Material', 'Formula Sheets', 'Assignments', 'Viva Questions']) {
-    expect(within(categories).getByRole('button', { name: new RegExp(label) })).toBeVisible();
+    expect(within(categories).getByRole('button', { name: new RegExp(`^${label}\\b`) })).toBeVisible();
   }
-  fireEvent.click(within(categories).getByRole('button', { name: /Notes/ }));
+  fireEvent.click(within(categories).getByRole('button', { name: /^Notes\b/ }));
   expect(screen.getByRole('heading', { name: 'Rasterization notes' })).toBeVisible();
   expect(screen.queryByRole('heading', { name: 'Mid-sem 2026' })).not.toBeInTheDocument();
   fireEvent.click(within(categories).getByRole('button', { name: /Quizzes/ }));
   expect(screen.getByText('No quizzes have been added for this subject.')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Upload Quizzes' }).getAttribute('href')).toContain('kind=quiz');
-  expect(screen.getByRole('link', { name: 'Contribute Resource' }).getAttribute('href')).toContain('/contribute-resource?');
+  expect(screen.getByRole('link', { name: 'Upload Notes & Resources' }).getAttribute('href')).toContain('/contribute-resource?');
 });
 
 test('the subject hub error contribute link opens resource upload', async () => {

@@ -504,7 +504,7 @@ export default function ContributorProfilePage({
             className="cp-inline-action"
           >
             <UploadCloud size={15} />
-            Upload resource
+            Upload Notes &amp; Resources
           </Link>
         </section>
       )}

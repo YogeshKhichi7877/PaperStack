@@ -28,18 +28,18 @@ test('home rotates the newest five reviews and refreshes when the tab regains fo
   }));
   axios.get.mockImplementation((url) => Promise.resolve({ data: url.includes('testimonials') ? reviews : url.includes('analytics') ? {} : [] }));
 
-  const { container } = render(<PaperStackHomePage user={null} />);
-  await screen.findByRole('heading', { name: 'Latest student experiences' });
-  expect(container.querySelectorAll('.landing-review-card')).toHaveLength(5);
+  render(<PaperStackHomePage user={null} />);
+  await screen.findByRole('heading', { name: 'Latest student stories' });
+  expect(screen.getAllByRole('blockquote')).toHaveLength(5);
   expect(screen.queryByText('Review message 5')).not.toBeInTheDocument();
-  expect(container.querySelector('.landing-review-card')).toHaveTextContent('Review message 0');
+  expect(screen.getAllByRole('blockquote')[0]).toHaveTextContent('Review message 0');
   expect(screen.getAllByLabelText('5 out of 5 stars')).toHaveLength(1);
 
   fireEvent.click(screen.getByRole('button', { name: 'Next review' }));
-  expect(container.querySelector('.landing-review-card')).toHaveTextContent('Review message 1');
+  expect(screen.getAllByRole('blockquote')[0]).toHaveTextContent('Review message 1');
 
   reviews = [{ _id: 'new', displayName: 'New Student', message: 'A newly shared experience.', rating: 5, createdAt: new Date().toISOString() }, ...reviews];
   fireEvent.focus(window);
-  await waitFor(() => expect(container.querySelector('.landing-review-card')).toHaveTextContent('A newly shared experience.'));
-  expect(container.querySelectorAll('.landing-review-card')).toHaveLength(5);
+  await waitFor(() => expect(screen.getAllByRole('blockquote')[0]).toHaveTextContent('A newly shared experience.'));
+  expect(screen.getAllByRole('blockquote')).toHaveLength(5);
 });

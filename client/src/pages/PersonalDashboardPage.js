@@ -1739,7 +1739,7 @@ export default function PersonalDashboardPage({
                   </span>
 
                   <strong>
-                    Revision Sheets
+                    Revision Notes
                   </strong>
 
                   <small>
@@ -1766,7 +1766,7 @@ export default function PersonalDashboardPage({
                   </span>
 
                   <strong>
-                    War Room
+                    Exam Planner
                   </strong>
 
                   <small>
@@ -2140,7 +2140,7 @@ export default function PersonalDashboardPage({
 
               <span>
                 <strong>
-                  Study Progress
+                  My Progress
                 </strong>
 
                 <small>
@@ -2156,7 +2156,7 @@ export default function PersonalDashboardPage({
 
               <span>
                 <strong>
-                  Verify Archive
+                  Verify Papers
                 </strong>
 
                 <small>
@@ -2812,11 +2812,11 @@ export default function PersonalDashboardPage({
 
           <nav>
             <Link to="/trending">
-              Trending
+              Trending Papers
             </Link>
 
             <Link to="/branch-competition">
-              Branch League
+              Branch Rankings
             </Link>
 
             <Link to="/archive-progress">

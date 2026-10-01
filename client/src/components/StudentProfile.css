@@ -280,6 +280,11 @@
   margin-top: 25px;
 }
 
+.student-profile-dialog.is-onboarding .student-profile-actions {
+  flex-direction: column;
+  gap: 5px;
+}
+
 .student-profile-actions button {
   min-height: 50px;
   padding: 0 18px;
@@ -325,6 +330,21 @@
 .student-profile-cancel:hover {
   border-color: #7caaa9;
   background: #f5faf9;
+}
+
+.student-profile-actions .student-profile-skip {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: #527078;
+  font-size: 0.78rem;
+  box-shadow: none;
+}
+
+.student-profile-skip:hover {
+  background: #f1f8f6;
+  color: #076e73;
 }
 
 .student-profile-form-panel > small {
@@ -469,6 +489,10 @@
   .student-profile-input-wrap,
   .student-profile-actions button {
     min-height: 48px;
+  }
+
+  .student-profile-actions .student-profile-skip {
+    min-height: 34px;
   }
 }
 

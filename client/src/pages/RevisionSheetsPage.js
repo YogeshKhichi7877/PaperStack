@@ -511,7 +511,7 @@ export default function RevisionSheetsPage({
         recordStudyProgressOnce({
           entityType: 'revision',
           entityKey: `${subjectCode}:${examType || 'all'}`,
-          title: `${data?.subject?.subject || subjectCode} revision sheet`,
+          title: `${data?.subject?.subject || subjectCode} revision notes`,
           route: `/revision-sheets?subjectCode=${encodeURIComponent(subjectCode)}${examType ? `&examType=${encodeURIComponent(examType)}` : ''}`,
           subjectCode,
           status: 'in_progress',
@@ -528,7 +528,7 @@ export default function RevisionSheetsPage({
         const message =
           error.response?.data
             ?.error ||
-          'Could not prepare the revision sheet.';
+          'Could not prepare the revision notes.';
 
         setSheet(null);
         setLoadError(
@@ -773,7 +773,7 @@ export default function RevisionSheetsPage({
     <main className="rs-page">
       <Helmet>
         <title>
-          Revision Sheets -
+          Revision Notes -
           PaperStack
         </title>
 
@@ -795,7 +795,7 @@ export default function RevisionSheetsPage({
                 size={15}
               />
 
-              Revision Sheets
+              Revision Notes
             </span>
 
             <h1>
@@ -1168,7 +1168,7 @@ export default function RevisionSheetsPage({
                 <SaveButton
                   entityType="revision"
                   entityId={`${subjectCode}:${examType || 'all'}`}
-                  title={`${sheet.subject?.subject || subjectCode} revision sheet`}
+                  title={`${sheet.subject?.subject || subjectCode} revision notes`}
                   route={`/revision-sheets?subjectCode=${encodeURIComponent(subjectCode)}${examType ? `&examType=${encodeURIComponent(examType)}` : ''}`}
                   subjectCode={subjectCode}
                   toast={toast}

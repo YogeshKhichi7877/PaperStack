@@ -521,7 +521,7 @@ export default function VerificationPage({
     <main className="vq-page">
       <Helmet>
         <title>
-          Verify Archive -
+          Verify Papers -
           PaperStack
         </title>
 
@@ -543,7 +543,7 @@ export default function VerificationPage({
                 size={15}
               />
 
-              Archive Quality Desk
+              Verify Papers
             </span>
 
             <h1>

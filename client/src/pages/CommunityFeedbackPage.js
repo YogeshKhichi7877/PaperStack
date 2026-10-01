@@ -63,11 +63,11 @@ export function TestimonialsPage({ user, isAdmin }) {
   };
 
   return <main className="feedback-page testimonials-page">
-    <header className="feedback-heading testimonials-heading"><div><span className="testimonials-eyebrow"><MessageCircle size={18} /> THE PAPERSTACK COMMUNITY</span><h1>Student experiences</h1><p>Honest reviews. Shared by the students behind the stack.</p><a href="#share-experience">Share your experience <ArrowRight size={17} /></a></div><img src="/testimonials.png" alt="" /></header>
+    <header className="feedback-heading testimonials-heading"><div><span className="testimonials-eyebrow"><MessageCircle size={18} /> THE PAPERSTACK COMMUNITY</span><h1>Student Stories</h1><p>Honest reviews. Shared by the students behind the stack.</p><a href="#share-experience">Share your experience <ArrowRight size={17} /></a></div><img src="/testimonials.png" alt="" /></header>
     <div className="feedback-layout">
       <div className="testimonials-feed">
       <h2 className="testimonials-feed-title">Community reviews</h2>
-      <section className="feedback-list" aria-label="Student experiences">
+      <section className="feedback-list" aria-label="Student Stories">
         {items.length ? items.map((item) => <article className="feedback-item" key={item._id}>
           <div className="review-card-top"><Quote size={23} aria-hidden="true" />{item.rating ? <span className="review-stars" aria-label={`${item.rating} out of 5 stars`}>{[1, 2, 3, 4, 5].map((value) => <Star key={value} size={17} fill={value <= item.rating ? 'currentColor' : 'none'} aria-hidden="true" />)}</span> : <span className="review-unrated">Not rated</span>}</div>
           <p>{item.message}</p><div className="feedback-author"><span className="review-avatar" aria-hidden="true">{item.displayName?.slice(0, 1).toUpperCase()}</span><div><strong>{item.displayName}</strong><span>{[item.branch, item.semester ? `Semester ${item.semester}` : ''].filter(Boolean).join(' · ')}</span><time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleDateString('en-IN')}</time></div></div>
@@ -109,7 +109,7 @@ export function SiteReportPage({ user }) {
     }
   };
   return <main className="feedback-page feedback-report-page">
-    <div className="feedback-heading"><span><MessageSquareWarning size={16} /> Help improve PaperStack</span><h1>Report a problem</h1><p>Tell us what went wrong so the team can investigate it.</p></div>
+    <div className="feedback-heading"><span><MessageSquareWarning size={16} /> Help improve PaperStack</span><h1>Report Issue</h1><p>Tell us what went wrong so the team can investigate it.</p></div>
     {user ? <form className="feedback-form" onSubmit={submit}>
       <label htmlFor="report-category">Category</label><select id="report-category" required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option value="">Choose a category</option>{categories.map((category) => <option key={category}>{category}</option>)}</select>
       <label htmlFor="report-page">Page or feature</label><input id="report-page" maxLength={120} value={form.page} onChange={(event) => setForm({ ...form, page: event.target.value })} placeholder="e.g. Archive, Mock Exams" />

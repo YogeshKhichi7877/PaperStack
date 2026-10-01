@@ -627,7 +627,7 @@ function SubjectCard({
         <Link
           to={subject.links.warRoom}
         >
-          War Room
+          Exam Planner
         </Link>
 
         <Link to={subject.links.ask}>

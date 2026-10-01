@@ -1327,7 +1327,7 @@ export default function MockEvaluationPage({
                   <Target
                     size={15}
                   />
-                  War Room
+                  Exam Planner
                 </Link>
 
                 <Link

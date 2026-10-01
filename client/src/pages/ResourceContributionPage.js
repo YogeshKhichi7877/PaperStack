@@ -119,7 +119,7 @@ const FALLBACK_TYPES = [
   },
   {
     value: 'revision_sheet',
-    label: 'Revision Sheet',
+    label: 'Revision Notes',
     description:
       'Structured last-minute revision material.',
     icon: 'revision',
@@ -831,7 +831,7 @@ export default function ResourceContributionPage({
     <main className="rc-page">
       <Helmet>
         <title>
-          Contribute Resource -
+          Upload Notes &amp; Resources -
           PaperStack
         </title>
 
@@ -853,7 +853,7 @@ export default function ResourceContributionPage({
                 size={15}
               />
 
-              Contribution Desk
+              Upload Notes &amp; Resources
             </span>
 
             <h1>

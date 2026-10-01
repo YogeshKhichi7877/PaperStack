@@ -131,6 +131,23 @@ test('the close button dismisses onboarding only for the current mount', async (
   expect(await screen.findByRole('dialog', { name: "Let's get started" })).toBeInTheDocument();
 });
 
+test('Skip for now keeps the all-semesters profile and does not save onboarding', async () => {
+  const user = { username: 'new-student', name: 'New Student', semester: null, onboardingCompleted: false };
+  const { onUserUpdate } = renderProfile(user);
+
+  await screen.findByRole('dialog', { name: "Let's get started" });
+  expect(screen.getByText('Skip to browse papers from every semester.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.getByText('PaperStack content')).toBeInTheDocument();
+  expect(screen.getByLabelText('Current student profile')).toHaveTextContent('New Student||false');
+  expect(axios.patch).not.toHaveBeenCalled();
+  expect(onUserUpdate).not.toHaveBeenCalled();
+  expect(localStorage.getItem('userSemester')).toBeNull();
+  expect(localStorage.getItem('paperstack_preferred_semester')).toBeNull();
+});
+
 test('a returning student with a completed profile is not asked again', async () => {
   renderProfile({
     username: 'returning',

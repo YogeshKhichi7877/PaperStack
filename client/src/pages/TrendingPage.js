@@ -271,7 +271,7 @@ export default function TrendingPage({
     <main className="tr-page">
       <Helmet>
         <title>
-          Trending -
+          Trending Papers -
           PaperStack
         </title>
 
@@ -795,7 +795,7 @@ export default function TrendingPage({
                     </span>
 
                     <h2>
-                      Trending papers
+                      Trending Papers
                     </h2>
 
                     <p>

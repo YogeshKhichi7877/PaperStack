@@ -395,7 +395,7 @@ export default function ExamWarRoomPage({
         const message =
           error.response?.data
             ?.error ||
-          'Could not load War Room subjects.';
+          'Could not load Exam Planner subjects.';
 
         setLoadError(
           message
@@ -512,7 +512,7 @@ export default function ExamWarRoomPage({
         const message =
           error.response?.data
             ?.error ||
-          'Could not prepare the War Room.';
+          'Could not prepare the Exam Planner.';
 
         setRoom(null);
         setLoadError(
@@ -956,7 +956,7 @@ export default function ExamWarRoomPage({
     <main className="wr-page">
       <Helmet>
         <title>
-          Exam War Room -
+          Exam Planner -
           PaperStack
         </title>
 
@@ -978,7 +978,7 @@ export default function ExamWarRoomPage({
                 size={15}
               />
 
-              Exam War Room
+              Exam Planner
             </span>
 
             <h1>
@@ -1158,7 +1158,7 @@ export default function ExamWarRoomPage({
               <Target size={17} />
 
               <span>
-                Start your War Room
+                Start your Exam Planner
               </span>
             </div>
 
@@ -1343,7 +1343,7 @@ export default function ExamWarRoomPage({
             />
 
             <strong>
-              War Room is not available
+              Exam Planner is not available
               yet.
             </strong>
 
@@ -1440,7 +1440,7 @@ export default function ExamWarRoomPage({
 
                     <p>
                       PaperStack is reducing
-                      the War Room to short,
+                      the Exam Planner to short,
                       source-backed material
                       because the exam is
                       close.
@@ -3068,7 +3068,7 @@ export default function ExamWarRoomPage({
 
               <div>
                 <strong>
-                  About War Room guidance
+                  About Exam Planner guidance
                 </strong>
 
                 <p>

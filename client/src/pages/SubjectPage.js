@@ -26,7 +26,7 @@ const RESOURCE_TABS = [
   { value: 'quiz', label: 'Quizzes', short: 'Quizzes' },
   { value: 'viva_questions', label: 'Viva Questions', short: 'Viva' },
   { value: 'important_questions', label: 'Important Questions', short: 'Important' },
-  { value: 'revision_sheet', label: 'Revision Sheets', short: 'Revision' },
+  { value: 'revision_sheet', label: 'Revision Notes', short: 'Revision' },
   { value: 'syllabus', label: 'Syllabus', short: 'Syllabus' },
   { value: 'other', label: 'Other Resources', short: 'Other' },
 ];
@@ -233,7 +233,7 @@ export default function SubjectPage({ user, toast }) {
   const resourceContributionPath = `/contribute-resource${resourceContributionParams.toString() ? `?${resourceContributionParams.toString()}` : ''}`;
   const isPaperTab = activeKind === 'question_paper';
   const activeUploadPath = isPaperTab ? contributionPath : resourceContributionPath;
-  const activeUploadLabel = isPaperTab ? 'Upload Paper' : 'Upload Resource';
+  const activeUploadLabel = isPaperTab ? 'Upload Paper' : 'Upload Notes & Resources';
 
   const examParams = new URLSearchParams();
   if (firstBranch) examParams.set('branch', firstBranch);
@@ -306,8 +306,8 @@ export default function SubjectPage({ user, toast }) {
           </div>
           <p className="subject-hub-description">{summary.kindCounts?.question_paper || 0} papers · {summary.kindCounts?.solution || 0} solutions · {(summary.years || []).length} years in the archive</p>
           <div className="subject-hub-hero-actions">
-            <Link to={examModePath} className="subject-hub-primary-action">Open Exam Mode</Link>
-            <Link to={resourceContributionPath} className="subject-hub-secondary-action subject-hub-resource-upload-action">Contribute Resource</Link>
+            <Link to={examModePath} className="subject-hub-primary-action">ZIP download</Link>
+            <Link to={resourceContributionPath} className="subject-hub-secondary-action subject-hub-resource-upload-action">Upload Notes &amp; Resources</Link>
           </div>
         </div>
 
@@ -315,10 +315,10 @@ export default function SubjectPage({ user, toast }) {
 
       <nav className="subject-hub-tools" aria-label="Study this subject">
         <Link to={`/questions${studyQuery}`}>Practice questions</Link>
-        <Link to={`/pyq-intelligence${studyQuery}`}>PYQ patterns</Link>
-        <Link to={`/important-topics${studyQuery}`}>Important topics</Link>
-        <Link to={`/revision-sheets${studyQuery}`}>Revision sheet</Link>
-        <Link to={`/exam-war-room${studyQuery}`}>Exam War Room</Link>
+        <Link to={`/pyq-intelligence${studyQuery}`}>Repeated topics</Link>
+        <Link to={`/important-topics${studyQuery}`}>Top Exam Topics</Link>
+        <Link to={`/revision-sheets${studyQuery}`}>Revision Notes</Link>
+        <Link to={`/exam-war-room${studyQuery}`}>Exam Planner</Link>
         <Link to={`/mock-exams${studyQuery}`}>Mock exam</Link>
         <Link to={`/exam-war-room${studyQuery}&minutes=10`}>10-min sprint</Link>
         <Link to={`/exam-war-room${studyQuery}&minutes=30`}>30-min revision</Link>

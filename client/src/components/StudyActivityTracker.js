@@ -94,8 +94,8 @@ function resumableRoute(pathname) {
     };
   }
   const routes = [
-    ['/revision-sheets', 'revision', 'Revision sheets'],
-    ['/exam-war-room', 'war_room', 'Exam War Room'],
+    ['/revision-sheets', 'revision', 'Revision Notes'],
+    ['/exam-war-room', 'war_room', 'Exam Planner'],
     ['/mock-exams', 'mock', 'Mock exams'],
     ['/mock-evaluation', 'mock', 'Mock evaluation'],
   ];
