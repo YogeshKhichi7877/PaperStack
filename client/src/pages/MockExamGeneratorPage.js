@@ -49,6 +49,8 @@ import {
 } from '../utils/studyEvidence';
 
 import './MockExamGeneratorPage.css';
+import { useStudentProfile } from '../context/StudentProfileContext';
+import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 
 const MathAnswer = React.lazy(() => import('../components/MathAnswer'));
 
@@ -160,6 +162,7 @@ function OptionButton({
 export default function MockExamGeneratorPage({
   toast,
 }) {
+  const { semester } = useStudentProfile();
   const navigate =
     useNavigate();
 
@@ -319,7 +322,8 @@ export default function MockExamGeneratorPage({
           ).values(),
         ];
 
-        setSubjects(list);
+        const ordered = prioritizeSubjects(list, semester);
+        setSubjects(ordered);
 
         setSubjectsError('');
 
@@ -333,7 +337,7 @@ export default function MockExamGeneratorPage({
           setSubjectCode(
             (current) =>
               current ||
-              list[0]
+              preferredSubject(ordered, semester)
                 .subjectCode
           );
         }
@@ -363,7 +367,7 @@ export default function MockExamGeneratorPage({
     return () => {
       mounted = false;
     };
-  }, [toast]);
+  }, [semester, toast]);
 
   /* =========================================================
      DERIVED DATA
@@ -769,15 +773,9 @@ export default function MockExamGeneratorPage({
               </span>
             </h1>
 
-            <p>
-              Create subject-wise practice
-              papers using previous-year
-              questions and fresh questions
-              matched to your selected exam
-              style.
-            </p>
+            <p>Practice your subject before the real exam.</p>
 
-            <div className="me-hero-points">
+            <div className="me-hero-points" hidden>
               <span>
                 <Check size={14} />
                 Past-paper grounded

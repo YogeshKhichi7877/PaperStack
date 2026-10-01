@@ -6,7 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import logo from './assets/Paperstack_logo_wt2.png';
 import authLogo from './assets/Paperstack_auth_owl.png';
 import authWordmark from './assets/Paperstack_auth_wordmark.png';
-import { Bookmark, CalendarDays, Download, Eye, FileText, Link2, Search, Share2, ShieldCheck, TriangleAlert, BookOpen, Menu, ChevronDown, Cloud, Database, Monitor, Cpu, Network, Calculator } from 'lucide-react';
+import { ArrowRight, Bookmark, CalendarDays, Download, Eye, FileText, Link2, Search, Share2, ShieldCheck, TriangleAlert, BookOpen, Menu, ChevronDown, Cloud, Database, Monitor, Cpu, Network, Calculator, Users } from 'lucide-react';
 import PaperStackHomePage from './pages/PaperStackHomePage';
 import { TestimonialsPage, SiteReportPage } from './pages/CommunityFeedbackPage';
 import { OFFICIAL_BRANCHES, normalizeBranchList } from './config/branches';
@@ -66,6 +66,7 @@ import './styles/ReferenceNavbar.css';
 import './styles/ProductPolish.css';
 import PaperStackLoader from './components/PaperStackLoader';
 import { ErrorState } from './components/ErrorState';
+import { StudentProfileProvider, useStudentProfile } from './context/StudentProfileContext';
 
 function getPaperShareUrl(paper) {
   const baseUrl = FRONTEND_URL.replace(/\/$/, '');
@@ -301,7 +302,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const primaryItems = [
     { to: '/', label: 'Home' },
     { to: '/archive', label: 'Archive' },
-    { to: '/search', label: 'Search' },
+    { to: '/ask-paperstack', label: 'Ask PaperStack' },
     { to: '/questions', label: 'Questions' },
     { to: '/semester-survival', label: 'Survival' },
     { to: '/mock-exams', label: 'Mocks' },
@@ -337,6 +338,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     {
       title: 'Archive',
       items: [
+        { to: '/search', label: 'Search All Content' },
         { to: '/archive-progress', label: 'Archive Progress' },
         { to: '/analytics', label: 'Archive Analytics' },
       ],
@@ -370,6 +372,13 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     setMenuOpen(false);
   };
 
+  const submitNavSearch = (event) => {
+    event.preventDefault();
+    const query = navSearch.trim();
+    navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+    closeMenu();
+  };
+
   const userLabel =
     user?.name ||
     user?.username ||
@@ -386,12 +395,6 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     toast('Logged out successfully', 'info');
     closeMenu();
     navigate('/');
-  };
-
-  const submitNavSearch = (event) => {
-    event.preventDefault();
-    const query = navSearch.trim();
-    if (query) navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
   const exitAdmin = () => {
@@ -458,18 +461,28 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
         </Link>
       </div>
 
-      <div className="psnav-primary">
+      <div className="psnav-primary" aria-label="Primary navigation">
         {primaryItems.map(renderFeatureLink)}
 
       </div>
 
       <div className="psnav-actions">
-        <form className="psnav-search" onSubmit={submitNavSearch}><Search size={18} /><input type="search" value={navSearch} onChange={(event) => setNavSearch(event.target.value)} placeholder="Search papers, subjects, topics..." aria-label="Search PaperStack" /></form>
+        <form className="psnav-search" role="search" onSubmit={submitNavSearch}>
+          <Search size={17} aria-hidden="true" />
+          <input
+            type="search"
+            value={navSearch}
+            onChange={(event) => setNavSearch(event.target.value)}
+            aria-label="Search PaperStack"
+            placeholder="Search papers, subjects…"
+          />
+          <button type="submit" aria-label="Submit search"><ArrowRight size={16} /></button>
+        </form>
 
         {user && <NotificationNavButton />}
 
         {user ? (
-          <details className="psnav-profile"><summary title={userLabel}><span className="psnav-avatar">{userLabel.slice(0, 2).toUpperCase()}</span><span className="psnav-profile-label">{userLabel}</span><ChevronDown size={16} /></summary><div><Link to="/dashboard">Dashboard</Link><Link to="/contributors/me">Contributor Profile</Link><Link to="/notifications">Notifications</Link><Link to="/dashboard#profile">Edit Profile</Link>{!isAdmin && <Link to="/admin">Admin</Link>}{isAdmin && <button type="button" onClick={exitAdmin}>Exit admin</button>}<button type="button" onClick={logout}>Logout</button></div></details>
+          <details className="psnav-profile"><summary title={userLabel}><span className="psnav-avatar">{userLabel.slice(0, 2).toUpperCase()}</span><span className="psnav-profile-label">{userLabel}</span><ChevronDown size={16} /></summary><div><Link to="/dashboard">Dashboard</Link><Link to="/contributors/me">Contributor Profile</Link><Link to="/notifications">Notifications</Link>{!isAdmin && <Link to="/admin">Admin</Link>}{isAdmin && <button type="button" onClick={exitAdmin}>Exit admin</button>}<button type="button" onClick={logout}>Logout</button></div></details>
         ) : (
           <Link
             to="/login"
@@ -482,7 +495,18 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
       </div>
 
       <div id="psnav-feature-menu" className={`psnav-mobile-panel ${menuOpen ? 'open' : ''}`}>
-        <form className="psnav-mobile-search" onSubmit={(event) => { submitNavSearch(event); closeMenu(); }}><Search size={18} /><input type="search" value={navSearch} onChange={(event) => setNavSearch(event.target.value)} placeholder="Search papers, subjects, topics..." aria-label="Search PaperStack" /></form>
+        <form className="psnav-mobile-search" role="search" onSubmit={submitNavSearch}>
+          <Search size={17} aria-hidden="true" />
+          <input
+            type="search"
+            value={navSearch}
+            onChange={(event) => setNavSearch(event.target.value)}
+            aria-label="Search PaperStack"
+            placeholder="Search papers, subjects…"
+          />
+          <button type="submit" aria-label="Submit search"><ArrowRight size={16} /></button>
+        </form>
+
         <div className="psnav-mobile-primary">
           {user && <span className="psnav-mobile-user" title={userLabel}>{userLabel}</span>}
           {primaryItems.map(renderFeatureLink)}
@@ -970,11 +994,12 @@ function getArchiveSubjectIcon(paper) {
 }
 
 function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
+  const { semester } = useStudentProfile();
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSem, setFilterSem] = useState('');
+  const [filterSem, setFilterSem] = useState(() => String(semester || ''));
   const [filterExam, setFilterExam] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterBranch, setFilterBranch] = useState('');
@@ -1006,6 +1031,10 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   useEffect(() => {
     fetchPapers();
   }, [fetchPapers]);
+
+  useEffect(() => {
+    setFilterSem(String(semester || ''));
+  }, [semester]);
 
   useEffect(() => {
     axios.get(`${API_URL}/api/analytics`).then((res) => setAnalytics(res.data)).catch(() => setAnalytics(null));
@@ -1119,6 +1148,25 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
     window.open(`https://wa.me/?text=${encodeURIComponent(getPaperShareText(paper))}`, '_blank');
   };
 
+  const visibleViews = displayedPapers.reduce((sum, paper) => sum + Number(paper.views || 0), 0);
+  const visibleDownloads = displayedPapers.reduce((sum, paper) => sum + Number(paper.downloads || 0), 0);
+  const archiveStats = filterSem
+    ? [
+        { label: `Semester ${filterSem} Papers`, value: displayedPapers.length, icon: FileText },
+        { label: `Semester ${filterSem} Views`, value: visibleViews, icon: Eye },
+        { label: `Semester ${filterSem} Downloads`, value: visibleDownloads, icon: Download },
+        { label: 'Global Views', value: analytics?.totalViews, icon: Eye },
+        { label: 'Global Downloads', value: analytics?.totalDownloads, icon: Download },
+        { label: 'Active Contributors', value: analytics?.totalContributors, icon: BookOpen },
+      ]
+    : [
+        { label: 'Global Papers', value: analytics?.totalPapers ?? displayedPapers.length, icon: FileText },
+        { label: 'Global Views', value: analytics?.totalViews ?? visibleViews, icon: Eye },
+        { label: 'Global Downloads', value: analytics?.totalDownloads ?? visibleDownloads, icon: Download },
+        { label: 'Subjects Covered', value: analytics?.subjects?.length, icon: BookOpen },
+        { label: 'Active Contributors', value: analytics?.totalContributors, icon: Users },
+      ];
+
   return (
     <>
       <Helmet>
@@ -1131,12 +1179,7 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
       <div className="app-container archive-page">
         <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
         <div className="ps-archive-stats" aria-label="Archive statistics">
-          {[
-            { label: 'Total Papers', value: analytics?.totalPapers, icon: FileText },
-            { label: 'Total Views', value: analytics?.totalViews, icon: Eye },
-            { label: 'Total Downloads', value: analytics?.totalDownloads, icon: Download },
-            { label: 'Active Contributors', value: analytics?.totalContributors, icon: BookOpen },
-          ].map(({ label, value, icon: Icon }) => <div className="ps-archive-stat" key={label}><div><strong>{value == null ? '—' : Number(value).toLocaleString('en-IN')}</strong><span>{label}</span></div><Icon size={26} /></div>)}
+          {archiveStats.map(({ label, value, icon: Icon }) => <div className="ps-archive-stat" key={label}><div><strong>{value == null ? '—' : Number(value).toLocaleString('en-IN')}</strong><span>{label}</span></div><Icon size={26} /></div>)}
         </div>
 
         <main className="archive-main" id="archive-browser">
@@ -1144,7 +1187,7 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
             <div className="archive-heading-row">
               <div>
                 <span className="ps-archive-eyebrow">Smart Archive</span>
-                <h1>All Semester Papers</h1>
+                <h1>{filterSem ? `Semester ${filterSem} Papers` : 'Paper Archive'}</h1>
                 <p aria-live="polite">{loading ? 'Loading papers' : `${displayedPapers.length} ${displayedPapers.length === 1 ? 'paper' : 'papers'} found`}</p>
               </div>
               <Link to="/contribute">Contribute a paper</Link>
@@ -1156,7 +1199,7 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
               </div>
               <div className="archive-filters">
                 <select aria-label="Semester" value={filterSem} onChange={(e) => setFilterSem(e.target.value)}>
-                  <option value="">All semesters</option>
+                  <option value="">Explore all semesters</option>
                   {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => <option key={sem} value={sem}>Semester {sem}</option>)}
                 </select>
                 <select aria-label="Exam type" value={filterExam} onChange={(e) => setFilterExam(e.target.value)}>
@@ -1425,6 +1468,7 @@ function NotFoundPage() {
 
 // V2 Page: Interactive Contribution Form with Cloudinary Upload
 function ContributePageNew({ user, setUser, isAdmin, setIsAdmin, toast }) {
+  const { semester: preferredSemester } = useStudentProfile();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -1442,7 +1486,7 @@ function ContributePageNew({ user, setUser, isAdmin, setIsAdmin, toast }) {
     subjectCode: queryParams.get('subjectCode') || '',
     title: queryParams.get('title') || '',
     branch: queryParams.get('branch') || 'CSE',
-    semester: queryParams.get('semester') || '1',
+    semester: queryParams.get('semester') || String(preferredSemester || 1),
     year: queryParams.get('year') || new Date().getFullYear().toString(),
     examType: queryParams.get('examType') || 'Mid-Sem',
     notes: '',
@@ -3499,6 +3543,7 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast }) {
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(() => !localStorage.getItem('token'));
   const [isAdmin, setIsAdmin] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [databaseOffline, setDatabaseOffline] = useState(false);
@@ -3545,7 +3590,7 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) { setAuthReady(true); return; }
     axios.get(`${API_URL}/api/user/me`, { headers: authHeader() })
       .then((res) => {
         const semester = res.data.semester || res.data.currentSemester;
@@ -3568,7 +3613,8 @@ export default function App() {
           setUser(null);
           toast('Your session expired. Please sign in with Google again.', 'info');
         }
-      });
+      })
+      .finally(() => setAuthReady(true));
   }, [toast]);
 
   const appRoutes = (
@@ -3934,5 +3980,5 @@ export default function App() {
     </Router>
   );
 
-  return appRoutes;
+  return <StudentProfileProvider user={user} authReady={authReady} onUserUpdate={setUser} toast={toast}>{appRoutes}</StudentProfileProvider>;
 }

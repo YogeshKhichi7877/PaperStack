@@ -503,6 +503,7 @@ function buildUserResponse(user) {
     email: user.email,
     semester: user.semester ?? user.currentSemester ?? null,
     currentSemester: user.currentSemester ?? user.semester ?? null,
+    onboardingCompleted: Boolean(user.onboardingCompleted || ((user.semester ?? user.currentSemester) && (user.displayName || user.username))),
     role: user.role || 'student',
     bookmarks: user.bookmarks || [],
     avatar: user.avatar || '',
@@ -1359,7 +1360,7 @@ app.post('/api/auth/google/link', authenticate, async (req, res) => {
 
 app.get('/api/user/me', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('username displayName email semester currentSemester role bookmarks avatar authProvider').lean();
+    const user = await User.findById(req.user._id).select('username displayName email semester currentSemester onboardingCompleted role bookmarks avatar authProvider').lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(buildUserResponse(user));
   } catch (err) {
@@ -1378,11 +1379,18 @@ const profilePhotoUpload = multer({
 
 app.patch('/api/user/profile', authenticate, async (req, res) => {
   const displayName = normalizeDisplayName(req.body?.displayName);
+  const hasSemester = req.body?.semester !== undefined && req.body?.semester !== null && req.body?.semester !== '';
+  const semester = hasSemester ? Number(req.body.semester) : null;
   if (!validDisplayName(displayName)) {
     return res.status(400).json({ error: 'Display name must be 2 to 60 characters and cannot contain markup.' });
   }
+  if (hasSemester && (!Number.isInteger(semester) || semester < 1 || semester > 8)) {
+    return res.status(400).json({ error: 'Semester must be between 1 and 8.' });
+  }
   try {
-    const user = await User.findByIdAndUpdate(req.user._id, { $set: { displayName } }, { new: true, runValidators: true });
+    const updates = { displayName };
+    if (hasSemester) Object.assign(updates, { semester, currentSemester: semester, onboardingCompleted: true });
+    const user = await User.findByIdAndUpdate(req.user._id, { $set: updates }, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ error: 'User not found' });
     return res.json({ user: buildUserResponse(user) });
   } catch (error) {
@@ -1602,7 +1610,9 @@ app.post('/api/papers', authenticateAdmin, adminUploadFields, async (req, res) =
 
 app.get('/api/papers', async (req, res) => {
   try {
-    const papers = await Paper.find().sort({ year: -1, semester: 1, createdAt: -1 }).lean();
+    const semester = Number(req.query.semester);
+    const query = Number.isInteger(semester) && semester >= 1 && semester <= 8 ? { semester } : {};
+    const papers = await Paper.find(query).sort({ year: -1, semester: 1, createdAt: -1 }).lean();
     const paperIds = papers.map((paper) => paper._id);
     const votes = paperIds.length ? await PaperVote.find({ paperId: { $in: paperIds } }).lean() : [];
     const votesByPaper = new Map();
@@ -2652,8 +2662,12 @@ app.put('/api/user/bookmark/:id', authenticate, async (req, res) => {
 
 app.put('/api/user/semester', authenticate, async (req, res) => {
   try {
-    const { semester } = req.body;
-    const user = await User.findByIdAndUpdate(req.user._id, { semester, currentSemester: semester }, { new: true }).lean();
+    const semester = Number(req.body?.semester);
+    if (!Number.isInteger(semester) || semester < 1 || semester > 8) {
+      return res.status(400).json({ error: 'Semester must be between 1 and 8.' });
+    }
+    const user = await User.findByIdAndUpdate(req.user._id, { semester, currentSemester: semester, onboardingCompleted: true }, { new: true, runValidators: true }).lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ message: 'Semester updated', semester: user.semester, currentSemester: user.currentSemester });
   } catch (err) {
     res.status(500).json({ error: 'Could not update semester' });

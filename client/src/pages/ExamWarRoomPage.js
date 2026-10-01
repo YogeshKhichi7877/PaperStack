@@ -65,6 +65,8 @@ import {
 } from '../utils/warRoomPlan';
 
 import './ExamWarRoomPage.css';
+import { useStudentProfile } from '../context/StudentProfileContext';
+import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 
 const MathAnswer = React.lazy(
   () =>
@@ -236,6 +238,7 @@ function WarStat({
 export default function ExamWarRoomPage({
   toast,
 }) {
+  const { semester } = useStudentProfile();
   const [
     searchParams,
     setSearchParams,
@@ -371,13 +374,14 @@ export default function ExamWarRoomPage({
             ? data.subjects
             : [];
 
-        setSubjects(list);
+        const ordered = prioritizeSubjects(list, semester);
+        setSubjects(ordered);
 
         if (list.length) {
           setSubjectCode(
             (current) =>
               current ||
-              list[0]
+              preferredSubject(ordered, semester)
                 .subjectCode
           );
         }
@@ -406,7 +410,7 @@ export default function ExamWarRoomPage({
     return () => {
       active = false;
     };
-  }, [toast]);
+  }, [semester, toast]);
 
   /* =========================================================
      LOCAL STATE
@@ -987,16 +991,9 @@ export default function ExamWarRoomPage({
               </span>
             </h1>
 
-            <p>
-              PaperStack combines archive
-              evidence, your mock
-              performance and the time
-              remaining before the exam to
-              decide what deserves your
-              attention next.
-            </p>
+            <p>Turn your syllabus and PYQs into a focused revision plan.</p>
 
-            <div className="wr-hero-points">
+            <div className="wr-hero-points" hidden>
               <span>
                 <CheckCircle2
                   size={14}
@@ -1161,13 +1158,12 @@ export default function ExamWarRoomPage({
               <Target size={17} />
 
               <span>
-                Configure command center
+                Start your War Room
               </span>
             </div>
 
             <small>
-              Set the subject, exam and
-              actual exam time.
+              Semester {semester} subjects appear first.
             </small>
           </div>
 

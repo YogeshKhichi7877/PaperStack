@@ -13,6 +13,8 @@ test('home does not render student voices when there are no real testimonials', 
   axios.get.mockImplementation((url) => Promise.resolve({ data: url.includes('analytics') ? {} : [] }));
   render(<PaperStackHomePage user={null} />);
   await screen.findByText('Open Archive');
+  expect(screen.getByText('Global Views')).toBeInTheDocument();
+  expect(screen.getByText('Global Downloads')).toBeInTheDocument();
   expect(screen.queryByText('From the students')).not.toBeInTheDocument();
 });
 

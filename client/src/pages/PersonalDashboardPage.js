@@ -511,10 +511,7 @@ export default function PersonalDashboardPage({
 
           if (
             result?.user
-              ?.semester &&
-            !hasStoredKey(
-              'paperstack_preferred_semester'
-            )
+              ?.semester
           ) {
             setSemester(
               Number(
@@ -791,7 +788,8 @@ export default function PersonalDashboardPage({
     try {
       let updatedUser =
         await updateProfile(
-          nextName
+          nextName,
+          semester
         );
 
       setDashboard(
@@ -806,6 +804,9 @@ export default function PersonalDashboardPage({
 
             avatar:
               updatedUser.avatar,
+
+            semester:
+              updatedUser.semester,
           },
         })
       );
@@ -821,6 +822,9 @@ export default function PersonalDashboardPage({
 
                 avatar:
                   updatedUser.avatar,
+
+                semester:
+                  updatedUser.semester,
               }
             : current
       );
@@ -868,6 +872,11 @@ export default function PersonalDashboardPage({
       setSelectedPhoto(
         null
       );
+
+      try {
+        localStorage.setItem('userSemester', String(updatedUser.semester || semester));
+        localStorage.setItem('paperstack_preferred_semester', String(updatedUser.semester || semester));
+      } catch {}
 
       setProfileOpen(
         false
@@ -1230,6 +1239,10 @@ export default function PersonalDashboardPage({
                       ?.name ||
                       ''
                   );
+
+                  setSemester(
+                    Number(dashboard?.user?.semester) || semester
+                  );
                 }}
               >
                 <X
@@ -1338,6 +1351,24 @@ export default function PersonalDashboardPage({
                     readOnly
                   />
                 </label>
+
+                <fieldset className="pd-semester-field">
+                  <legend>Current semester</legend>
+                  <div className="pd-semester-options">
+                    {SEMESTERS.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        className={semester === item ? 'active' : ''}
+                        aria-pressed={semester === item}
+                        onClick={() => setSemester(item)}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                  <small>Changing this updates your homepage, archive defaults, subjects and study tools.</small>
+                </fieldset>
               </div>
 
               <button

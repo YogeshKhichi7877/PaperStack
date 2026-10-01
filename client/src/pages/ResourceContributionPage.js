@@ -47,6 +47,7 @@ import {
 import { OFFICIAL_BRANCHES } from '../config/branches';
 
 import './ResourceContributionPage.css';
+import { useStudentProfile } from '../context/StudentProfileContext';
 
 /* =========================================================
    FALLBACK CONFIG
@@ -298,6 +299,7 @@ export default function ResourceContributionPage({
   user,
   toast,
 }) {
+  const { semester: preferredSemester } = useStudentProfile();
   const navigate =
     useNavigate();
 
@@ -393,7 +395,7 @@ export default function ResourceContributionPage({
         cleanParam(
           searchParams,
           'semester'
-        ),
+        ) || String(preferredSemester || ''),
 
       year:
         cleanParam(
@@ -415,6 +417,10 @@ export default function ResourceContributionPage({
   /* =========================================================
      CONFIG
   ========================================================= */
+
+  useEffect(() => {
+    setForm((current) => ({ ...current, semester: String(preferredSemester || current.semester || '') }));
+  }, [preferredSemester]);
 
   useEffect(() => {
     let mounted = true;
@@ -860,15 +866,11 @@ export default function ResourceContributionPage({
             </h1>
 
             <p>
-              Upload notes, solutions,
-              formula sheets, labs and
-              other useful material to
-              the PaperStack subject
-              library.
+              Help your batch and juniors by uploading a useful resource.
             </p>
           </div>
 
-          <div className="rc-header-aside">
+          <div className="rc-header-aside" hidden>
             <img src="/resource-upload-owl.png" alt="" aria-hidden="true" />
             <div className="rc-header-note">
               <span>Your upload journey</span>
@@ -898,10 +900,7 @@ export default function ResourceContributionPage({
               </h2>
 
               <p>
-                Choose the type first.
-                PaperStack will keep it
-                organized inside the
-                correct Subject Hub.
+                Choose a resource type to begin.
               </p>
             </div>
 

@@ -38,6 +38,8 @@ import {
 } from '../services/pyqIntelligenceApi';
 
 import './PyqIntelligencePage.css';
+import { useStudentProfile } from '../context/StudentProfileContext';
+import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 
 /* =========================================================
    HELPERS
@@ -382,6 +384,7 @@ function ClusterCard({
 export default function PyqIntelligencePage({
   toast,
 }) {
+  const { semester } = useStudentProfile();
   const [
     searchParams,
     setSearchParams,
@@ -450,13 +453,14 @@ export default function PyqIntelligencePage({
             ? result.subjects
             : [];
 
-        setSubjects(list);
+        const ordered = prioritizeSubjects(list, semester);
+        setSubjects(ordered);
 
         if (list.length) {
           setSubjectCode(
             (current) =>
               current ||
-              list[0]
+              preferredSubject(ordered, semester)
                 .subjectCode
           );
         }
@@ -485,7 +489,7 @@ export default function PyqIntelligencePage({
     return () => {
       mounted = false;
     };
-  }, [toast]);
+  }, [semester, toast]);
 
   /* =========================================================
      INTELLIGENCE DATA
@@ -669,15 +673,9 @@ export default function PyqIntelligencePage({
               </span>
             </h1>
 
-            <p>
-              Compare previous-year
-              questions across exams and
-              years to find exact repeats,
-              similar question patterns
-              and recurring topic signals.
-            </p>
+            <p>Discover repeated questions, topics and exam patterns.</p>
 
-            <div className="pi-hero-trust">
+            <div className="pi-hero-trust" hidden>
               <span>
                 <CheckCircle2
                   size={14}
@@ -762,13 +760,12 @@ export default function PyqIntelligencePage({
               <Target size={18} />
 
               <span>
-                Analysis controls
+              Analyze PYQs
               </span>
             </div>
 
             <small>
-              Adjust the subject or how
-              closely questions must match.
+              Semester {semester} subjects appear first.
             </small>
           </div>
 

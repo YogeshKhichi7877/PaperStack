@@ -2563,3 +2563,344 @@
     scroll-behavior: auto;
   }
 }
+
+/* =========================================================
+   FOCUSED ASK WORKSPACE
+========================================================= */
+
+.aps-page {
+  min-height: calc(100vh - 60px);
+  padding: 16px clamp(12px, 2vw, 28px) 54px;
+  background: #f4fbfb;
+}
+
+.aps-shell {
+  width: min(1440px, 100%);
+}
+
+.aps-controls {
+  grid-template-columns: minmax(235px, .8fr) minmax(340px, 1.4fr) minmax(190px, .65fr);
+  align-items: center;
+  margin-top: 0;
+  padding: 16px 18px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(18, 67, 72, .05);
+}
+
+.aps-control-title {
+  min-height: 46px;
+}
+
+.aps-control-title > svg {
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 9px;
+  background: var(--aps-primary-soft);
+}
+
+.aps-control-title strong {
+  font-size: 14px;
+}
+
+.aps-control-title span {
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.aps-controls label > span {
+  margin-bottom: 7px;
+  font-size: 10px;
+  letter-spacing: .05em;
+}
+
+.aps-controls select {
+  min-height: 46px;
+  padding-inline: 13px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.aps-workspace {
+  grid-template-columns: 310px minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.aps-sidebar {
+  top: 78px;
+}
+
+.aps-side-section {
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(18, 67, 72, .035);
+}
+
+.aps-side-section > header {
+  gap: 10px;
+  padding-bottom: 12px;
+}
+
+.aps-side-section header strong {
+  font-size: 13px;
+}
+
+.aps-side-section header span {
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.aps-example-list {
+  margin-top: 7px;
+}
+
+.aps-example-list button {
+  grid-template-columns: 30px 32px minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 70px;
+  padding: 11px 0;
+}
+
+.aps-example-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 10px;
+}
+
+.aps-example-icon {
+  width: 31px;
+  height: 31px;
+}
+
+.aps-example-copy strong {
+  font-size: 12px;
+}
+
+.aps-example-copy small {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.42;
+}
+
+.aps-conversation {
+  min-height: calc(100vh - 186px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(18, 67, 72, .04);
+}
+
+.aps-conversation-head {
+  align-items: center;
+  padding: 17px 20px;
+}
+
+.aps-conversation-head h2 {
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.aps-conversation-head .aps-eyebrow {
+  font-size: 10px;
+}
+
+.aps-conversation-status > span,
+.aps-conversation-status button {
+  font-size: 11px;
+}
+
+.aps-welcome {
+  justify-items: start;
+  padding: 28px 24px 10px;
+  text-align: left;
+}
+
+.aps-welcome-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+}
+
+.aps-welcome h3 {
+  margin-top: 12px;
+  font-size: 19px;
+}
+
+.aps-welcome > p {
+  max-width: 660px;
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.aps-welcome-examples {
+  justify-content: flex-start;
+  margin-top: 15px;
+}
+
+.aps-welcome-examples button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.aps-thread {
+  flex: 1;
+  padding-inline: 20px;
+}
+
+.aps-answer-content,
+.aps-answer-content .ps-math-answer {
+  font-size: 13px;
+}
+
+.aps-answer-identity strong,
+.aps-answer-section header strong,
+.aps-follow-ups header strong {
+  font-size: 12px;
+}
+
+.aps-answer-identity div > span,
+.aps-answer-section header span,
+.aps-follow-ups header span {
+  font-size: 10px;
+}
+
+.aps-answer-question > span,
+.aps-copy,
+.aps-match-meta span,
+.aps-match-actions a {
+  font-size: 10px;
+}
+
+.aps-answer-question p,
+.aps-match-main > p,
+.aps-follow-ups button {
+  font-size: 12px;
+}
+
+.aps-composer {
+  margin-top: auto;
+  padding: 13px 18px 14px;
+}
+
+.aps-composer-context > span {
+  font-size: 9px;
+}
+
+.aps-composer-context > strong,
+.aps-composer-context > b {
+  font-size: 11px;
+}
+
+.aps-composer-input {
+  gap: 10px;
+  padding: 7px;
+  border-radius: 10px;
+}
+
+.aps-composer textarea {
+  min-height: 86px;
+  padding: 11px;
+  font-size: 13px;
+}
+
+.aps-composer-input > button {
+  min-width: 112px;
+  min-height: 42px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.aps-composer footer {
+  margin-top: 8px;
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .aps-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .aps-control-title {
+    grid-column: 1 / -1;
+  }
+
+  .aps-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .aps-sidebar {
+    position: static;
+    grid-template-columns: 1fr;
+  }
+
+  .aps-example-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+  }
+
+  .aps-conversation {
+    min-height: 620px;
+  }
+}
+
+@media (max-width: 700px) {
+  .aps-page {
+    padding: 10px 9px 42px;
+  }
+
+  .aps-controls {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .aps-control-title {
+    grid-column: auto;
+  }
+
+  .aps-sidebar {
+    display: none;
+  }
+
+  .aps-workspace {
+    margin-top: 10px;
+  }
+
+  .aps-conversation {
+    min-height: calc(100vh - 260px);
+  }
+
+  .aps-conversation-head {
+    padding: 14px 15px;
+  }
+
+  .aps-conversation-head h2 {
+    font-size: 18px;
+  }
+
+  .aps-welcome {
+    padding: 22px 15px 8px;
+  }
+
+  .aps-welcome-examples {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .aps-thread {
+    padding-inline: 11px;
+  }
+
+  .aps-composer {
+    padding: 11px;
+  }
+
+  .aps-composer textarea {
+    min-height: 76px;
+  }
+}

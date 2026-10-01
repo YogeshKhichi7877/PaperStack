@@ -32,6 +32,7 @@ import {
 import { OFFICIAL_BRANCHES } from '../config/branches';
 
 import './SearchV2Page.css';
+import { useStudentProfile } from '../context/StudentProfileContext';
 
 /* =========================================================
    RESULT HELPERS
@@ -137,6 +138,7 @@ const SEARCH_TYPES = [
 export default function SearchV2Page({
   toast,
 }) {
+  const { semester: preferredSemester } = useStudentProfile();
   const [
     searchParams,
     setSearchParams,
@@ -322,7 +324,7 @@ export default function SearchV2Page({
       semester:
         current.get(
           'semester'
-        ) || '',
+        ) || String(preferredSemester || ''),
 
       year:
         current.get(
@@ -403,6 +405,7 @@ export default function SearchV2Page({
     };
   }, [
     paramsKey,
+    preferredSemester,
     toast,
   ]);
 

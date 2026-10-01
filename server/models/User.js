@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema({
     default: null,
     index: true
   },
+  onboardingCompleted: {
+    type: Boolean,
+    default: false
+  },
 
   bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Paper' }]
 }, { timestamps: true });

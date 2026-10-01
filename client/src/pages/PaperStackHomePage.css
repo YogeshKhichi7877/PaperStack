@@ -188,6 +188,10 @@
   margin-top: 12px;
 }
 
+.landing-metrics.is-global {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .landing-metric {
   display: flex;
   align-items: center;

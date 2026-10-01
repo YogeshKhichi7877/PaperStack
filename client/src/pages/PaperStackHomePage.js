@@ -127,9 +127,11 @@ import {
   CalendarDays,
   Check,
   Download,
+  Eye,
   FileText,
   Flame,
   Heart,
+  Search,
   Sparkles,
   Star,
   Target,
@@ -143,6 +145,7 @@ import {
 import { API_URL } from '../config/appConfig';
 import { getContributorLeaderboard } from '../services/contributorApi';
 import { getSubjectHubPath } from '../utils/subjectRoute';
+import { useStudentProfile } from '../context/StudentProfileContext';
 
 import campusArt from '../assets/paperstack-campus.png';
 import archiveArt from '../assets/paperstack-past-papers.png';
@@ -175,6 +178,8 @@ const getPaperDownloads = (paper) =>
   );
 
 export default function PaperStackHomePage({ user }) {
+  const { displayName, semester } = useStudentProfile();
+  const personalized = Boolean(user && semester);
   const [papers, setPapers] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [contributors, setContributors] = useState([]);
@@ -235,7 +240,7 @@ export default function PaperStackHomePage({ user }) {
     let active = true;
 
     Promise.allSettled([
-      axios.get(`${API_URL}/api/papers`),
+      axios.get(`${API_URL}/api/papers`, { params: personalized ? { semester } : {} }),
       axios.get(`${API_URL}/api/analytics`),
       getContributorLeaderboard(),
     ]).then(([paperResult, analyticsResult, contributorResult]) => {
@@ -272,7 +277,7 @@ export default function PaperStackHomePage({ user }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [personalized, semester]);
 
   const subjects = useMemo(() => {
     const map = new Map();
@@ -310,30 +315,31 @@ export default function PaperStackHomePage({ user }) {
       .slice(0, 3);
   }, [papers]);
 
-  const metrics = [
-    {
-      label: 'Papers in Archive',
-      value: analytics?.totalPapers,
-      icon: FileText,
-    },
-    {
-      label: 'Student Contributors',
-      value: analytics?.totalContributors,
-      icon: Users,
-    },
-    {
-      label: 'Subjects Covered',
-      value: analytics
-        ? analytics.subjects?.length
-        : subjects.length || null,
-      icon: BookOpen,
-    },
-    {
-      label: 'Total Downloads',
-      value: analytics?.totalDownloads,
-      icon: Download,
-    },
-  ];
+  const semesterViews = papers.reduce((total, paper) => total + getPaperViews(paper), 0);
+  const semesterDownloads = papers.reduce((total, paper) => total + getPaperDownloads(paper), 0);
+  const globalPapers = analytics?.totalPapers ?? (!personalized ? papers.length : null);
+  const globalViews = analytics?.totalViews ?? (!personalized ? semesterViews : null);
+  const globalDownloads = analytics?.totalDownloads ?? (!personalized ? semesterDownloads : null);
+  const globalSubjects = analytics ? analytics.subjects?.length : (!personalized ? subjects.length : null);
+
+  const metrics = personalized
+    ? [
+        { label: `Semester ${semester} Papers`, value: papers.length, icon: FileText },
+        { label: `Semester ${semester} Views`, value: semesterViews, icon: Eye },
+        { label: `Semester ${semester} Downloads`, value: semesterDownloads, icon: Download },
+        { label: 'Your Subjects', value: subjects.length, icon: BookOpen },
+        { label: 'Global Papers', value: globalPapers, icon: FileText },
+        { label: 'Global Views', value: globalViews, icon: Eye },
+        { label: 'Global Downloads', value: globalDownloads, icon: Download },
+        { label: 'Student Contributors', value: analytics?.totalContributors, icon: Users },
+      ]
+    : [
+        { label: 'Global Papers', value: globalPapers, icon: FileText },
+        { label: 'Global Views', value: globalViews, icon: Eye },
+        { label: 'Global Downloads', value: globalDownloads, icon: Download },
+        { label: 'Subjects Covered', value: globalSubjects, icon: BookOpen },
+        { label: 'Student Contributors', value: analytics?.totalContributors, icon: Users },
+      ];
 
   return (
     <main className="landing-page">
@@ -346,45 +352,34 @@ export default function PaperStackHomePage({ user }) {
         aria-labelledby="landing-heading"
       >
         <div className="landing-hero-copy">
-          {user && (
-            <p className="landing-welcome">
-              Welcome back,
-              <strong>
-                {user.name ||
-                  user.username ||
-                  'student'}
-                !
-              </strong>
-            </p>
-          )}
+          <p className="landing-welcome">{personalized ? <>Welcome back, <strong>{displayName || user?.name || 'student'} 👋</strong></> : <>Welcome to <strong>PaperStack</strong></>}</p>
 
           <h1 id="landing-heading">
-            The Smart Archive
+            {personalized ? `Your Semester ${semester}` : 'All semester papers'}
             <br />
-            <span>for IIIT Surat Students</span>
+            <span>{personalized ? 'academic workspace' : 'in one place'}</span>
           </h1>
 
           <p className="landing-hero-lead">
-            Access mid-sem and end-sem past papers,
-            solutions, exam stats, revision resources,
-            and AI tools, curated by IIIT Surat students
-            for IIIT Surat students.
+            {personalized ? 'Papers, subject hubs and focused study tools for what you are learning now.' : 'Browse every semester, see the complete archive, or sign in to personalize your workspace.'}
           </p>
+
+          <div className="landing-hero-actions"><Link to={personalized ? `/archive?semester=${semester}` : '/archive'} className="landing-button landing-button-primary"><Search size={20} /> Find a paper <ArrowRight size={18} /></Link><Link to="/ask-paperstack" className="landing-button landing-button-secondary">Ask PaperStack</Link></div>
 
           <div className="landing-trust">
             <span>
               <Check />
-              Student driven
+              {personalized ? `Semester ${semester} first` : 'All semesters'}
             </span>
 
             <span>
               <Check />
-              Organized by subject
+              {personalized ? 'Ready to study' : 'Global archive stats'}
             </span>
 
             <span>
               <Check />
-              Open access
+              Explore anytime
             </span>
           </div>
         </div>
@@ -419,7 +414,7 @@ export default function PaperStackHomePage({ user }) {
       ========================== */}
 
       <section
-        className="landing-metrics"
+        className={`landing-metrics ${personalized ? 'is-personalized' : 'is-global'}`}
         aria-label="Archive at a glance"
       >
         {metrics.map(
@@ -627,42 +622,20 @@ export default function PaperStackHomePage({ user }) {
             </span>
 
             <div>
-              <h2>Subject Hubs</h2>
+              <h2>{personalized ? `Semester ${semester} Subjects` : 'All Semester Subjects'}</h2>
               <p>
-                Everything for a subject, organized in
-                one place.
+                {personalized ? 'Everything for your current subjects.' : 'Browse subjects across the complete archive.'}
               </p>
             </div>
           </div>
 
-          <p className="home-subject-copy">
-            Browse past papers, solutions, notes,
-            formula sheets and study resources without
-            searching across different pages.
-          </p>
-
-          <div className="home-check-list">
-            <span>
-              <Check size={16} />
-              Find everything subject-wise
-            </span>
-
-            <span>
-              <Check size={16} />
-              Papers, solutions, notes & formula sheets
-            </span>
-
-            <span>
-              <Check size={16} />
-              Explore resources for your subjects
-            </span>
-          </div>
+          <p className="home-subject-copy">Open papers and resources grouped by subject.</p>
 
           <Link
             to="/archive"
             className="home-feature-button"
           >
-            Explore Subject Hubs
+            Open a subject
             <ArrowRight size={18} />
           </Link>
         </div>
@@ -677,7 +650,7 @@ export default function PaperStackHomePage({ user }) {
 
         <div className="home-popular-subjects">
           <div className="home-mini-heading">
-            <h3>Explore Popular Subjects</h3>
+            <h3>Your subjects</h3>
 
             <Link to="/archive">
               View All Subjects
@@ -715,8 +688,8 @@ export default function PaperStackHomePage({ user }) {
             </div>
           ) : (
             <p className="landing-empty">
-              Subjects will appear here once archive
-              data loads.
+              {personalized ? `Semester ${semester} is still growing. Help build the archive for your batch.` : 'The PaperStack archive is still growing. Help add the next useful resource.'}
+              <br /><Link to="/contribute">Contribute a resource →</Link>
             </p>
           )}
         </div>

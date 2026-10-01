@@ -16,9 +16,7 @@ import {
 
 import {
   ArrowRight,
-  BookOpen,
   Brain,
-  CheckCircle2,
   ChevronRight,
   CircleAlert,
   Clipboard,
@@ -41,6 +39,8 @@ import {
 } from '../services/askPaperStackApi';
 
 import './AskPaperStackPage.css';
+import { useStudentProfile } from '../context/StudentProfileContext';
+import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 
 const MathAnswer = React.lazy(
   () =>
@@ -142,6 +142,7 @@ function ExampleIcon({
 export default function AskPaperStackPage({
   toast,
 }) {
+  const { semester } = useStudentProfile();
   const [
     subjects,
     setSubjects,
@@ -200,13 +201,37 @@ export default function AskPaperStackPage({
             ? data.subjects
             : [];
 
-        setSubjects(list);
+        const ordered = prioritizeSubjects(list, semester);
+        const consolidated = Array.from(
+          ordered.reduce((byCode, subject) => {
+            const code = String(subject.subjectCode || '').trim().toUpperCase();
+            if (!code) return byCode;
 
-        if (list.length) {
+            const existing = byCode.get(code);
+            if (!existing) {
+              byCode.set(code, {
+                ...subject,
+                examTypes: [...new Set(subject.examTypes || [])],
+                totalQuestions: Number(subject.totalQuestions || 0),
+              });
+              return byCode;
+            }
+
+            existing.examTypes = [...new Set([
+              ...(existing.examTypes || []),
+              ...(subject.examTypes || []),
+            ])];
+            existing.totalQuestions += Number(subject.totalQuestions || 0);
+            return byCode;
+          }, new Map()).values()
+        );
+        setSubjects(consolidated);
+
+        if (consolidated.length) {
           setSubjectCode(
             (current) =>
               current ||
-              list[0]
+              preferredSubject(consolidated, semester)
                 .subjectCode
           );
         }
@@ -235,7 +260,7 @@ export default function AskPaperStackPage({
     return () => {
       mounted = false;
     };
-  }, [toast]);
+  }, [semester, toast]);
 
   /* =========================================================
      SELECTED SUBJECT
@@ -462,128 +487,6 @@ export default function AskPaperStackPage({
 
       <div className="aps-shell">
         {/* =================================================
-            HERO
-        ================================================= */}
-
-        <section className="aps-hero">
-          <div className="aps-hero-copy">
-            <span className="aps-eyebrow">
-              <MessageSquareText
-                size={15}
-              />
-
-              Ask PaperStack
-            </span>
-
-            <h1>
-              Ask once.
-              <br />
-
-              <span>
-                Study from the
-                archive.
-              </span>
-            </h1>
-
-            <p>
-              Ask questions about
-              previous papers,
-              repeated PYQs,
-              important topics,
-              solutions or revision.
-              PaperStack can combine
-              archive evidence with a
-              clear student-friendly
-              explanation.
-            </p>
-
-            <div className="aps-hero-points">
-              <span>
-                <CheckCircle2
-                  size={14}
-                />
-
-                Archive-aware
-              </span>
-
-              <span>
-                <CheckCircle2
-                  size={14}
-                />
-
-                Source links included
-              </span>
-
-              <span>
-                <CheckCircle2
-                  size={14}
-                />
-
-                Mathematical answers
-                supported
-              </span>
-
-              <span>
-                <CheckCircle2
-                  size={14}
-                />
-
-                Follow-up questions
-              </span>
-            </div>
-          </div>
-
-          <aside className="aps-context-card">
-            <span>
-              Current study context
-            </span>
-
-            <strong>
-              {selectedSubject
-                ?.subjectCode ||
-                subjectCode ||
-                '—'}
-            </strong>
-
-            <p>
-              {selectedSubject
-                ?.subject ||
-                'Choose a subject'}
-            </p>
-
-            <div className="aps-context-meta">
-              <span>
-                <b>
-                  {examType ||
-                    'All exams'}
-                </b>
-
-                Exam scope
-              </span>
-
-              <span>
-                <b>
-                  {
-                    selectedSubject
-                      ?.totalQuestions ||
-                    '—'
-                  }
-                </b>
-
-                Archive questions
-              </span>
-            </div>
-
-            <small>
-              Change the context
-              below whenever you want
-              to ask about another
-              subject.
-            </small>
-          </aside>
-        </section>
-
-        {/* =================================================
             CONTEXT CONTROLS
         ================================================= */}
 
@@ -595,13 +498,11 @@ export default function AskPaperStackPage({
 
             <div>
               <strong>
-                Search context
+                Choose your study context
               </strong>
 
               <span>
-                PaperStack will use this
-                context for your next
-                question.
+                {semester ? `Semester ${semester} subjects appear first.` : 'Select any subject from the archive.'}
               </span>
             </div>
           </div>
@@ -637,10 +538,10 @@ export default function AskPaperStackPage({
               )}
 
               {subjects.map(
-                (subject) => (
+                (subject, index) => (
                   <option
                     key={
-                      subject.subjectCode
+                      `${subject.subjectCode}-${subject.semester || 'all'}-${index}`
                     }
                     value={
                       subject.subjectCode
@@ -779,146 +680,6 @@ export default function AskPaperStackPage({
               </div>
             </section>
 
-            <section className="aps-side-section aps-evidence-note">
-              <header>
-                <BookOpen
-                  size={16}
-                />
-
-                <div>
-                  <strong>
-                    Evidence first
-                  </strong>
-
-                  <span>
-                    Why this is useful
-                  </span>
-                </div>
-              </header>
-
-              <p>
-                When PaperStack finds
-                related archived
-                questions, they appear
-                with the answer so you
-                can inspect the
-                original question and
-                paper yourself.
-              </p>
-
-              <div className="aps-evidence-points">
-                <span>
-                  <CheckCircle2
-                    size={12}
-                  />
-
-                  Question source
-                </span>
-
-                <span>
-                  <CheckCircle2
-                    size={12}
-                  />
-
-                  Exam and year
-                </span>
-
-                <span>
-                  <CheckCircle2
-                    size={12}
-                  />
-
-                  Original PDF
-                </span>
-              </div>
-            </section>
-
-            <nav className="aps-related">
-              <span>
-                Continue studying
-              </span>
-
-              <Link to="/pyq-intelligence">
-                <FileQuestion
-                  size={15}
-                />
-
-                <div>
-                  <strong>
-                    PYQ Intelligence
-                  </strong>
-
-                  <small>
-                    Compare repeated
-                    questions
-                  </small>
-                </div>
-
-                <ChevronRight
-                  size={14}
-                />
-              </Link>
-
-              <Link to="/important-topics">
-                <Target
-                  size={15}
-                />
-
-                <div>
-                  <strong>
-                    Important Topics
-                  </strong>
-
-                  <small>
-                    Prioritize revision
-                  </small>
-                </div>
-
-                <ChevronRight
-                  size={14}
-                />
-              </Link>
-
-              <Link to="/revision-sheets">
-                <BookOpen
-                  size={15}
-                />
-
-                <div>
-                  <strong>
-                    Revision Sheets
-                  </strong>
-
-                  <small>
-                    Revise in less time
-                  </small>
-                </div>
-
-                <ChevronRight
-                  size={14}
-                />
-              </Link>
-
-              <Link to="/exam-war-room">
-                <Target
-                  size={15}
-                />
-
-                <div>
-                  <strong>
-                    Exam War Room
-                  </strong>
-
-                  <small>
-                    Decide what to do next
-                  </small>
-                </div>
-
-                <ChevronRight
-                  size={14}
-                />
-              </Link>
-            </nav>
           </aside>
 
           {/* ===============================================
@@ -931,12 +692,11 @@ export default function AskPaperStackPage({
                 <span className="aps-eyebrow">
                   <Brain size={14} />
 
-                  Study Assistant
+                  Archive assistant
                 </span>
 
                 <h2>
-                  Ask about your
-                  subject.
+                  What can I help you study?
                 </h2>
               </div>
 
@@ -984,15 +744,11 @@ export default function AskPaperStackPage({
                 </div>
 
                 <h3>
-                  What do you want to
-                  understand?
+                  Start with a question
                 </h3>
 
                 <p>
-                  You can ask naturally.
-                  PaperStack already knows
-                  the selected subject and
-                  exam context.
+                  Type your own question or use a quick prompt. Answers can include matching PYQs and source papers.
                 </p>
 
                 <div className="aps-welcome-examples">
@@ -1588,7 +1344,7 @@ export default function AskPaperStackPage({
                     </>
                   ) : (
                     <>
-                      Ask PaperStack
+                      Ask
                       <Send
                         size={14}
                       />
