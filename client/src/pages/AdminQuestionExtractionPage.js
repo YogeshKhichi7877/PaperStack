@@ -8,6 +8,7 @@ import {
   getQuestionExtractionStatus,
 } from '../services/questionExtractionApi';
 import './AdminQuestionExtractionPage.css';
+import QuestionText from '../components/QuestionText';
 
 function statusLabel(value) {
   return String(value || 'not_started')
@@ -280,7 +281,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
                 {lastResult.preview.slice(0, 6).map((question, index) => (
                   <div key={`${question.questionLabel}-${index}`}>
                     <strong>{question.questionLabel}</strong>
-                    <span>{question.questionText}</span>
+                    <QuestionText inline>{question.questionText}</QuestionText>
                   </div>
                 ))}
               </div>

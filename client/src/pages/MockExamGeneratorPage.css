@@ -168,44 +168,6 @@
   line-height: 1.55;
 }
 
-.me-hero-points {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 9px 18px;
-
-  margin-top: 20px;
-}
-
-.me-hero-points span {
-  display: inline-flex;
-
-  align-items: center;
-
-  gap: 6px;
-
-  color: #365c6e;
-
-  font-size: 11px;
-
-  font-weight: 650;
-}
-
-.me-hero-points svg {
-  width: 16px;
-  height: 16px;
-
-  padding: 3px;
-
-  border-radius: 50%;
-
-  background:
-    var(--me-primary);
-
-  color: white;
-}
-
 /* hero side */
 
 .me-hero-side {
@@ -427,6 +389,32 @@
   color: white;
 }
 
+.me-option-buttons button.me-option-easy[aria-pressed="true"] {
+  border-color: #69bc91;
+  background: #e7f7ee;
+  color: #176b45;
+  box-shadow: inset 0 0 0 1px rgba(23, 107, 69, .06);
+}
+
+.me-option-buttons button.me-option-balanced[aria-pressed="true"] {
+  border-color: #43b8b7;
+  background: #dff6f5;
+  color: #076d72;
+  box-shadow: inset 0 0 0 1px rgba(7, 109, 114, .06);
+}
+
+.me-option-buttons button.me-option-hard[aria-pressed="true"] {
+  border-color: #e28a96;
+  background: #fdebed;
+  color: #a52d3e;
+  box-shadow: inset 0 0 0 1px rgba(165, 45, 62, .06);
+}
+
+.me-option-buttons button:focus-visible {
+  outline: 3px solid rgba(0, 131, 140, .2);
+  outline-offset: 2px;
+}
+
 .me-adaptive {
   cursor: pointer;
 }
@@ -468,13 +456,6 @@
 
   background:
     #edf9f7;
-}
-
-.me-adaptive svg {
-  flex: none;
-
-  color:
-    var(--me-primary);
 }
 
 .me-adaptive strong,
@@ -530,23 +511,6 @@
   align-items: center;
 
   gap: 10px;
-}
-
-.me-builder-icon {
-  display: grid;
-
-  place-items: center;
-
-  width: 40px;
-  height: 40px;
-
-  border-radius: 8px;
-
-  background:
-    var(--me-primary-soft);
-
-  color:
-    var(--me-primary);
 }
 
 .me-builder-head h2 {
@@ -2206,13 +2170,6 @@
     font-size: 13px;
   }
 
-  .me-hero-points {
-    display: grid;
-
-    grid-template-columns:
-      1fr 1fr;
-  }
-
   .me-options {
     grid-template-columns: 1fr;
   }
@@ -2322,10 +2279,6 @@
 @media (
   max-width: 390px
 ) {
-  .me-hero-points {
-    grid-template-columns: 1fr;
-  }
-
   .me-command-actions {
     grid-template-columns: 1fr;
   }

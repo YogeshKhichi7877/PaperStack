@@ -64,6 +64,7 @@ import './styles/ExperienceRefresh.css';
 import './styles/ArchiveReference.css';
 import './styles/ReferenceNavbar.css';
 import './styles/ProductPolish.css';
+import './styles/StudentFeatureRedesign.css';
 import PaperStackLoader from './components/PaperStackLoader';
 import { ErrorState } from './components/ErrorState';
 import { StudentProfileProvider, useStudentProfile } from './context/StudentProfileContext';
@@ -140,10 +141,18 @@ function storeAuthSession(authPayload, setUser) {
     email: user.email,
     bookmarks: user.bookmarks || [],
     semester,
+    onboardingCompleted: user.onboardingCompleted,
     avatar: user.avatar || '',
     authProvider: user.authProvider || 'local',
   });
 }
+
+const ONBOARDING_PREVIEW_USER = Object.freeze({
+  username: '',
+  displayName: '',
+  semester: null,
+  onboardingCompleted: false,
+});
 
 function GoogleAuthButton({ setUser, toast }) {
   const [loading, setLoading] = useState(false);
@@ -3600,6 +3609,7 @@ export default function App() {
           email: res.data.email,
           bookmarks: res.data.bookmarks || [],
           semester,
+          onboardingCompleted: res.data.onboardingCompleted,
           avatar: res.data.avatar || '',
           authProvider: res.data.authProvider || 'local',
         });
@@ -3980,5 +3990,10 @@ export default function App() {
     </Router>
   );
 
-  return <StudentProfileProvider user={user} authReady={authReady} onUserUpdate={setUser} toast={toast}>{appRoutes}</StudentProfileProvider>;
+  const onboardingPreviewUser = process.env.NODE_ENV === 'development'
+    && new URLSearchParams(window.location.search).get('onboarding-preview') === '1'
+    ? ONBOARDING_PREVIEW_USER
+    : user;
+
+  return <StudentProfileProvider user={onboardingPreviewUser} authReady={authReady} onUserUpdate={setUser} toast={toast}>{appRoutes}</StudentProfileProvider>;
 }

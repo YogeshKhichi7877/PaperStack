@@ -75,6 +75,20 @@
   padding-block: 4px;
 }
 
+.ps-math-answer.ps-question-math {
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+}
+
+.ps-math-answer.ps-question-math p {
+  margin: 0;
+}
+
+.ps-math-answer.ps-question-math .katex {
+  font-size: 1.04em;
+}
+
 .ps-table-scroll {
   max-width: 100%;
   margin: 1em 0;

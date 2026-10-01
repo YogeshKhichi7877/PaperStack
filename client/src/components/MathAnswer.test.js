@@ -4,6 +4,7 @@ import MathAnswer, {
   KATEX_OPTIONS,
   normalizeAcademicMarkdown,
   normalizeMathDelimiters,
+  normalizeQuestionMath,
 } from './MathAnswer';
 
 jest.mock('react-markdown', () => {
@@ -91,4 +92,33 @@ test('passes explicit raw-HTML blocking to the renderer', () => {
   expect(container.querySelector('img')).not.toBeInTheDocument();
   expect(container.querySelector('script')).not.toBeInTheDocument();
   expect(container.querySelector('.markdown-test')).toHaveTextContent('Before <script>alert(1)</script> after');
+});
+
+test('upgrades extracted powers, subscripts, roots, and algebraic fractions', () => {
+  const normalized = normalizeQuestionMath(
+    'Find x^2, f_c, sqrt(a+b), and (x+1)/(x-1).'
+  );
+
+  expect(normalized).toContain('$x^{2}$');
+  expect(normalized).toContain('$f_{c}$');
+  expect(normalized).toContain('$\\sqrt{a+b}$');
+  expect(normalized).toContain('$\\frac{x+1}{x-1}$');
+});
+
+test('preserves explicit math, inline code, fenced code, and ordinary prose', () => {
+  const source = [
+    'Use `$raw^2$` and keep $y^3$ as authored.',
+    '',
+    '```text',
+    'x^4',
+    '```',
+    '',
+    'The archive/year label stays plain.',
+  ].join('\n');
+  const normalized = normalizeQuestionMath(source);
+
+  expect(normalized).toContain('`$raw^2$`');
+  expect(normalized).toContain('$y^3$');
+  expect(normalized).toContain('```text\nx^4\n```');
+  expect(normalized).toContain('The archive/year label stays plain.');
 });

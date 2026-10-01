@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { trackProductEvent } from '../services/productAnalyticsApi';
+import QuestionText from './QuestionText';
 
 export default function RelatedPyqs({ questions = [], title = 'Related PYQs', empty = true }) {
   if (!questions.length && !empty) return null;
@@ -11,7 +12,7 @@ export default function RelatedPyqs({ questions = [], title = 'Related PYQs', em
         <div className="related-pyq-list">
           {questions.slice(0, 6).map((item) => (
             <article key={item._id}>
-              <div><small>{[item.year, item.examType, item.marks != null ? `${item.marks} marks` : '', item.similarity != null ? `${item.similarity}% related` : ''].filter(Boolean).join(' · ')}</small><p>{item.questionText}</p></div>
+              <div><small>{[item.year, item.examType, item.marks != null ? `${item.marks} marks` : '', item.similarity != null ? `${item.similarity}% related` : ''].filter(Boolean).join(' · ')}</small><p><QuestionText inline>{item.questionText}</QuestionText></p></div>
               <Link to={`/questions/${item._id}`} onClick={() => trackProductEvent('related_open', { routeKey: 'related_pyqs', type: 'question' }).catch(() => {})}>Open <ArrowRight size={13} /></Link>
             </article>
           ))}

@@ -41,6 +41,7 @@ import {
 import './AskPaperStackPage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
+import QuestionText from '../components/QuestionText';
 
 const MathAnswer = React.lazy(
   () =>
@@ -498,7 +499,7 @@ export default function AskPaperStackPage({
 
             <div>
               <strong>
-                Choose your study context
+                Study context
               </strong>
 
               <span>
@@ -696,7 +697,7 @@ export default function AskPaperStackPage({
                 </span>
 
                 <h2>
-                  What can I help you study?
+                  Ask PaperStack
                 </h2>
               </div>
 
@@ -744,11 +745,11 @@ export default function AskPaperStackPage({
                 </div>
 
                 <h3>
-                  Start with a question
+                  Ask anything
                 </h3>
 
                 <p>
-                  Type your own question or use a quick prompt. Answers can include matching PYQs and source papers.
+                  Get an answer grounded in PaperStack's archive.
                 </p>
 
                 <div className="aps-welcome-examples">
@@ -1143,9 +1144,7 @@ export default function AskPaperStackPage({
                                     </div>
 
                                     <p>
-                                      {
-                                        item.questionText
-                                      }
+                                      <QuestionText inline>{item.questionText}</QuestionText>
                                     </p>
                                   </div>
 

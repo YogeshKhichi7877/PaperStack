@@ -43,6 +43,7 @@ import {
 } from '../utils/studyEvidence';
 
 import './MockEvaluationPage.css';
+import QuestionText from '../components/QuestionText';
 
 const MathAnswer = React.lazy(
   () =>
@@ -1140,9 +1141,7 @@ export default function MockEvaluationPage({
                       </span>
 
                       <h2>
-                        {
-                          currentQuestion.questionText
-                        }
+                        <QuestionText inline>{currentQuestion.questionText}</QuestionText>
                       </h2>
                     </div>
                   </div>
@@ -1441,9 +1440,7 @@ export default function MockEvaluationPage({
                             </small>
 
                             <h3>
-                              {
-                                question.questionText
-                              }
+                              <QuestionText inline>{question.questionText}</QuestionText>
                             </h3>
                           </div>
                         </div>

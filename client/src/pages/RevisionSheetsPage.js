@@ -799,21 +799,16 @@ export default function RevisionSheetsPage({
             </span>
 
             <h1>
-              Less scrolling.
+              Revise what
               <br />
 
               <span>
-                More remembering.
+                matters.
               </span>
             </h1>
 
             <p>
-              Turn PaperStack's question
-              archive, approved answers
-              and your own mock mistakes
-              into a focused revision
-              sheet for the time you
-              actually have.
+              Build a focused revision session from archive evidence and your mock mistakes.
             </p>
 
             <div className="rs-hero-points">
@@ -964,10 +959,10 @@ export default function RevisionSheetsPage({
                 )}
 
                 {subjects.map(
-                  (item) => (
+                  (item, index) => (
                     <option
                       key={
-                        item.subjectCode
+                        `${item.subjectCode}-${item.semester || 'all'}-${index}`
                       }
                       value={
                         item.subjectCode
@@ -1090,6 +1085,20 @@ export default function RevisionSheetsPage({
                 </span>
               </button>
             )}
+
+            <button
+              type="button"
+              className="rs-start"
+              disabled={loading || !subjectCode}
+              onClick={() =>
+                document
+                  .querySelector('.rs-context, .rs-state, .rs-last-five')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+            >
+              Start Revision
+              <ArrowRight size={16} />
+            </button>
           </div>
         </section>
 
@@ -1133,7 +1142,7 @@ export default function RevisionSheetsPage({
                 SUBJECT CONTEXT
             ============================================= */}
 
-            <section className="rs-context">
+            <section className="rs-context" id="revision-workspace">
               <div className="rs-current-subject">
                 <span>
                   Current workspace
@@ -2572,27 +2581,14 @@ export default function RevisionSheetsPage({
                     METHODOLOGY
                 ========================================= */}
 
-                <section className="rs-method">
-                  <Sparkles
-                    size={17}
-                  />
-
-                  <div>
-                    <strong>
-                      How this sheet is
-                      built
-                    </strong>
-
-                    <p>
-                      {workspace.methodology}{' '}
-                      Historical frequency
-                      helps prioritize
-                      revision, but it is
-                      not a prediction of
-                      the next exam.
-                    </p>
-                  </div>
-                </section>
+                <details className="rs-method">
+                  <summary>How this sheet is built</summary>
+                  <p>
+                    {workspace.methodology}{' '}
+                    Historical frequency helps prioritize revision, but it is
+                    not a prediction of the next exam.
+                  </p>
+                </details>
               </>
             )}
           </>

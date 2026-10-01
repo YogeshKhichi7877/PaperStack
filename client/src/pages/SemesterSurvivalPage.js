@@ -38,6 +38,7 @@ import {
 import { OFFICIAL_BRANCHES } from '../config/branches';
 
 import './SemesterSurvivalPage.css';
+import QuestionText from '../components/QuestionText';
 
 /* =========================================================
    PREFERENCES
@@ -228,6 +229,14 @@ function MissionItem({
         </div>
 
         <p>{item.reason}</p>
+
+        <Link
+          className="sp-mission-action"
+          to={`/subject/${encodeURIComponent(item.subjectCode)}`}
+        >
+          Study
+          <ArrowRight size={14} />
+        </Link>
       </div>
     </article>
   );
@@ -242,6 +251,7 @@ function SubjectCard({
   done,
   onToggle,
 }) {
+  const [expanded, setExpanded] = useState(false);
   const topTopics =
     subject?.intelligence?.topTopics || [];
 
@@ -320,6 +330,16 @@ function SubjectCard({
               </>
             )}
           </button>
+
+          <button
+            type="button"
+            className="sp-subject-expand sp-no-print"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? 'Less' : 'More'}
+            <ChevronRight size={15} />
+          </button>
         </div>
       </header>
 
@@ -337,6 +357,7 @@ function SubjectCard({
         />
       </div>
 
+      {expanded && <>
       <div className="sp-subject-stats">
         <div>
           <span>PYQ Archive</span>
@@ -530,9 +551,7 @@ function SubjectCard({
                     </div>
 
                     <p>
-                      {
-                        question.questionText
-                      }
+                      <QuestionText inline>{question.questionText}</QuestionText>
                     </p>
 
                     <ChevronRight
@@ -588,6 +607,7 @@ function SubjectCard({
           )}
         </div>
       )}
+      </>}
 
       <nav className="sp-tools sp-no-print">
         <Link
@@ -882,20 +902,16 @@ export default function SemesterSurvivalPage({
             </span>
 
             <h1>
-              Know what to study.
+              What should you
               <br />
 
               <span>
-                Know what you're missing.
+                study next?
               </span>
             </h1>
 
             <p>
-              One practical workspace for
-              your semester — PYQs,
-              important topics, solutions,
-              revision resources, mocks
-              and archive gaps.
+              See priority subjects first, then open the exact study tool you need.
             </p>
 
             <div className="sp-hero-context">
@@ -1163,16 +1179,11 @@ export default function SemesterSurvivalPage({
                   </span>
 
                   <h2>
-                    Start where PaperStack
-                    has the least support.
+                    Study these subjects first.
                   </h2>
 
                   <p>
-                    This order helps you
-                    spot subjects where the
-                    archive has fewer
-                    papers, questions or
-                    resources.
+                    Priority is based on archive coverage and available study support.
                   </p>
                 </div>
 
@@ -1189,7 +1200,7 @@ export default function SemesterSurvivalPage({
                   (item, index) => (
                     <MissionItem
                       key={
-                        item.subjectCode
+                        `${item.subjectCode}-${index}`
                       }
                       item={item}
                       index={index}
@@ -1243,10 +1254,10 @@ export default function SemesterSurvivalPage({
 
               <div className="sp-subject-list">
                 {(pack.subjects ||
-                  []).map((subject) => (
+                  []).map((subject, index) => (
                   <SubjectCard
                     key={
-                      subject.subjectCode
+                      `${subject.subjectCode}-${index}`
                     }
                     subject={subject}
                     done={checked.has(

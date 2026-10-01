@@ -18,7 +18,6 @@ import {
   ArrowRight,
   BarChart3,
   BookOpen,
-  Brain,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -31,10 +30,8 @@ import {
   Printer,
   RefreshCw,
   RotateCcw,
-  Settings2,
   Sparkles,
   Target,
-  WandSparkles,
 } from 'lucide-react';
 
 import {
@@ -143,11 +140,13 @@ function OptionButton({
   active,
   children,
   onClick,
+  tone = '',
 }) {
   return (
     <button
       type="button"
       aria-pressed={active}
+      className={tone ? `me-option-${tone}` : undefined}
       onClick={onClick}
     >
       {children}
@@ -765,37 +764,16 @@ export default function MockExamGeneratorPage({
             </span>
 
             <h1>
-              Build a paper.
+              Build a mock.
               <br />
 
               <span>
-                Then sit the exam.
+                Start practising.
               </span>
             </h1>
 
-            <p>Practice your subject before the real exam.</p>
+            <p>Choose the setup, generate the paper, and begin.</p>
 
-            <div className="me-hero-points" hidden>
-              <span>
-                <Check size={14} />
-                Past-paper grounded
-              </span>
-
-              <span>
-                <Check size={14} />
-                Adjustable difficulty
-              </span>
-
-              <span>
-                <Check size={14} />
-                Timed exam mode
-              </span>
-
-              <span>
-                <Check size={14} />
-                Detailed evaluation
-              </span>
-            </div>
           </div>
 
           <div className="me-hero-side">
@@ -933,12 +911,12 @@ export default function MockExamGeneratorPage({
             <div className="me-option-buttons">
               {[
                 [
-                  'balanced',
-                  'Balanced',
-                ],
-                [
                   'easy',
                   'Easy',
+                ],
+                [
+                  'balanced',
+                  'Balanced',
                 ],
                 [
                   'hard',
@@ -951,6 +929,7 @@ export default function MockExamGeneratorPage({
                 ]) => (
                   <OptionButton
                     key={value}
+                    tone={value}
                     active={
                       difficulty ===
                       value
@@ -980,8 +959,6 @@ export default function MockExamGeneratorPage({
             />
 
             <span>
-              <Brain size={17} />
-
               <span>
                 <strong>
                   Focus on my weak topics
@@ -1003,12 +980,6 @@ export default function MockExamGeneratorPage({
         <section className="me-builder me-no-print">
           <div className="me-builder-head">
             <div>
-              <span className="me-builder-icon">
-                <Settings2
-                  size={20}
-                />
-              </span>
-
               <div>
                 <h2>
                   Build your mock
@@ -1048,10 +1019,10 @@ export default function MockExamGeneratorPage({
                 )}
 
                 {subjects.map(
-                  (subject) => (
+                  (subject, index) => (
                     <option
                       key={
-                        subject.subjectCode
+                        `${subject.subjectCode}-${subject.semester || 'all'}-${index}`
                       }
                       value={
                         subject.subjectCode
@@ -1225,12 +1196,7 @@ export default function MockExamGeneratorPage({
                   Building Paper…
                 </>
               ) : (
-                <>
-                  <WandSparkles
-                    size={17}
-                  />
-                  Generate Mock
-                </>
+                'Generate Mock'
               )}
             </button>
           </div>
@@ -1857,7 +1823,7 @@ export default function MockExamGeneratorPage({
                                 </div>
 
                                 <React.Suspense fallback={<p>{question.questionText}</p>}>
-                                  <MathAnswer>{question.questionText}</MathAnswer>
+                                  <MathAnswer className="ps-question-math" normalizePlainMath>{question.questionText}</MathAnswer>
                                 </React.Suspense>
 
                                 {question.source ===

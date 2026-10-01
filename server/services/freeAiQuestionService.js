@@ -176,6 +176,7 @@ IMPORTANT:
 - Do NOT infer or return subject, branch, semester, year, or exam type. PaperStack already has authoritative metadata.
 - Extract only the questions visible in the PDF.
 - Preserve sub-questions such as Q2(a), Q2(b).
+- Preserve mathematical notation exactly where possible. Use Unicode symbols for visible symbols and inline LaTeX delimiters for formulas, for example $x^{2}$, $f_{c}$, $\\frac{a}{b}$, and $\\sqrt{x}$. Never flatten powers or subscripts into caret text when their structure is visible.
 - Do not invent missing question text.
 - If marks are visible, return the numeric marks.
 - If a page number is clear, return it; otherwise null.

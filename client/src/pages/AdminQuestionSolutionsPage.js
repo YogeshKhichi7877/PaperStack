@@ -15,6 +15,7 @@ import {
 } from '../services/questionSolutionApi';
 
 import './AdminQuestionSolutionsPage.css';
+import QuestionText from '../components/QuestionText';
 
 const MathAnswer = React.lazy(() => import('../components/MathAnswer'));
 
@@ -303,8 +304,9 @@ export default function AdminQuestionSolutionsPage({
                       Question
                     </strong>
                     <p>
-                      {q.questionText ||
-                        'Question text unavailable.'}
+                      <QuestionText inline>
+                        {q.questionText || 'Question text unavailable.'}
+                      </QuestionText>
                     </p>
 
                     {q._id && (

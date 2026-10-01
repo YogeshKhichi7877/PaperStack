@@ -798,6 +798,7 @@ import {
 
 import QuestionSolutionsPanel from '../components/QuestionSolutionsPanel';
 import QuestionAssistantPanel from '../components/QuestionAssistantPanel';
+import QuestionText from '../components/QuestionText';
 import SaveButton from '../components/SaveButton';
 import RelatedPyqs from '../components/RelatedPyqs';
 import { recordStudyProgressOnce } from '../services/studyProgressApi';
@@ -961,7 +962,7 @@ function QuestionCard({
 
       <div className="iq-card-question-wrap">
         <p className="iq-question-text">
-          {question.questionText}
+          <QuestionText inline>{question.questionText}</QuestionText>
         </p>
       </div>
 
@@ -1101,7 +1102,7 @@ function PracticePanel({
               )}
             </div>
 
-            <p>{question.questionText}</p>
+            <p><QuestionText inline>{question.questionText}</QuestionText></p>
 
             <QuestionMeta
               question={question}
@@ -1362,7 +1363,7 @@ function QuestionDetail({
           </div>
 
           <div className="iq-detail-question">
-            {question.questionText}
+            <QuestionText>{question.questionText}</QuestionText>
           </div>
 
           <QuestionMeta
@@ -1585,7 +1586,7 @@ export default function InteractiveQuestionsPage({
   const [
     filtersExpanded,
     setFiltersExpanded,
-  ] = useState(true);
+  ] = useState(false);
 
   /* ========================
      FILTER DATA
@@ -1886,20 +1887,16 @@ export default function InteractiveQuestionsPage({
             </span>
 
             <h1>
-              Practice PYQs.
+              Find a question.
               <br />
 
               <span>
-                One question at a time.
+                Start practising.
               </span>
             </h1>
 
             <p>
-              Search extracted questions
-              directly instead of opening
-              every PDF. Find questions by
-              subject, topic, marks, year,
-              exam and difficulty.
+              Search the archive or start a focused practice question.
             </p>
 
             <div className="iq-hero-actions">
@@ -2026,12 +2023,11 @@ export default function InteractiveQuestionsPage({
 
               <div>
                 <h2>
-                  Find the exact question
+                  Search questions
                 </h2>
 
                 <p>
-                  Search text or narrow the
-                  archive using filters.
+                  Add filters only when you need them.
                 </p>
               </div>
             </div>

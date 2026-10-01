@@ -15,7 +15,6 @@ import {
 
 import {
   ArrowRight,
-  BarChart3,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -40,6 +39,7 @@ import {
 import './PyqIntelligencePage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
+import QuestionText from '../components/QuestionText';
 
 /* =========================================================
    HELPERS
@@ -332,9 +332,7 @@ function ClusterCard({
                       </div>
 
                       <p>
-                        {
-                          question.questionText
-                        }
+                        <QuestionText inline>{question.questionText}</QuestionText>
                       </p>
                     </div>
 
@@ -665,11 +663,11 @@ export default function PyqIntelligencePage({
             </span>
 
             <h1>
-              See what keeps
+              Find repeated
               <br />
 
               <span>
-                coming back.
+                PYQs.
               </span>
             </h1>
 
@@ -793,10 +791,10 @@ export default function PyqIntelligencePage({
                 )}
 
                 {subjects.map(
-                  (subject) => (
+                  (subject, index) => (
                     <option
                       key={
-                        subject.subjectCode
+                        `${subject.subjectCode}-${subject.semester || 'all'}-${index}`
                       }
                       value={
                         subject.subjectCode
@@ -890,6 +888,20 @@ export default function PyqIntelligencePage({
                 )}
               </div>
             </label>
+
+            <button
+              type="button"
+              className="pi-analyze"
+              disabled={loading || !subjectCode}
+              onClick={() =>
+                document
+                  .querySelector('.pi-summary-grid, .pi-state')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+            >
+              Analyze PYQs
+              <ArrowRight size={16} />
+            </button>
           </div>
 
           <div className="pi-threshold-guide">
@@ -996,7 +1008,7 @@ export default function PyqIntelligencePage({
                 SUMMARY
             ============================================= */}
 
-            <section className="pi-summary-grid">
+            <section className="pi-summary-grid" id="pi-analysis-results">
               <IntelligenceStat
                 icon={FileQuestion}
                 label="Questions analyzed"
@@ -1264,29 +1276,13 @@ export default function PyqIntelligencePage({
                 METHODOLOGY
             ============================================= */}
 
-            <section className="pi-method">
-              <BarChart3
-                size={18}
-              />
-
-              <div>
-                <strong>
-                  How to read this page
-                </strong>
-
-                <p>
-                  An exact cluster means
-                  PaperStack found highly
-                  matching repeated question
-                  wording. A similar cluster
-                  groups questions whose
-                  wording or structure is
-                  close enough to pass the
-                  selected similarity
-                  threshold.
-                </p>
-              </div>
-            </section>
+            <details className="pi-method">
+              <summary>How matching works</summary>
+              <p>
+                Exact clusters share highly matching wording. Similar clusters
+                meet the selected similarity threshold.
+              </p>
+            </details>
           </>
         )}
       </div>

@@ -39,6 +39,7 @@ import {
 } from '../services/importantTopicsApi';
 
 import './ImportantTopicsPage.css';
+import QuestionText from '../components/QuestionText';
 
 /* =========================================================
    HELPERS
@@ -598,9 +599,7 @@ function TopicCard({
                       </div>
 
                       <p>
-                        {
-                          question.questionText
-                        }
+                        <QuestionText inline>{question.questionText}</QuestionText>
                       </p>
                     </div>
 
