@@ -20,6 +20,33 @@ import './StudentUtility.css';
 
 const MathAnswer = React.lazy(() => import('./MathAnswer'));
 
+function hasMeaningfulAnswer(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (text.length < 20) return false;
+
+  const metadataOnly = [
+    /automatic numerical verification could not validate[^.]*\.?/gi,
+    /the extracted expression could not be evaluated safely\.?/gi,
+    /ai-generated practice answer[^.]*\.?/gi,
+    /check (?:the )?(?:given values|calculations)[^.]*\.?/gi,
+    /reused (?:the|a) current versioned answer[^.]*\.?/gi,
+    /paperstack (?:could not|couldn't) generate the solution\.?/gi,
+  ].reduce((answer, pattern) => answer.replace(pattern, ' '), text)
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return metadataOnly.length >= 20;
+}
+
+function answerHeading(intent) {
+  if (intent === 'hint') return 'Hint';
+  if (intent === 'formula') return 'Formula guide';
+  if (intent === 'concepts') return 'Concepts to revise';
+  if (intent === 'structure') return 'Answer structure';
+  if (intent === 'explain') return 'Explanation';
+  return 'Solution';
+}
+
 function AiFeedbackControls({ answerId, toast }) {
   const [choice, setChoice] = useState('');
   const [reason, setReason] = useState('incorrect');
@@ -191,6 +218,14 @@ export default function QuestionAssistantPanel({
           }
         );
 
+      if (!hasMeaningfulAnswer(data.answer)) {
+        const invalidAnswerError = new Error(
+          'PaperStack could not generate the solution.'
+        );
+        invalidAnswerError.code = 'EMPTY_AI_ANSWER';
+        throw invalidAnswerError;
+      }
+
       setMessages(
         (current) => [
           ...current,
@@ -221,15 +256,34 @@ export default function QuestionAssistantPanel({
               [],
             answerId: data.answerId || '',
             cache: data.cache || null,
+            practiceAnswer: Boolean(data.practiceAnswer),
+            verification: data.verification || null,
+            questionKind: data.questionKind || '',
           },
         ]
       );
       onAnswered?.();
     } catch (error) {
+      const message =
+        error.response?.data?.error ||
+        error.message ||
+        'PaperStack could not generate the solution.';
+
+      setMessages(
+        (current) => [
+          ...current,
+          {
+            id: `assistant_error_${Date.now()}`,
+            role: 'error',
+            query,
+            text: message,
+          },
+        ]
+      );
+
       if (toast) {
         toast(
-          error.response?.data?.error ||
-            'Could not answer this question.',
+          message,
           'error'
         );
       }
@@ -326,7 +380,7 @@ export default function QuestionAssistantPanel({
       <div className="qa-quick-actions">
         <AcademicAiActions disabled={sending} onAction={handleAcademicAction} />
         {!contextLoading && quickSummary.solutions === 0 && (
-          <button type="button" disabled={sending} onClick={() => submit('Generate a complete worked practice answer for this question. Show all steps and verify numerical calculations.')}>
+          <button type="button" disabled={sending} onClick={() => submit('Generate a complete worked practice answer for this question. Show all necessary reasoning and verify calculations only if this is genuinely numerical. State the final answer clearly.')}>
             Generate practice answer
           </button>
         )}
@@ -418,6 +472,28 @@ export default function QuestionAssistantPanel({
                     }
                   </p>
                 </article>
+              ) : message.role === 'error' ? (
+                <article
+                  key={message.id}
+                  className="qa-generation-error"
+                >
+                  <div>
+                    <strong>
+                      PaperStack couldn't generate the solution.
+                    </strong>
+                    <p>
+                      Please try again. Your question and approved archive context are still available.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => submit(message.query)}
+                  >
+                    Try again
+                  </button>
+                </article>
               ) : (
                 <article
                   key={
@@ -442,9 +518,19 @@ export default function QuestionAssistantPanel({
                     <em>{message.mode === 'ai' ? 'PaperStack AI' : 'PaperStack guidance'}</em>
                   </div>
 
+                  <h3 className="qa-solution-title">
+                    {answerHeading(message.intent)}
+                  </h3>
+
                   <React.Suspense fallback={<p>{message.answer}</p>}>
                     <MathAnswer>{message.answer}</MathAnswer>
                   </React.Suspense>
+
+                  {message.practiceAnswer && (
+                    <small className="qa-practice-note">
+                      AI-generated practice answer — not an approved student solution.
+                    </small>
+                  )}
 
                   {message.cache?.hit && <small className="qa-cache-note">{message.cache.matchType === 'semantic' ? 'Reused a highly similar, positively rated answer.' : 'Reused the current versioned answer for this content.'}</small>}
 
@@ -581,6 +667,23 @@ export default function QuestionAssistantPanel({
               )
           )
         }
+
+        {sending && (
+          <article
+            className="qa-solving"
+            aria-live="polite"
+          >
+            <span className="qa-solving-spinner" />
+            <div>
+              <strong>
+                Solving this question…
+              </strong>
+              <p>
+                Building a complete answer from the question and available archive context.
+              </p>
+            </div>
+          </article>
+        )}
       </div>
       {!messages.length && <RelatedPyqs questions={context?.similarQuestions || []} />}
     </section>

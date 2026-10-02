@@ -143,12 +143,16 @@ router.post('/:questionId/query', async (req, res) => {
   } catch (error) {
     console.error(
       'Question assistant query failed:',
-      error
+      {
+        code: error.code || error.name || 'QUESTION_ASSISTANT_ERROR',
+        questionId: String(req.params.questionId || ''),
+      }
     );
 
-    res.status(500).json({
-      error:
-        'Failed to answer this question',
+    res.status(error.statusCode || 500).json({
+      error: error.statusCode === 503
+        ? 'PaperStack could not generate the solution. Please try again.'
+        : 'Failed to answer this question',
     });
   }
 });

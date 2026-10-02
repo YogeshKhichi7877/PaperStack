@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   answerSelectedQuestion,
+  buildQuestionTutorPrompt,
   detectQuestionIntent,
   expectedAnswerShape,
   localHint,
@@ -215,4 +216,41 @@ test('AI availability is optional and local result stays usable', async () => {
 
   assert.equal(result.mode, 'local');
   assert.ok(result.answer.length > 20);
+});
+
+test('transitive closure bypasses numerical verification and keeps full question context', async () => {
+  const question = q(
+    'relation-1',
+    'Given R = {(1,2), (2,3), (3,4)} on A = {1,2,3,4}. Compute the transitive closure of relation R.',
+    {
+      primaryTopic: 'Transitive Closure',
+      marks: 5,
+    }
+  );
+  question.subject = 'Discrete Mathematics';
+  question.subjectCode = 'CS201';
+
+  const result = await answerSelectedQuestion({
+    query: 'Solve this question completely',
+    question,
+    approvedSolutions: [],
+    candidateQuestions: [],
+    useAi: false,
+  });
+
+  assert.equal(result.questionKind, 'relation');
+  assert.equal(result.verification.status, 'not_applicable');
+  assert.deepEqual(result.verification.details, []);
+
+  const prompt = buildQuestionTutorPrompt({
+    query: 'Solve this question completely',
+    intent: 'solution',
+    question,
+  });
+  assert.match(prompt, /answer this exact question/i);
+  assert.match(prompt, /transitive closure of relation R/i);
+  assert.match(prompt, /subject=Discrete Mathematics \(CS201\)/i);
+  assert.match(prompt, /category=relation/i);
+  assert.match(prompt, /Final Answer/i);
+  assert.match(prompt, /do not force numerical calculation/i);
 });

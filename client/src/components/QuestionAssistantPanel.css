@@ -33,6 +33,95 @@
 }
 .qa-question-anchor { position: sticky; top: 8px; z-index: 1; margin: -5px -5px 12px; padding: 9px 12px; border-left: 3px solid var(--color-primary); background: var(--color-surface); font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
 
+.qa-solution-title {
+  margin: 18px 0 8px;
+  color: var(--color-text-primary);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.025em;
+}
+
+.qa-practice-note,
+.qa-cache-note {
+  display: block;
+  margin-top: 12px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.qa-generation-error,
+.qa-solving {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 17px 18px;
+  border: 1px solid rgba(33, 128, 141, .22);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.qa-generation-error strong,
+.qa-solving strong {
+  color: var(--color-text-primary);
+  font-size: 15px;
+}
+
+.qa-generation-error p,
+.qa-solving p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.qa-generation-error button {
+  flex: none;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.qa-generation-error button:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.qa-solving {
+  justify-content: flex-start;
+}
+
+.qa-solving-spinner {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 3px solid rgba(33, 128, 141, .18);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: qa-solving-spin .8s linear infinite;
+}
+
+@keyframes qa-solving-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .qa-generation-error {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qa-solving-spinner { animation-duration: 2s; }
+}
+
 .qa-heading {
   display: grid;
   grid-template-columns: minmax(0,1fr) 190px;

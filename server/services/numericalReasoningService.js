@@ -3,10 +3,50 @@ const { numericalReasoningSchema, parseAiJson } = require('./aiSchemas');
 const { verifyCalculation } = require('./mathVerificationService');
 const aiCache = require('./aiCacheService');
 
+function classifyQuestionKind(question = {}) {
+  const text = String(question.questionText || '').toLowerCase();
+  const declared = String(question.questionType || '').toLowerCase();
+
+  if (/\b(transitive closure|reflexive closure|symmetric closure|equivalence relation|partial order|power set|cartesian product|set theory|relation on|relation r|hasse diagram)\b/.test(text)) {
+    return 'relation';
+  }
+
+  if (/\b(write|trace|debug|implement)\b[^.]{0,45}\b(program|code|function|class|query)\b|\b(c\+\+|python|java|javascript|sql)\b/.test(text) || declared === 'programming') {
+    return 'programming';
+  }
+
+  if (/\b(algorithm|pseudocode|time complexity|space complexity|midpoint circle|shortest path|sorting|searching)\b/.test(text) || declared === 'algorithm') {
+    return 'algorithm';
+  }
+
+  if (/\b(prove|proof|show that|demonstrate that)\b/.test(text) || declared === 'proof') {
+    return 'proof';
+  }
+
+  if (/\b(derive|derivation)\b/.test(text) || declared === 'derivation') {
+    return 'derivation';
+  }
+
+  if (/\b(define|describe|discuss|what is|explain|compare|differentiate between)\b/.test(text) ||
+      ['theory', 'conceptual', 'definition'].includes(declared)) {
+    return 'theory';
+  }
+
+  if (declared === 'numerical') return 'numerical';
+
+  const calculationCommand = /\b(calculate|compute|solve for|evaluate|determine the (?:value|magnitude)|find the (?:value|magnitude))\b/.test(text);
+  const calculationSubject = /\b(determinant|matrix product|integral|derivative|eigenvalue|probability|mean|variance|standard deviation|voltage|current|resistance|velocity|acceleration|force|energy|power|frequency|wavelength|numerical value)\b/.test(text);
+  const numericData = /(?:^|\s)[+-]?(?:\d+(?:\.\d+)?|\.\d+)\s*(?:[a-z]+|%|°)?(?:\s|$|[,;])/i.test(text);
+
+  if ((calculationCommand && (calculationSubject || numericData)) || calculationSubject) {
+    return 'numerical';
+  }
+
+  return 'conceptual';
+}
+
 function isNumericalQuestion(question = {}) {
-  return question.questionType === 'numerical' ||
-    /\b(calculate|compute|solve for|determinant|matrix product|numerical value|evaluate)\b/i
-      .test(String(question.questionText || ''));
+  return classifyQuestionKind(question) === 'numerical';
 }
 
 function displayValue(value) {
@@ -43,9 +83,12 @@ async function answerNumericalQuestion(question) {
   const check = verifyCalculation({ expression: data.expression,
     claimedResult: data.claimedResult, unit: data.unit });
   if (check.calculated === null) {
-    return { verified: false,
-      verification: { status: 'unverified', details: ['The extracted expression could not be evaluated safely.'] },
-      answer: 'Automatic numerical verification could not validate this calculation. Check the given values and method against the question before using a final answer.' };
+    return {
+      verified: false,
+      unsupported: true,
+      verification: { status: 'not_applicable', details: [] },
+      answer: '',
+    };
   }
   const result = displayValue(check.calculated);
   const safeUnit = check.unit.replace(/[^a-zA-Z0-9/°^ ]/g, '');
@@ -71,4 +114,4 @@ async function answerNumericalQuestion(question) {
   };
 }
 
-module.exports = { answerNumericalQuestion, isNumericalQuestion };
+module.exports = { answerNumericalQuestion, classifyQuestionKind, isNumericalQuestion };

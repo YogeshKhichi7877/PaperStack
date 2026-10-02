@@ -6,6 +6,64 @@ const { questionSimilarity } = require('./pyqIntelligenceService');
 
 const REUSABLE_TASKS = new Set(['QUESTION_TUTOR']);
 const REUSABLE_MODES = new Set(['explain', 'solution', 'hint', 'concepts', 'formula', 'structure', 'general']);
+const GENERATED_ANSWER_FIELDS = [
+  'answer',
+  'content',
+  'response',
+  'solution',
+  'body',
+  'markdown',
+  'generatedAnswer',
+  'versionedAnswer',
+];
+
+function extractGeneratedAnswerText(value) {
+  if (typeof value === 'string') return value.trim();
+  if (!value || typeof value !== 'object') return '';
+
+  for (const field of GENERATED_ANSWER_FIELDS) {
+    const candidate = value[field];
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+    if (candidate && typeof candidate === 'object') {
+      const nested = extractGeneratedAnswerText(candidate);
+      if (nested) return nested;
+    }
+  }
+
+  return '';
+}
+
+function isValidGeneratedAnswer(value, options = {}) {
+  const answer = extractGeneratedAnswerText(value);
+  const minimumLength = Math.max(20, Number(options.minimumLength) || 40);
+  if (!answer || answer.length < minimumLength) return false;
+
+  const normalized = answer
+    .replace(/[#*_`>$\[\](){}|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (normalized.length < minimumLength || normalized.split(' ').filter(Boolean).length < 7) {
+    return false;
+  }
+
+  const invalidOnlyPatterns = [
+    /automatic numerical verification could not validate[^.]*\.?/gi,
+    /the extracted expression could not be evaluated safely\.?/gi,
+    /ai-generated practice answer[^.]*\.?/gi,
+    /check (?:the )?(?:given values|calculations)[^.]*\.?/gi,
+    /reused (?:the|a) current versioned answer[^.]*\.?/gi,
+    /paperstack (?:could not|couldn't) generate the solution\.?/gi,
+    /(?:generation|parser|provider) failed[^.]*\.?/gi,
+  ];
+
+  const substantive = invalidOnlyPatterns
+    .reduce((text, pattern) => text.replace(pattern, ' '), normalized)
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return substantive.length >= minimumLength &&
+    substantive.split(' ').filter(Boolean).length >= 7;
+}
 
 function normalizeAcademicRequest(value = '') {
   return String(value || '')
@@ -35,6 +93,9 @@ function reusableAcademicRequest({ task, mode, personalized = false }) {
 
 function answerReusable(entry, { semantic = false } = {}) {
   if (!entry || ['stale', 'needs_review'].includes(entry.status)) return false;
+  if (!isValidGeneratedAnswer(entry.answer, {
+    minimumLength: entry.mode === 'solution' ? 80 : 40,
+  })) return false;
   if (Number(entry.negativeCount || 0) > Math.max(1, Number(entry.helpfulCount || 0))) return false;
   return semantic ? ['verified', 'helpful'].includes(entry.status) : true;
 }
@@ -55,12 +116,18 @@ async function findReusableAnswer(input, dependencies = {}) {
   if (!reusableAcademicRequest(input)) return null;
   const Model = dependencies.Model || AiAnswerCache;
   const exactHash = exactRequestHash(input);
-  const promptVersion = input.promptVersion || 'question-tutor-v4';
+  const promptVersion = input.promptVersion || 'question-tutor-v5';
   const exact = await Model.findOne({ exactHash, contentVersion: input.contentVersion, promptVersion }).lean();
 
   if (answerReusable(exact)) {
     await Model.updateOne({ _id: exact._id }, { $inc: { exactHits: 1 }, $set: { lastUsedAt: new Date() } });
     return { entry: exact, matchType: 'exact', similarity: 1 };
+  }
+
+  if (exact && !isValidGeneratedAnswer(exact.answer, {
+    minimumLength: exact.mode === 'solution' ? 80 : 40,
+  })) {
+    await Model.updateOne({ _id: exact._id }, { $set: { status: 'stale' } });
   }
 
   const candidates = await Model.find({
@@ -82,13 +149,15 @@ async function findReusableAnswer(input, dependencies = {}) {
 }
 
 async function storeReusableAnswer(input, dependencies = {}) {
-  if (!reusableAcademicRequest(input) || !String(input.answer || '').trim()) return null;
+  const answer = extractGeneratedAnswerText(input.answer);
+  if (!reusableAcademicRequest(input) || !isValidGeneratedAnswer(answer, {
+    minimumLength: String(input.mode || '').toLowerCase() === 'solution' ? 80 : 40,
+  })) return null;
   const Model = dependencies.Model || AiAnswerCache;
   const normalizedRequest = normalizeAcademicRequest(input.request);
   const exactHash = exactRequestHash(input);
-  const answer = String(input.answer).trim();
   return Model.findOneAndUpdate(
-    { exactHash, contentVersion: input.contentVersion, promptVersion: input.promptVersion || 'question-tutor-v4' },
+    { exactHash, contentVersion: input.contentVersion, promptVersion: input.promptVersion || 'question-tutor-v5' },
     {
       $setOnInsert: {
         exactHash,
@@ -99,7 +168,7 @@ async function storeReusableAnswer(input, dependencies = {}) {
         questionId: input.questionId || null,
         topics: input.topics || [],
         contentVersion: input.contentVersion,
-        promptVersion: input.promptVersion || 'question-tutor-v4',
+        promptVersion: input.promptVersion || 'question-tutor-v5',
         answer,
         answerHash: crypto.createHash('sha256').update(answer).digest('hex'),
         provider: input.provider || '',
@@ -154,8 +223,10 @@ async function invalidateQuestionAnswers(questionIds, dependencies = {}) {
 module.exports = {
   answerReusable,
   exactRequestHash,
+  extractGeneratedAnswerText,
   findReusableAnswer,
   invalidateQuestionAnswers,
+  isValidGeneratedAnswer,
   normalizeAcademicRequest,
   recordAnswerFeedback,
   reusableAcademicRequest,

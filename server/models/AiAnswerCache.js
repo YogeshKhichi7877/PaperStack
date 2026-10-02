@@ -9,7 +9,7 @@ const aiAnswerCacheSchema = new mongoose.Schema({
   questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question', default: null, index: true },
   topics: { type: [String], default: [] },
   contentVersion: { type: String, required: true, index: true },
-  promptVersion: { type: String, required: true, default: 'question-tutor-v4' },
+  promptVersion: { type: String, required: true, default: 'question-tutor-v5' },
   answer: { type: String, required: true, maxlength: 50000 },
   answerHash: { type: String, required: true },
   provider: { type: String, default: '' },

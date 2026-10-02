@@ -4,7 +4,7 @@ import { trackProductEvent } from '../services/productAnalyticsApi';
 
 export const ACADEMIC_AI_ACTIONS = [
   { key: 'explain', label: 'Explain', query: 'Explain what this question is asking in simple words and show an exam-ready approach.' },
-  { key: 'solution', label: 'Solve', query: 'Solve this question step by step. Verify calculations and state the final answer clearly.' },
+  { key: 'solution', label: 'Solve', query: 'Solve this question completely. Show the appropriate reasoning or steps, verify calculations only when the question is numerical, and state the final answer clearly.' },
   { key: 'hint', label: 'Hint', query: 'Give me a progressive hint only. Do not reveal the full answer.' },
   { key: 'concepts', label: 'Concepts', query: 'What concepts and prerequisites should I revise before solving this?' },
   { key: 'formula', label: 'Formula', query: 'Show the relevant formulas, define every symbol, and explain when to use them.' },
