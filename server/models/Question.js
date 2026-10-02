@@ -227,6 +227,10 @@ const questionSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+questionSchema.index({ subjectCode: 1, status: 1, year: -1, sequence: 1 });
+questionSchema.index({ subjectKey: 1, status: 1, year: -1, sequence: 1 });
+questionSchema.index({ branch: 1, semester: 1, examType: 1, status: 1, year: -1 });
+
 questionSchema.index({ paperId: 1, questionKey: 1 }, { unique: true });
 questionSchema.index({ paperId: 1, sequence: 1 });
 questionSchema.index({ subjectKey: 1, year: -1, examType: 1 });

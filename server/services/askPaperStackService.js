@@ -1,4 +1,5 @@
 const { aiAvailable, generateForTask } = require('./aiService');
+const aiCache = require('./aiCacheService');
 
 function normalizeText(value = '') {
   return String(value || '')
@@ -402,7 +403,11 @@ async function askAi({
   const task = intent === 'revision' ? 'STUDY_PLANNER'
     : intent === 'topics' ? 'IMPORTANT_TOPIC_EXPLANATION'
       : 'PYQ_EXPLANATION';
-  return generateForTask(task, prompt, { temperature: 0.2, maxOutputTokens: 700 });
+  return generateForTask(task, prompt, {
+    temperature: 0.2,
+    maxOutputTokens: 700,
+    inflightKey: `ask-paperstack:${aiCache.hashContent(prompt)}`,
+  });
 }
 
 function isAiConfigured() {

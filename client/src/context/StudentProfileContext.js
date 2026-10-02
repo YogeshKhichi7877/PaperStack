@@ -91,7 +91,7 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
               <span>Home Awaits</span>
             </h1>
             <p>A smarter way to access, practice and grow — just for your semester.</p>
-            <img className="student-profile-illustration" src={onboardingStudyOwl} alt="" />
+            <img className="student-profile-illustration" src={onboardingStudyOwl} alt="" width="1122" height="1402" loading="lazy" decoding="async" />
           </aside>
         )}
 

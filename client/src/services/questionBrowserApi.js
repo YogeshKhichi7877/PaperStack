@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config/appConfig';
+import { cachedPublicRequest } from './publicRequestCache';
 
 function cleanParams(params = {}) {
   return Object.fromEntries(
@@ -12,16 +13,19 @@ function cleanParams(params = {}) {
   );
 }
 
-export async function browseQuestions(params = {}) {
+export async function browseQuestions(params = {}, options = {}) {
   const response = await axios.get(`${API_URL}/api/question-browser`, {
     params: cleanParams(params),
+    signal: options.signal,
   });
   return response.data;
 }
 
 export async function getQuestionFacets() {
-  const response = await axios.get(`${API_URL}/api/question-browser/facets`);
-  return response.data;
+  return cachedPublicRequest('question-browser:facets', async () => {
+    const response = await axios.get(`${API_URL}/api/question-browser/facets`);
+    return response.data;
+  });
 }
 
 export async function getRandomQuestion(params = {}) {

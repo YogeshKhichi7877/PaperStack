@@ -8,42 +8,15 @@ import authLogo from './assets/Paperstack_auth_owl.png';
 import authWordmark from './assets/Paperstack_auth_wordmark.png';
 import { ArrowRight, Bookmark, CalendarDays, Download, Eye, FileText, Link2, Search, Share2, ShieldCheck, TriangleAlert, BookOpen, Menu, ChevronDown, Cloud, Database, Monitor, Cpu, Network, Calculator, Users } from 'lucide-react';
 import PaperStackHomePage from './pages/PaperStackHomePage';
-import { TestimonialsPage, SiteReportPage } from './pages/CommunityFeedbackPage';
 import { OFFICIAL_BRANCHES, normalizeBranchList } from './config/branches';
 
 import PWAInstallPrompt from './components/PWAInstallPrompt';
-import ContributorLeaderboardPage from './pages/ContributorLeaderboardPage';
-import ContributorProfilePage from './pages/ContributorProfilePage';
-import PaperBountiesPage from './pages/PaperBountiesPage';
-import ArchiveCompletionPage from './pages/ArchiveCompletionPage';
-import VerificationPage from './pages/VerificationPage';
-import AdminQuestionExtractionPage from './pages/AdminQuestionExtractionPage';
-import InteractiveQuestionsPage from './pages/InteractiveQuestionsPage';
-import PyqIntelligencePage from './pages/PyqIntelligencePage';
-import ImportantTopicsPage from './pages/ImportantTopicsPage';
-import AdminQuestionSolutionsPage from './pages/AdminQuestionSolutionsPage';
-import RevisionSheetsPage from './pages/RevisionSheetsPage';
-import ExamWarRoomPage from './pages/ExamWarRoomPage';
-import AskPaperStackPage from './pages/AskPaperStackPage';
-import MockExamGeneratorPage from './pages/MockExamGeneratorPage';
-import MockEvaluationPage from './pages/MockEvaluationPage';
-import SemesterSurvivalPage from './pages/SemesterSurvivalPage';
-import PersonalDashboardPage from './pages/PersonalDashboardPage';
-import NotificationsPage from './pages/NotificationsPage';
-import StreaksBadgesPage from './pages/StreaksBadgesPage';
-import BranchCompetitionPage from './pages/BranchCompetitionPage';
-import TrendingPage from './pages/TrendingPage';
-import SearchV2Page from './pages/SearchV2Page';
-import AdminModerationPage from './pages/AdminModerationPage';
-import AdminProductAnalyticsPage from './pages/AdminProductAnalyticsPage';
-import ResourceContributionPage from './pages/ResourceContributionPage';
 import NotificationNavButton from './components/NotificationNavButton';
 import StudyActivityTracker from './components/StudyActivityTracker';
 import ProductAnalyticsTracker from './components/ProductAnalyticsTracker';
 import './components/NavbarV3.css';
 import './components/CompactLayout.css';
 import PaperVerificationModal from './components/PaperVerificationModal';
-import SubjectPage from './pages/SubjectPage';
 import { getSubjectHubPath } from './utils/subjectRoute';
 import SmartPaperUpload from './components/SmartPaperUpload';
 import { analyzeContributionPdf } from './services/contributionApi';
@@ -55,6 +28,7 @@ import {
   GOOGLE_AUTH_CONFIGURED,
 } from './config/appConfig';
 import { authHeader, adminHeader } from './services/authHeaders';
+import { getPublicAnalytics, getPublicPapers } from './services/paperApi';
 
 import './App.css';
 import './styles/NavbarRefresh.css';
@@ -66,8 +40,96 @@ import './styles/ReferenceNavbar.css';
 import './styles/ProductPolish.css';
 import './styles/StudentFeatureRedesign.css';
 import PaperStackLoader from './components/PaperStackLoader';
+import ContentSkeleton from './components/ContentSkeleton';
 import { ErrorState } from './components/ErrorState';
 import { StudentProfileProvider, useStudentProfile } from './context/StudentProfileContext';
+
+function lazyPage(loader, select = (module) => module.default) {
+  const Component = React.lazy(() => loader().then((module) => ({ default: select(module) })));
+  Component.preload = loader;
+  return Component;
+}
+
+const pageLoaders = {
+  '/testimonials': () => import('./pages/CommunityFeedbackPage'),
+  '/report': () => import('./pages/CommunityFeedbackPage'),
+  '/subject': () => import('./pages/SubjectPage'),
+  '/contributors': () => import('./pages/ContributorLeaderboardPage'),
+  '/contributor-profile': () => import('./pages/ContributorProfilePage'),
+  '/missing-papers': () => import('./pages/PaperBountiesPage'),
+  '/archive-progress': () => import('./pages/ArchiveCompletionPage'),
+  '/verify-archive': () => import('./pages/VerificationPage'),
+  '/questions': () => import('./pages/InteractiveQuestionsPage'),
+  '/pyq-intelligence': () => import('./pages/PyqIntelligencePage'),
+  '/important-topics': () => import('./pages/ImportantTopicsPage'),
+  '/revision-sheets': () => import('./pages/RevisionSheetsPage'),
+  '/exam-war-room': () => import('./pages/ExamWarRoomPage'),
+  '/ask-paperstack': () => import('./pages/AskPaperStackPage'),
+  '/mock-exams': () => import('./pages/MockExamGeneratorPage'),
+  '/mock-evaluation': () => import('./pages/MockEvaluationPage'),
+  '/semester-survival': () => import('./pages/SemesterSurvivalPage'),
+  '/dashboard': () => import('./pages/PersonalDashboardPage'),
+  '/notifications': () => import('./pages/NotificationsPage'),
+  '/streaks': () => import('./pages/StreaksBadgesPage'),
+  '/branch-competition': () => import('./pages/BranchCompetitionPage'),
+  '/trending': () => import('./pages/TrendingPage'),
+  '/search': () => import('./pages/SearchV2Page'),
+  '/contribute-resource': () => import('./pages/ResourceContributionPage'),
+  '/admin/moderation': () => import('./pages/AdminModerationPage'),
+  '/admin/product-analytics': () => import('./pages/AdminProductAnalyticsPage'),
+  '/admin/question-extraction': () => import('./pages/AdminQuestionExtractionPage'),
+  '/admin/question-solutions': () => import('./pages/AdminQuestionSolutionsPage'),
+};
+
+const TestimonialsPage = lazyPage(pageLoaders['/testimonials'], (module) => module.TestimonialsPage);
+const SiteReportPage = lazyPage(pageLoaders['/report'], (module) => module.SiteReportPage);
+const SubjectPage = lazyPage(pageLoaders['/subject']);
+const ContributorLeaderboardPage = lazyPage(pageLoaders['/contributors']);
+const ContributorProfilePage = lazyPage(pageLoaders['/contributor-profile']);
+const PaperBountiesPage = lazyPage(pageLoaders['/missing-papers']);
+const ArchiveCompletionPage = lazyPage(pageLoaders['/archive-progress']);
+const VerificationPage = lazyPage(pageLoaders['/verify-archive']);
+const InteractiveQuestionsPage = lazyPage(pageLoaders['/questions']);
+const PyqIntelligencePage = lazyPage(pageLoaders['/pyq-intelligence']);
+const ImportantTopicsPage = lazyPage(pageLoaders['/important-topics']);
+const RevisionSheetsPage = lazyPage(pageLoaders['/revision-sheets']);
+const ExamWarRoomPage = lazyPage(pageLoaders['/exam-war-room']);
+const AskPaperStackPage = lazyPage(pageLoaders['/ask-paperstack']);
+const MockExamGeneratorPage = lazyPage(pageLoaders['/mock-exams']);
+const MockEvaluationPage = lazyPage(pageLoaders['/mock-evaluation']);
+const SemesterSurvivalPage = lazyPage(pageLoaders['/semester-survival']);
+const PersonalDashboardPage = lazyPage(pageLoaders['/dashboard']);
+const NotificationsPage = lazyPage(pageLoaders['/notifications']);
+const StreaksBadgesPage = lazyPage(pageLoaders['/streaks']);
+const BranchCompetitionPage = lazyPage(pageLoaders['/branch-competition']);
+const TrendingPage = lazyPage(pageLoaders['/trending']);
+const SearchV2Page = lazyPage(pageLoaders['/search']);
+const ResourceContributionPage = lazyPage(pageLoaders['/contribute-resource']);
+const AdminModerationPage = lazyPage(pageLoaders['/admin/moderation']);
+const AdminProductAnalyticsPage = lazyPage(pageLoaders['/admin/product-analytics']);
+const AdminQuestionExtractionPage = lazyPage(pageLoaders['/admin/question-extraction']);
+const AdminQuestionSolutionsPage = lazyPage(pageLoaders['/admin/question-solutions']);
+
+function preloadRoute(path) {
+  const exact = pageLoaders[path];
+  if (exact) return exact();
+  if (path.startsWith('/questions/')) return pageLoaders['/questions']();
+  if (path.startsWith('/contributors/')) return pageLoaders['/contributor-profile']();
+  if (path.startsWith('/subject/')) return pageLoaders['/subject']();
+  return null;
+}
+
+function RouteLoadingFallback() {
+  return (
+    <main className="route-loading-shell" role="status" aria-live="polite">
+      <div className="route-loading-bar" />
+      <div className="route-loading-grid">
+        <span /><span /><span />
+      </div>
+      <span className="sr-only">Loading page…</span>
+    </main>
+  );
+}
 
 function getPaperShareUrl(paper) {
   const baseUrl = FRONTEND_URL.replace(/\/$/, '');
@@ -240,7 +302,7 @@ function Footer() {
         <div className="footer-grid">
           <div className="footer-brand">
             <div className="footer-logo-wrapper">
-              <img src={logo} alt="PaperStack logo" className="footer-logo-img" />
+              <img src={logo} alt="PaperStack logo" className="footer-logo-img" width="505" height="490" loading="lazy" decoding="async" />
               <h3 className="footer-logo">PaperStack</h3>
             </div>
             <p className="footer-description">
@@ -420,6 +482,8 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
       key={item.to}
       to={item.to}
       onClick={closeMenu}
+      onMouseEnter={() => preloadRoute(item.to)}
+      onFocus={() => preloadRoute(item.to)}
       className={[
         'psnav-link',
         item.featured ? 'featured' : '',
@@ -444,6 +508,8 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
             key={item.to}
             to={item.to}
             onClick={closeMenu}
+            onMouseEnter={() => preloadRoute(item.to)}
+            onFocus={() => preloadRoute(item.to)}
             className={isActive(item.to) ? 'active' : ''}
           >
             {item.label}
@@ -466,7 +532,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
       <div className="psnav-brand-zone">
         <button type="button" className="psnav-main-menu" onClick={() => setMenuOpen((open) => !open)} aria-label="Open site menu" aria-controls="psnav-feature-menu" aria-expanded={menuOpen}><Menu size={23} /></button>
         <Link to="/" onClick={closeMenu} className="psnav-brand">
-          <img src={authWordmark} alt="PaperStack" className="psnav-wordmark" />
+          <img src={authWordmark} alt="PaperStack" className="psnav-wordmark" width="776" height="175" decoding="async" />
         </Link>
       </div>
 
@@ -1022,9 +1088,9 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const fetchPapers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/api/papers`);
-      const loadedPapers = Array.isArray(res.data) ? res.data : res.data?.papers || [];
-      const sorted = loadedPapers.sort((a, b) => {
+      const data = await getPublicPapers(filterSem ? { semester: filterSem } : {});
+      const loadedPapers = Array.isArray(data) ? data : data?.papers || [];
+      const sorted = [...loadedPapers].sort((a, b) => {
         if ((b.year || 0) !== (a.year || 0)) return (b.year || 0) - (a.year || 0);
         if ((b.semester || 0) !== (a.semester || 0)) return (b.semester || 0) - (a.semester || 0);
         return String(a.subject || '').localeCompare(String(b.subject || ''));
@@ -1035,7 +1101,7 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [filterSem, toast]);
 
   useEffect(() => {
     fetchPapers();
@@ -1046,7 +1112,7 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
   }, [semester]);
 
   useEffect(() => {
-    axios.get(`${API_URL}/api/analytics`).then((res) => setAnalytics(res.data)).catch(() => setAnalytics(null));
+    getPublicAnalytics().then(setAnalytics).catch(() => setAnalytics(null));
   }, []);
 
   const years = useMemo(() => Array.from(new Set(papers.map((paper) => paper.year).filter(Boolean))).sort((a, b) => b - a), [papers]);
@@ -1234,9 +1300,7 @@ function ArchivePage({ user, setUser, isAdmin, setIsAdmin, toast }) {
 
           <div className="ps-archive-grid">
             {loading ? (
-              <div className="archive-list-state">
-                <PaperStackLoader label="Loading question papers..." />
-              </div>
+              <ContentSkeleton count={6} variant="cards" label="Loading question papers…" />
             ) : displayedPapers.length === 0 ? (
               <div className="archive-list-state">
                 <h3>{filter === 'saved' ? 'No saved papers yet' : 'No papers match these filters'}</h3>
@@ -3637,6 +3701,7 @@ export default function App() {
       </div>}
       <PWAInstallPrompt />
       <BackToTopButton />
+      <React.Suspense fallback={<RouteLoadingFallback />}>
       <Routes>
         <Route path="/" element={<Home user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
         <Route path="/archive" element={<ArchivePage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
@@ -3987,6 +4052,7 @@ export default function App() {
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </React.Suspense>
     </Router>
   );
 

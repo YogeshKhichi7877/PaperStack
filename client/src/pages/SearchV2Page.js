@@ -1,6 +1,7 @@
 import React, {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -190,6 +191,8 @@ export default function SearchV2Page({
 
   const [loading, setLoading] =
     useState(false);
+  const searchRequestRef =
+    useRef(null);
 
   const paramsKey =
     searchParams.toString();
@@ -264,15 +267,19 @@ export default function SearchV2Page({
     if (
       nextKey === paramsKey
     ) {
+      searchRequestRef.current?.abort();
+      const controller = new AbortController();
+      searchRequestRef.current = controller;
       setLoading(true);
 
       searchPaperStack({
         ...next,
         limit: 36,
-      })
+      }, { signal: controller.signal })
         .then(setData)
 
         .catch((error) => {
+          if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
           toast?.(
             error.response?.data
               ?.error ||
@@ -281,9 +288,9 @@ export default function SearchV2Page({
           );
         })
 
-        .finally(() =>
-          setLoading(false)
-        );
+        .finally(() => {
+          if (searchRequestRef.current === controller) setLoading(false);
+        });
 
       return;
     }
@@ -359,6 +366,8 @@ export default function SearchV2Page({
             'all'
       );
 
+    searchRequestRef.current?.abort();
+
     if (!active) {
       setData(null);
       setLoading(false);
@@ -367,13 +376,15 @@ export default function SearchV2Page({
     }
 
     let mounted = true;
+    const controller = new AbortController();
+    searchRequestRef.current = controller;
 
     setLoading(true);
 
     searchPaperStack({
       ...initial,
       limit: 36,
-    })
+    }, { signal: controller.signal })
       .then((result) => {
         if (mounted) {
           setData(result);
@@ -381,6 +392,7 @@ export default function SearchV2Page({
       })
 
       .catch((error) => {
+        if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
         if (
           mounted &&
           toast
@@ -395,13 +407,14 @@ export default function SearchV2Page({
       })
 
       .finally(() => {
-        if (mounted) {
+        if (mounted && searchRequestRef.current === controller) {
           setLoading(false);
         }
       });
 
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, [
     paramsKey,

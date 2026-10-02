@@ -1,0 +1,46 @@
+.loading-button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.loading-button__content,
+.loading-button__status {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.loading-button__content.is-hidden {
+  visibility: hidden;
+}
+
+.loading-button__status {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.loading-button__status.is-visible {
+  visibility: visible;
+  opacity: 1;
+}
+
+.loading-button__spinner {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: loading-button-spin .7s linear infinite;
+}
+
+@keyframes loading-button-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-button__spinner { animation-duration: 1.6s; }
+}

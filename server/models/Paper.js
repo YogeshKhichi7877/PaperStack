@@ -52,6 +52,8 @@ const paperSchema = new mongoose.Schema({
 
 paperSchema.index({ semester: 1, subject: 1 });
 paperSchema.index({ branch: 1, semester: 1, normalizedSubject: 1, year: 1, examType: 1 });
+paperSchema.index({ semester: 1, year: -1, createdAt: -1 });
+paperSchema.index({ subjectCode: 1, examType: 1, year: -1 });
 
 paperSchema.pre('save', function setUpdatedAt() {
     this.updatedAt = new Date();

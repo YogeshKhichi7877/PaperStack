@@ -1937,6 +1937,31 @@
     #eef9f8;
 }
 
+.aps-answer-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid rgba(190, 55, 55, .22);
+  border-radius: 14px;
+  background: rgba(190, 55, 55, .05);
+}
+
+.aps-answer-error strong { color: var(--color-text-primary); }
+.aps-answer-error p { margin: 5px 0 0; color: var(--color-text-secondary); }
+.aps-answer-error button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .aps-thinking-dot {
   width: 14px;
   height: 14px;

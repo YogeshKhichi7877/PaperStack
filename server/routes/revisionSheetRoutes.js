@@ -43,6 +43,7 @@ function setCached(key, payload) {
 
 router.get('/subjects', async (req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     const rows = await Question.aggregate([
       {
         $match: {
@@ -146,6 +147,7 @@ router.get('/subject/:subjectCode', async (req, res) => {
         sequence: 1,
       })
       .limit(1200)
+      .select('_id paperId questionNumber questionLabel questionText marks questionType difficulty unit primaryTopic topics sourceLocation subjectKey subject subjectCode shortCode branch semester examType year extraction status')
       .populate(
         'paperId',
         '_id title filePath solutionPath'

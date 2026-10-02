@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { API_URL } from '../config/appConfig';
+import { cachedPublicRequest } from './publicRequestCache';
 
 export async function getImportantTopicsSubjects() {
-  const response = await axios.get(
-    `${API_URL}/api/important-topics/subjects`
-  );
-  return response.data;
+  return cachedPublicRequest('important-topics:subjects', async () => {
+    const response = await axios.get(`${API_URL}/api/important-topics/subjects`);
+    return response.data;
+  });
 }
 
 export async function getImportantTopics(
@@ -13,7 +14,8 @@ export async function getImportantTopics(
   {
     threshold = 72,
     limit = 30,
-  } = {}
+  } = {},
+  options = {}
 ) {
   const response = await axios.get(
     `${API_URL}/api/important-topics/subject/${encodeURIComponent(subjectCode)}`,
@@ -22,6 +24,8 @@ export async function getImportantTopics(
         threshold,
         limit,
       },
+      signal: options.signal,
+      timeout: 60_000,
     }
   );
 

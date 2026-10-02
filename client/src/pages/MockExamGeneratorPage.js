@@ -48,6 +48,7 @@ import {
 import './MockExamGeneratorPage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
+import LoadingButton from '../components/LoadingButton';
 
 const MathAnswer = React.lazy(() => import('../components/MathAnswer'));
 
@@ -1179,28 +1180,28 @@ export default function MockExamGeneratorPage({
               </select>
             </label>
 
-            <button
+            <LoadingButton
               type="button"
               className="me-generate"
+              loading={generating}
+              loadingText="Building your mock…"
               disabled={
-                generating ||
                 !subjectCode
               }
               onClick={() =>
                 createMock()
               }
             >
-              {generating ? (
-                <>
-                  <span className="me-spinner" />
-                  Building Paper…
-                </>
-              ) : (
-                'Generate Mock'
-              )}
-            </button>
+              Generate Mock
+            </LoadingButton>
           </div>
         </section>
+
+        {generating && (
+          <p className="me-generation-status" role="status" aria-live="polite">
+            Selecting questions, balancing difficulty, and preparing your paper…
+          </p>
+        )}
 
         {generationError && (
           <div className="me-generation-error me-no-print" role="alert">

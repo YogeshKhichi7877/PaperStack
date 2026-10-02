@@ -13,6 +13,7 @@ import { submitAiFeedback } from '../services/aiFeedbackApi';
 import { trackProductEvent } from '../services/productAnalyticsApi';
 import { getMiniPractice } from '../services/questionBrowserApi';
 import AcademicAiActions from './AcademicAiActions';
+import LoadingButton from './LoadingButton';
 import RelatedPyqs from './RelatedPyqs';
 
 import './QuestionAssistantPanel.css';
@@ -415,22 +416,19 @@ export default function QuestionAssistantPanel({
             Shift+Enter for a new line
           </small>
 
-          <button
+          <LoadingButton
             type="button"
+            loading={sending}
+            loadingText="Generating answer…"
             disabled={
-              sending ||
               !input.trim()
             }
             onClick={() =>
               submit(input)
             }
           >
-            {
-              sending
-                ? 'Thinking…'
-                : 'Ask'
-            }
-          </button>
+            Ask PaperStack
+          </LoadingButton>
         </div>
       </div>
 

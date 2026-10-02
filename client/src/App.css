@@ -16073,3 +16073,54 @@ body,
 
 .auth-signup-note { margin: 22px 0 8px; padding: 14px 16px; border-left: 3px solid #168f91; background: #eef8f7; color: #315667; font-size: 15px; line-height: 1.55; }
 
+/* Route chunks keep the current page shell responsive while the next screen loads. */
+.route-loading-shell {
+  width: min(1180px, calc(100% - 32px));
+  min-height: 55vh;
+  margin: 28px auto;
+  padding: 24px;
+  border: 1px solid var(--color-border, #d8e2e4);
+  border-radius: 18px;
+  background: var(--color-surface, #fff);
+}
+
+.route-loading-bar,
+.route-loading-grid span {
+  display: block;
+  overflow: hidden;
+  background: linear-gradient(100deg, #edf2f3 25%, #f8fbfb 40%, #edf2f3 60%);
+  background-size: 200% 100%;
+  animation: route-loading-shimmer 1.25s ease-in-out infinite;
+}
+
+.route-loading-bar {
+  width: min(420px, 70%);
+  height: 34px;
+  margin-bottom: 24px;
+  border-radius: 9px;
+}
+
+.route-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.route-loading-grid span {
+  min-height: 180px;
+  border-radius: 14px;
+}
+
+@keyframes route-loading-shimmer {
+  to { background-position-x: -200%; }
+}
+
+@media (max-width: 720px) {
+  .route-loading-grid { grid-template-columns: 1fr; }
+  .route-loading-grid span { min-height: 105px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-bar,
+  .route-loading-grid span { animation: none; }
+}

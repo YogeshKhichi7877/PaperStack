@@ -143,6 +143,7 @@ import {
 } from 'lucide-react';
 
 import { API_URL } from '../config/appConfig';
+import { getPublicAnalytics, getPublicPapers } from '../services/paperApi';
 import { getContributorLeaderboard } from '../services/contributorApi';
 import { getSubjectHubPath } from '../utils/subjectRoute';
 import { useStudentProfile } from '../context/StudentProfileContext';
@@ -240,8 +241,8 @@ export default function PaperStackHomePage({ user }) {
     let active = true;
 
     Promise.allSettled([
-      axios.get(`${API_URL}/api/papers`, { params: personalized ? { semester } : {} }),
-      axios.get(`${API_URL}/api/analytics`),
+      getPublicPapers(personalized ? { semester } : {}),
+      getPublicAnalytics(),
       getContributorLeaderboard(),
     ]).then(([paperResult, analyticsResult, contributorResult]) => {
       if (!active) return;
@@ -249,14 +250,14 @@ export default function PaperStackHomePage({ user }) {
       const failed = [];
 
       if (paperResult.status === 'fulfilled') {
-        const data = paperResult.value.data;
+        const data = paperResult.value;
         setPapers(Array.isArray(data) ? data : data?.papers || []);
       } else {
         failed.push('papers');
       }
 
       if (analyticsResult.status === 'fulfilled') {
-        setAnalytics(analyticsResult.value.data);
+        setAnalytics(analyticsResult.value);
       } else {
         failed.push('archive statistics');
       }
@@ -389,6 +390,10 @@ export default function PaperStackHomePage({ user }) {
           className="landing-hero-art"
           src={campusArt}
           alt="Illustration of IIIT Surat and study resources"
+          width="1448"
+          height="1086"
+          fetchPriority="high"
+          decoding="async"
         />
 
         <img
@@ -491,7 +496,10 @@ export default function PaperStackHomePage({ user }) {
           <img
             src={archiveArt}
             alt="Illustrated stack of past papers"
+            width="1448"
+            height="1086"
             loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -525,7 +533,10 @@ export default function PaperStackHomePage({ user }) {
             <img
               src={examArt}
               alt="Exam preparation illustration"
+              width="1448"
+              height="1086"
               loading="lazy"
+              decoding="async"
             />
           </Link>
 
@@ -554,7 +565,10 @@ export default function PaperStackHomePage({ user }) {
             <img
               src={aiArt}
               alt="PaperStack study assistant"
+              width="1254"
+              height="1254"
               loading="lazy"
+              decoding="async"
             />
           </Link>
         </div>

@@ -40,6 +40,7 @@ import {
 
 import './ImportantTopicsPage.css';
 import QuestionText from '../components/QuestionText';
+import LoadingButton from '../components/LoadingButton';
 
 /* =========================================================
    HELPERS
@@ -783,6 +784,7 @@ export default function ImportantTopicsPage({
     }
 
     let mounted = true;
+    const controller = new AbortController();
 
     setLoading(true);
 
@@ -803,7 +805,8 @@ export default function ImportantTopicsPage({
       {
         threshold,
         limit,
-      }
+      },
+      { signal: controller.signal }
     )
       .then((result) => {
         if (mounted) {
@@ -814,6 +817,7 @@ export default function ImportantTopicsPage({
       })
 
       .catch((error) => {
+        if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
         console.error(
           'Important Topics analysis failed:',
           error
@@ -839,6 +843,7 @@ export default function ImportantTopicsPage({
 
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, [
     subjectCode,
@@ -1406,6 +1411,17 @@ export default function ImportantTopicsPage({
                 )}
               </div>
             </label>
+
+            <LoadingButton
+              className="it-find-action"
+              loading={loading}
+              loadingText="Finding important topics…"
+              disabled={!subjectCode}
+              onClick={() => document.querySelector('.it-summary-grid, .it-state')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            >
+              Find Important Topics
+              <ArrowRight size={16} />
+            </LoadingButton>
           </div>
         </section>
 

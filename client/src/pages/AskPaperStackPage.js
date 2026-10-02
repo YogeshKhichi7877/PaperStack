@@ -42,6 +42,7 @@ import './AskPaperStackPage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 import QuestionText from '../components/QuestionText';
+import LoadingButton from '../components/LoadingButton';
 
 const MathAnswer = React.lazy(
   () =>
@@ -181,6 +182,8 @@ export default function AskPaperStackPage({
 
   const threadEndRef =
     useRef(null);
+  const requestActiveRef =
+    useRef(false);
 
   /* =========================================================
      SUBJECTS
@@ -321,7 +324,7 @@ export default function AskPaperStackPage({
 
     if (
       !finalQuery ||
-      sending
+      requestActiveRef.current
     ) {
       return;
     }
@@ -331,6 +334,8 @@ export default function AskPaperStackPage({
       role: 'user',
       text: finalQuery,
     };
+
+    requestActiveRef.current = true;
 
     setChat(
       (current) => [
@@ -409,7 +414,17 @@ export default function AskPaperStackPage({
           'PaperStack could not answer right now.',
         'error'
       );
+
+      setChat((current) => [
+        ...current,
+        {
+          id: `error_${Date.now()}`,
+          role: 'error',
+          query: finalQuery,
+        },
+      ]);
     } finally {
+      requestActiveRef.current = false;
       setSending(false);
     }
   }
@@ -835,6 +850,16 @@ export default function AskPaperStackPage({
                           }
                         </p>
                       </div>
+                    </article>
+                  ) : message.role === 'error' ? (
+                    <article key={message.id} className="aps-answer-error" role="alert">
+                      <div>
+                        <strong>Couldn't generate the answer.</strong>
+                        <p>PaperStack stopped this request safely. Try it again when you’re ready.</p>
+                      </div>
+                      <button type="button" disabled={sending} onClick={() => submitQuestion(message.query)}>
+                        Try Again
+                      </button>
                     </article>
                   ) : (
                     <article
@@ -1329,27 +1354,17 @@ export default function AskPaperStackPage({
                   aria-label="Ask PaperStack"
                 />
 
-                <button
+                <LoadingButton
                   type="submit"
+                  loading={sending}
+                  loadingText="Generating answer…"
                   disabled={
-                    sending ||
                     !query.trim()
                   }
                 >
-                  {sending ? (
-                    <>
-                      <span className="aps-button-spinner" />
-                      Working…
-                    </>
-                  ) : (
-                    <>
-                      Ask
-                      <Send
-                        size={14}
-                      />
-                    </>
-                  )}
-                </button>
+                  Ask PaperStack
+                  <Send size={14} />
+                </LoadingButton>
               </div>
 
               <footer>

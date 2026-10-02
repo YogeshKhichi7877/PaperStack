@@ -67,6 +67,7 @@ import {
 import './ExamWarRoomPage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
+import LoadingButton from '../components/LoadingButton';
 
 const MathAnswer = React.lazy(
   () =>
@@ -467,6 +468,7 @@ export default function ExamWarRoomPage({
     }
 
     let active = true;
+    const controller = new AbortController();
 
     setLoading(true);
 
@@ -493,7 +495,8 @@ export default function ExamWarRoomPage({
       {
         examType,
         minutes,
-      }
+      },
+      { signal: controller.signal }
     )
       .then((data) => {
         if (!active) {
@@ -505,6 +508,7 @@ export default function ExamWarRoomPage({
       })
 
       .catch((error) => {
+        if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
         if (!active) {
           return;
         }
@@ -533,6 +537,7 @@ export default function ExamWarRoomPage({
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [
     subjectCode,
@@ -1314,6 +1319,17 @@ export default function ExamWarRoomPage({
                 )}
               </select>
             </label>
+
+            <LoadingButton
+              className="wr-build-action"
+              loading={loading}
+              loadingText="Building your plan…"
+              disabled={!subjectCode}
+              onClick={() => document.querySelector('.wr-status-grid, .wr-state')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            >
+              Create Plan
+              <ArrowRight size={16} />
+            </LoadingButton>
           </div>
         </section>
 

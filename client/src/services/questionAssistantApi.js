@@ -30,7 +30,7 @@ export async function askSelectedQuestion(
         query,
         useAi,
       },
-      { headers: authHeader() }
+      { headers: authHeader(), timeout: 60_000 }
     );
 
   return response.data;

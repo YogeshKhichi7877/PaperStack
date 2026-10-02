@@ -43,6 +43,7 @@ import {
 } from '../utils/studyEvidence';
 import SaveButton from '../components/SaveButton';
 import { recordStudyProgressOnce } from '../services/studyProgressApi';
+import LoadingButton from '../components/LoadingButton';
 
 import './RevisionSheetsPage.css';
 import '../components/StudentUtility.css';
@@ -477,6 +478,7 @@ export default function RevisionSheetsPage({
     }
 
     let active = true;
+    const controller = new AbortController();
 
     setLoading(true);
 
@@ -500,7 +502,8 @@ export default function RevisionSheetsPage({
       subjectCode,
       {
         examType,
-      }
+      },
+      { signal: controller.signal }
     )
       .then((data) => {
         if (!active) {
@@ -521,6 +524,7 @@ export default function RevisionSheetsPage({
       })
 
       .catch((error) => {
+        if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
         if (!active) {
           return;
         }
@@ -549,6 +553,7 @@ export default function RevisionSheetsPage({
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [
     subjectCode,
@@ -1086,9 +1091,11 @@ export default function RevisionSheetsPage({
               </button>
             )}
 
-            <button
+            <LoadingButton
               type="button"
               className="rs-start"
+              loading={loading}
+              loadingText="Preparing revision…"
               disabled={loading || !subjectCode}
               onClick={() =>
                 document
@@ -1098,7 +1105,7 @@ export default function RevisionSheetsPage({
             >
               Start Revision
               <ArrowRight size={16} />
-            </button>
+            </LoadingButton>
           </div>
         </section>
 

@@ -12,6 +12,7 @@ const router = express.Router();
 
 router.get('/subjects', async (req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     const rows = await Question.aggregate([
       {
         $match: {
@@ -86,6 +87,7 @@ router.post('/query', async (req, res) => {
     const questions = await Question.find(filter)
       .sort({ year: -1, sequence: 1 })
       .limit(600)
+      .select('_id paperId questionNumber questionLabel questionText marks questionType difficulty unit primaryTopic topics sourceLocation subjectKey subject subjectCode shortCode branch semester examType year extraction status')
       .populate('paperId', '_id title filePath solutionPath')
       .lean();
 

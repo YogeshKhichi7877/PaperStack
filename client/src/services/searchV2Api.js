@@ -7,12 +7,14 @@ import {
 import { trackProductEvent } from './productAnalyticsApi';
 
 export async function searchPaperStack(
-  params = {}
+  params = {},
+  options = {}
 ) {
   const response = await axios.get(
     `${API_URL}/api/search/v2`,
     {
       params,
+      signal: options.signal,
     }
   );
 

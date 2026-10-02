@@ -633,6 +633,20 @@
     );
 }
 
+.it-find-action {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-height: 41px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--it-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
 /* =========================================================
    SEARCH CONTROL
 ========================================================= */

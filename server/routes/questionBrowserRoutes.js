@@ -132,6 +132,7 @@ async function buildFacets() {
 
 router.get('/facets', async (req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     const facets = await buildFacets();
     res.json({
       schemaVersion: 'question-browser-v1',

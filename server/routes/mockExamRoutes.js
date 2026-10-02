@@ -27,6 +27,7 @@ router.get(
     res
   ) => {
     try {
+      res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
       const rows =
         await Question.aggregate([
           {

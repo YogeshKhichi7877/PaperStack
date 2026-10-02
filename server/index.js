@@ -1611,22 +1611,45 @@ app.post('/api/papers', authenticateAdmin, adminUploadFields, async (req, res) =
 app.get('/api/papers', async (req, res) => {
   try {
     const semester = Number(req.query.semester);
+    const year = Number(req.query.year);
     const query = Number.isInteger(semester) && semester >= 1 && semester <= 8 ? { semester } : {};
-    const papers = await Paper.find(query).sort({ year: -1, semester: 1, createdAt: -1 }).lean();
+    if (Number.isInteger(year) && year >= 2000 && year <= 2100) query.year = year;
+    if (req.query.examType) query.examType = String(req.query.examType).trim();
+    if (req.query.subjectCode) query.subjectCode = String(req.query.subjectCode).trim().toUpperCase();
+    if (req.query.branch) query.branch = { $in: normalizeBranchList(req.query.branch) };
+
+    const papers = await Paper.find(query)
+      .sort({ year: -1, semester: 1, createdAt: -1 })
+      .select('-extractedTextPreview -extractionWarnings -filePublicId -solutionPublicId -fileHash -duplicateKey -originalFileName')
+      .lean();
     const paperIds = papers.map((paper) => paper._id);
-    const votes = paperIds.length ? await PaperVote.find({ paperId: { $in: paperIds } }).lean() : [];
-    const votesByPaper = new Map();
+    const voteRows = paperIds.length ? await PaperVote.aggregate([
+      { $match: { paperId: { $in: paperIds } } },
+      { $group: {
+        _id: '$paperId',
+        totalVotes: { $sum: 1 },
+        usefulCount: { $sum: { $cond: ['$useful', 1, 0] } },
+        easy: { $sum: { $cond: [{ $eq: ['$difficulty', 'Easy'] }, 1, 0] } },
+        medium: { $sum: { $cond: [{ $eq: ['$difficulty', 'Medium'] }, 1, 0] } },
+        hard: { $sum: { $cond: [{ $eq: ['$difficulty', 'Hard'] }, 1, 0] } },
+      } },
+    ]) : [];
+    const votesByPaper = new Map(voteRows.map((row) => [String(row._id), row]));
 
-    votes.forEach((vote) => {
-      const key = String(vote.paperId);
-      if (!votesByPaper.has(key)) votesByPaper.set(key, []);
-      votesByPaper.get(key).push(vote);
+    const papersWithVotes = papers.map((paper) => {
+      const row = votesByPaper.get(String(paper._id));
+      const difficultyCounts = { Easy: row?.easy || 0, Medium: row?.medium || 0, Hard: row?.hard || 0 };
+      const totalVotes = row?.totalVotes || 0;
+      return {
+        ...paper,
+        voteSummary: {
+          totalVotes,
+          difficultyCounts,
+          dominantDifficulty: Object.entries(difficultyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Medium',
+          usefulPercentage: totalVotes ? Math.round(((row?.usefulCount || 0) / totalVotes) * 100) : 0,
+        },
+      };
     });
-
-    const papersWithVotes = papers.map((paper) => ({
-      ...paper,
-      voteSummary: buildVoteSummary(votesByPaper.get(String(paper._id)) || [])
-    }));
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('Paper query debug:', {
@@ -1635,6 +1658,7 @@ app.get('/api/papers', async (req, res) => {
         paperCount: papersWithVotes.length,
       });
     }
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=45');
     res.json(papersWithVotes);
   } catch (err) {
     res.status(500).json({ error: 'Fetch failed' });
@@ -1715,9 +1739,21 @@ incrementResourceStatForPaper(req.params.id, 'downloads').catch((error) => {
   }
 });
 
+let publicAnalyticsCache = null;
+
 app.get('/api/analytics', async (req, res) => {
   try {
-    const papers = await Paper.find().select('title subject normalizedSubject semester examType year views downloads branch').lean();
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=90');
+    if (publicAnalyticsCache && publicAnalyticsCache.expiresAt > Date.now()) {
+      return res.json(publicAnalyticsCache.payload);
+    }
+
+    const [papers, totalContributors, totalApprovedContributions, difficultyVotes] = await Promise.all([
+      Paper.find().select('title subject normalizedSubject semester examType year views downloads branch').lean(),
+      Contribution.distinct('contributorUserId', { status: 'approved' }),
+      Contribution.countDocuments({ status: 'approved' }),
+      PaperVote.find().select('paperId difficulty').lean(),
+    ]);
     const subjectMap = new Map();
     const semMap = new Map();
     const examMap = new Map();
@@ -1748,33 +1784,21 @@ app.get('/api/analytics', async (req, res) => {
 
     const totalViews = papers.reduce((sum, p) => sum + (p.views || 0), 0);
     const totalDownloads = papers.reduce((sum, p) => sum + (p.downloads || 0), 0);
-    const totalContributors = await Contribution.distinct('contributorUserId', { status: 'approved' });
-    const totalApprovedContributions = await Contribution.countDocuments({ status: 'approved' });
-    const difficultyVotes = await PaperVote.find().select('paperId difficulty').lean();
     const hardestSubject = findHardestSubject(papers, difficultyVotes);
 
-    const combos = [];
-    const comboMap = new Set();
+    const combos = new Map();
+    const availableYears = new Set();
     papers.forEach(p => {
       if (!p.branch || !p.semester || !p.subject || !p.examType) return;
       const key = `${p.branch}-${p.semester}-${p.subject}-${p.examType}`;
-      if (!comboMap.has(key)) {
-        comboMap.add(key);
-        combos.push(p);
-      }
+      if (!combos.has(key)) combos.set(key, p);
+      if (p.year) availableYears.add(`${key}-${p.year}`);
     });
     const currentYear = new Date().getFullYear();
     let missingCount = 0;
-    combos.forEach(c => {
+    combos.forEach((c, key) => {
       for (let y = 2021; y <= currentYear; y++) {
-        const found = papers.some(p => 
-          p.branch === c.branch &&
-          p.semester === c.semester &&
-          p.subject === c.subject &&
-          p.examType === c.examType &&
-          p.year === y
-        );
-        if (!found) missingCount++;
+        if (!availableYears.has(`${key}-${y}`)) missingCount++;
       }
     });
 
@@ -1783,7 +1807,7 @@ app.get('/api/analytics', async (req, res) => {
       .slice(0, 3)
       .map(s => s.subject);
 
-    res.json({
+    const payload = {
       totalPapers: papers.length,
       totalViews,
       totalDownloads,
@@ -1804,7 +1828,9 @@ app.get('/api/analytics', async (req, res) => {
       contributionStats: {
         totalApproved: totalApprovedContributions
       }
-    });
+    };
+    publicAnalyticsCache = { payload, expiresAt: Date.now() + 30_000 };
+    return res.json(payload);
   } catch (err) {
     res.status(500).json({ error: 'Analytics failed' });
   }

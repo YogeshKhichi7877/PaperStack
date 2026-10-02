@@ -40,6 +40,7 @@ import './PyqIntelligencePage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 import QuestionText from '../components/QuestionText';
+import LoadingButton from '../components/LoadingButton';
 
 /* =========================================================
    HELPERS
@@ -500,6 +501,7 @@ export default function PyqIntelligencePage({
     }
 
     let mounted = true;
+    const controller = new AbortController();
 
     setLoading(true);
 
@@ -516,7 +518,8 @@ export default function PyqIntelligencePage({
 
     getSubjectPyqIntelligence(
       subjectCode,
-      threshold
+      threshold,
+      { signal: controller.signal }
     )
       .then((result) => {
         if (mounted) {
@@ -527,6 +530,7 @@ export default function PyqIntelligencePage({
       })
 
       .catch((error) => {
+        if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
         console.error(
           'PYQ intelligence load failed:',
           error
@@ -552,6 +556,7 @@ export default function PyqIntelligencePage({
 
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, [
     subjectCode,
@@ -889,9 +894,11 @@ export default function PyqIntelligencePage({
               </div>
             </label>
 
-            <button
+            <LoadingButton
               type="button"
               className="pi-analyze"
+              loading={loading}
+              loadingText="Analyzing PYQs…"
               disabled={loading || !subjectCode}
               onClick={() =>
                 document
@@ -901,7 +908,7 @@ export default function PyqIntelligencePage({
             >
               Analyze PYQs
               <ArrowRight size={16} />
-            </button>
+            </LoadingButton>
           </div>
 
           <div className="pi-threshold-guide">

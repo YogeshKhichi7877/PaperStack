@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import ContentSkeleton from '../components/ContentSkeleton';
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, BookOpen, Download, FileText } from 'lucide-react';
@@ -245,11 +246,7 @@ export default function SubjectPage({ user, toast }) {
   if (loading) {
     return (
       <main className="subject-hub-page subject-hub-loading-page">
-        <div className="subject-hub-loading-card">
-          <div className="subject-hub-spinner" />
-          <h2>Building your subject hub...</h2>
-          <p>Loading papers, solutions, and resource statistics.</p>
-        </div>
+        <ContentSkeleton count={4} variant="cards" label="Building your subject hub…" />
       </main>
     );
   }

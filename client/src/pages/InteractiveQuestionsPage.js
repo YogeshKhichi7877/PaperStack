@@ -798,6 +798,7 @@ import {
 
 import QuestionSolutionsPanel from '../components/QuestionSolutionsPanel';
 import QuestionAssistantPanel from '../components/QuestionAssistantPanel';
+import ContentSkeleton from '../components/ContentSkeleton';
 import QuestionText from '../components/QuestionText';
 import SaveButton from '../components/SaveButton';
 import RelatedPyqs from '../components/RelatedPyqs';
@@ -1651,13 +1652,14 @@ export default function InteractiveQuestionsPage({
   ======================== */
 
   const loadQuestions =
-    useCallback(async () => {
+    useCallback(async (signal) => {
       setLoading(true);
 
       try {
         const data =
           await browseQuestions(
-            activeFilters
+            activeFilters,
+            { signal }
           );
 
         setQuestions(
@@ -1676,6 +1678,7 @@ export default function InteractiveQuestionsPage({
 
         setLoadError('');
       } catch (error) {
+        if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return;
         const message =
           error.response?.data
             ?.error ||
@@ -1692,7 +1695,7 @@ export default function InteractiveQuestionsPage({
         setTotal(0);
         setTotalPages(1);
       } finally {
-        setLoading(false);
+        if (!signal?.aborted) setLoading(false);
       }
     }, [
       activeFilters,
@@ -1714,16 +1717,20 @@ export default function InteractiveQuestionsPage({
   useEffect(() => {
     if (questionId) return;
 
+    const controller = new AbortController();
+
     const timer = setTimeout(
       () => {
         syncUrl(filters, page);
-        loadQuestions();
+        loadQuestions(controller.signal);
       },
       filters.q ? 280 : 0
     );
 
-    return () =>
+    return () => {
       clearTimeout(timer);
+      controller.abort();
+    };
   }, [
     filters,
     page,
@@ -2473,13 +2480,7 @@ export default function InteractiveQuestionsPage({
         </div>
 
         {loading ? (
-          <div className="iq-state">
-            <span className="iq-loading-orb" />
-
-            <strong>
-              Loading questions…
-            </strong>
-          </div>
+          <ContentSkeleton count={5} variant="rows" label="Loading questions…" />
         ) : questions.length ? (
           <>
             <section className="iq-grid">
