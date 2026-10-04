@@ -8,7 +8,7 @@ const QuestionSolution =
   require('../models/QuestionSolution');
 const GeneratedMock = require('../models/GeneratedMock');
 const { combineMock, generateNovelQuestions } = require('../services/mockNovelService');
-const { publicQuestion } = require('../services/mockExamService');
+const { clampNumber, publicQuestion } = require('../services/mockExamService');
 
 const {
   generateMockWithMode,
@@ -156,6 +156,7 @@ router.post(
             ?.totalMarks ||
           25
         );
+      const requestedMarks = clampNumber(totalMarks, 10, 100, 25);
 
       const durationMinutes =
         Number(
@@ -345,6 +346,19 @@ router.post(
           }
         );
 
+      if (!baseMock.exactMarks || baseMock.generatedMarks !== requestedMarks) {
+        console.warn('Mock exam exact-mark selection unavailable', {
+          subjectCode,
+          examType: examType || 'all',
+          requestedMarks,
+          generatedMarks: baseMock.generatedMarks,
+          strategy,
+        });
+        return res.status(422).json({
+          error: 'We could not build the exact mark total for this mock. Try another exam scope or mark total.',
+        });
+      }
+
       let mock = combineMock(baseMock, [], 'pyq');
       if (mockType !== 'pyq' && mockAiEnabled()) {
         try {
@@ -360,22 +374,54 @@ router.post(
             subject: baseMock.subject, examType, difficulty,
           });
           if (mockType === 'new' && generated.length !== templates.length) {
+            console.warn('Fresh mock generation exhausted replacement budget', {
+              subjectCode,
+              difficulty,
+              requestedSlots: templates.length,
+              validSlots: generated.length,
+              missingSlots: templates.length - generated.length,
+            });
             return res.status(503).json({
-              error: `Only ${generated.length} of ${templates.length} fresh questions passed validation. Try again, choose fewer marks, or select PYQ + New.`,
+              error: "We couldn't complete this mock right now. Try again, or choose a different difficulty.",
             });
           }
           if (generated.length) {
-            await GeneratedMock.findOneAndUpdate(
-              { mockId: baseMock.mockId },
-              { mockId: baseMock.mockId, subjectCode, questions: generated,
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-              { upsert: true, new: true }
-            );
             mock = combineMock(baseMock, generated, mockType);
             mock.generationMode = 'ai';
             if (generated.length < templates.length) {
               mock.warnings = ['Some new questions did not pass validation, so archived questions filled those slots.'];
             }
+
+            const finalMarks = mock.questions.reduce(
+              (sum, question) => sum + Number(question.marks || 0),
+              0
+            );
+            const freshOnlySatisfied = mockType !== 'new'
+              || (mock.questions.length === templates.length
+                && mock.questions.every((question) => question.source === 'generated'));
+            if (finalMarks !== requestedMarks
+              || mock.questions.length !== baseMock.questions.length
+              || !freshOnlySatisfied) {
+              console.error('Generated mock failed final integrity check', {
+                subjectCode,
+                mockType,
+                requestedMarks,
+                finalMarks,
+                requestedQuestions: baseMock.questions.length,
+                finalQuestions: mock.questions.length,
+                freshOnlySatisfied,
+              });
+              return res.status(503).json({
+                error: "We couldn't complete this mock right now. Try again, or choose a different difficulty.",
+              });
+            }
+
+            await GeneratedMock.findOneAndUpdate(
+              { mockId: baseMock.mockId },
+              { mockId: baseMock.mockId, subjectCode, questions: generated,
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+              { upsert: true, returnDocument: 'after' }
+            );
           } else {
             mock.warnings = ['New questions were unavailable; this mock uses verified archived questions.'];
           }
@@ -383,7 +429,7 @@ router.post(
           console.warn('Generated mock fallback:', error.message);
           if (mockType === 'new') {
             return res.status(503).json({
-              error: 'Fresh question generation is temporarily unavailable. Try again or choose PYQ + New.',
+              error: "We couldn't complete this mock right now. Try again, or choose a different difficulty.",
             });
           }
           mock.warnings = ['New questions were unavailable; this mock uses verified archived questions.'];

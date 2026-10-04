@@ -244,6 +244,32 @@ test(
   }
 );
 
+test('selection uses an exact-mark combination when the archive can satisfy it', () => {
+  const bank = [
+    q('exact-1', 'Explain the first exact-mark concept.', { marks: 4 }),
+    q('exact-2', 'Explain the second exact-mark concept.', { marks: 6 }),
+    q('extra-1', 'Discuss an unrelated nine-mark concept in detail.', { marks: 9 }),
+    q('extra-2', 'Discuss another unrelated nine-mark concept in detail.', { marks: 9 }),
+  ];
+  const result = selectQuestions(bank, { totalMarks: 10, seed: 'exact-marks' });
+  assert.equal(result.exactMarks, true);
+  assert.equal(result.marksUsed, 10);
+  assert.deepEqual(result.selected.map((item) => item.marks).sort((a, b) => a - b), [4, 6]);
+});
+
+test('exact-mark selection supports fractional archive marks', () => {
+  const bank = [
+    q('fraction-1', 'Calculate the first fractional-mark result.', { marks: 1.5 }),
+    q('fraction-2', 'Calculate the second fractional-mark result.', { marks: 3.5 }),
+    q('fraction-3', 'Explain the five-mark supporting concept.', { marks: 5 }),
+    q('fraction-extra', 'Discuss an unrelated nine-mark topic.', { marks: 9 }),
+  ];
+  const result = selectQuestions(bank, { totalMarks: 10, seed: 'fractional-exact-marks' });
+  assert.equal(result.exactMarks, true);
+  assert.equal(result.marksUsed, 10);
+  assert.deepEqual(result.selected.map((item) => item.marks).sort((a, b) => a - b), [1.5, 3.5, 5]);
+});
+
 test(
   'same seed produces same mock selection',
   () => {

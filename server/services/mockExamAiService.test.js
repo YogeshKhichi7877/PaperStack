@@ -151,7 +151,7 @@ test(
 );
 
 test(
-  'selection validation rejects badly mismatched marks',
+  'selection validation rejects any mismatched mark total',
   () => {
     assert.throws(
       () =>
@@ -166,7 +166,16 @@ test(
           ],
           25
         ),
-      /instead of approximately/i
+      /instead of exactly/i
+    );
+
+    assert.throws(
+      () => validateSelectedIds(
+        { selectedQuestionIds: ['1', '2'] },
+        [q('1', 20), q('2', 3)],
+        25
+      ),
+      /instead of exactly/i
     );
   }
 );

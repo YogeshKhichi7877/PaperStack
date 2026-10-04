@@ -194,16 +194,9 @@ function validateSelectedIds(
       0
     );
 
-  if (
-    Math.abs(
-      Number(
-        targetMarks
-      ) -
-      total
-    ) > 3
-  ) {
+  if (Number(targetMarks) !== total) {
     throw new Error(
-      `AI selection was ${total} marks instead of approximately ${targetMarks}`
+      `AI selection was ${total} marks instead of exactly ${targetMarks}`
     );
   }
 
@@ -278,7 +271,7 @@ async function requestAiSelection({
     `Strategy: ${strategy}`,
     '',
     'Selection goals:',
-    '- total marks should equal the target if possible; otherwise stay within 2 marks',
+    '- total marks must equal the target exactly',
     '- avoid near-duplicate questions',
     '- balanced: mix years/topics/marks/repeat evidence',
     '- repeat-focused: favor repeatCount but still preserve some topic spread',

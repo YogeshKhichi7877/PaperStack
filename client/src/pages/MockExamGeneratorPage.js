@@ -520,7 +520,10 @@ export default function MockExamGeneratorPage({
         'success'
       );
     } catch (error) {
-      const message = error.response?.data?.error || 'Failed to generate mock exam.';
+      const serverMessage = error.response?.data?.error || '';
+      const message = /Only \d+ of \d+ fresh questions passed validation/i.test(serverMessage)
+        ? "We couldn't complete this mock right now. Try again, or choose a different difficulty."
+        : serverMessage || "We couldn't complete this mock right now. Please try again.";
       setGenerationError(message);
       console.error(
         'Mock generation failed:',
@@ -1184,7 +1187,7 @@ export default function MockExamGeneratorPage({
               type="button"
               className="me-generate"
               loading={generating}
-              loadingText="Building your mock…"
+              loadingText="Generating Mock…"
               disabled={
                 !subjectCode
               }
@@ -1199,7 +1202,7 @@ export default function MockExamGeneratorPage({
 
         {generating && (
           <p className="me-generation-status" role="status" aria-live="polite">
-            Selecting questions, balancing difficulty, and preparing your paper…
+            Creating and checking questions. Invalid candidates are replaced automatically…
           </p>
         )}
 

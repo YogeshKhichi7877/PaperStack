@@ -20,7 +20,7 @@ export async function generateMockExam(
     await axios.post(
       `${API_URL}/api/mock-exams/generate`,
       payload,
-      { headers: authHeader(), timeout: 90_000 }
+      { headers: authHeader(), timeout: 180_000 }
     );
 
   return response.data;

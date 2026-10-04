@@ -291,6 +291,56 @@ function rankCandidate(
   );
 }
 
+function findExactMarkSelection(
+  questions,
+  targetMarks,
+  strategy,
+  random
+) {
+  const markScale = 100;
+  const targetUnits = Math.round(Number(targetMarks) * markScale);
+  if (!Number.isFinite(targetUnits) || targetUnits <= 0) return null;
+  const states = Array(targetUnits + 1).fill(null);
+  states[0] = {
+    selected: [],
+    selectedYears: new Set(),
+    selectedTopics: new Set(),
+    score: 0,
+  };
+
+  questions.forEach((question) => {
+    const marks = questionMarks(question);
+    const markUnits = Math.round(marks * markScale);
+    if (!Number.isFinite(markUnits) || markUnits <= 0 || markUnits > targetUnits
+      || Math.abs(markUnits / markScale - marks) > 1e-6) return;
+    for (let total = targetUnits - markUnits; total >= 0; total -= 1) {
+      const state = states[total];
+      if (!state) continue;
+      const nextTotal = total + markUnits;
+      const nextScore = state.score + rankCandidate(question, {
+        strategy,
+        selectedYears: state.selectedYears,
+        selectedTopics: state.selectedTopics,
+        random,
+      });
+      if (states[nextTotal] && states[nextTotal].score >= nextScore) continue;
+      const selectedYears = new Set(state.selectedYears);
+      if (question.year) selectedYears.add(Number(question.year));
+      const selectedTopics = new Set(state.selectedTopics);
+      questionTopics(question).map(normalizeText).filter(Boolean)
+        .forEach((topic) => selectedTopics.add(topic));
+      states[nextTotal] = {
+        selected: [...state.selected, question],
+        selectedYears,
+        selectedTopics,
+        score: nextScore,
+      };
+    }
+  });
+
+  return states[targetUnits]?.selected || null;
+}
+
 function selectQuestions(
   questions = [],
   {
@@ -351,6 +401,21 @@ function selectQuestions(
           return true;
         }
       );
+
+  const exactSelection = findExactMarkSelection(
+    uniqueQuestions,
+    targetMarks,
+    strategy,
+    random
+  );
+  if (exactSelection?.length) {
+    return {
+      targetMarks,
+      marksUsed: targetMarks,
+      exactMarks: true,
+      selected: exactSelection,
+    };
+  }
 
   const selected = [];
   const selectedYears =
