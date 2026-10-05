@@ -112,11 +112,48 @@ function normalizeScriptNotation(value) {
 }
 
 function wrapDetectedQuestionMath(value) {
-  let output = String(value || '');
+  // Wrap raw LaTeX before looking for plain powers so expressions such as
+  // \frac{x^2}{\sqrt{4}} stay in one math span, including nested braces.
+  let output = mapOutsideDollarMath(value, (text) => {
+    const commands = /\\(?:frac|sqrt|sum|prod|int|lim|theta|alpha|beta|gamma|delta|lambda|mu|sigma|pi|infty|partial|nabla|times|cdot|leq|geq|neq|subset|cup|cap)\b/g;
+    let result = '';
+    let cursor = 0;
+    let match;
+    while ((match = commands.exec(text))) {
+      let end = commands.lastIndex;
+      while (end < text.length) {
+        const next = text.slice(end).match(/^\s*(?:\{|[_^])/);
+        if (!next) break;
+        let start = end + next[0].length - 1;
+        if (text[start] === '_' || text[start] === '^') {
+          start += 1;
+          while (/\s/.test(text[start] || '') && start < text.length) start += 1;
+          if (text[start] !== '{') {
+            const script = text.slice(start).match(/^[+-]?[A-Za-z0-9]+/);
+            if (!script) break;
+            end = start + script[0].length;
+            continue;
+          }
+        }
+        let depth = 1;
+        let position = start + 1;
+        for (; position < text.length && depth; position += 1) {
+          if (text[position] === '{') depth += 1;
+          if (text[position] === '}') depth -= 1;
+        }
+        if (depth) break;
+        end = position;
+      }
+      result += `${text.slice(cursor, match.index)}$${text.slice(match.index, end)}$`;
+      cursor = end;
+      commands.lastIndex = end;
+    }
+    return result + text.slice(cursor);
+  });
 
   // Preserve authored prose while upgrading the high-confidence notation that
   // commonly survives PDF extraction as plain text.
-  output = output.replace(
+  output = mapOutsideDollarMath(output, (text) => text.replace(
     /(^|[^\w$\\])((?:sqrt\s*\([^()\n]+\)|√\s*(?:\([^()\n]+\)|[A-Za-z0-9]+)))/gi,
     (match, prefix, expression) => {
       const normalized = expression
@@ -125,14 +162,14 @@ function wrapDetectedQuestionMath(value) {
         .replace(/^√\s*([A-Za-z0-9]+)$/, '\\sqrt{$1}');
       return `${prefix}$${normalized}$`;
     }
-  );
+  ));
 
-  output = output.replace(
+  output = mapOutsideDollarMath(output, (text) => text.replace(
     /(^|[^\w$\\])((?:[A-Za-z][A-Za-z0-9]*|\d+(?:\.\d+)?)(?:\s*[\^_]\s*(?:\([^()\n]+\)|\{[^{}\n]+\}|[-+]?[A-Za-z0-9]+))+)/g,
     (match, prefix, expression) => `${prefix}$${normalizeScriptNotation(expression)}$`
-  );
+  ));
 
-  output = output.replace(
+  output = mapOutsideDollarMath(output, (text) => text.replace(
     /(^|[^\w$\\])(\([^()\n]{1,48}\)|[A-Za-z])\s*\/\s*(\([^()\n]{1,48}\)|[A-Za-z])(?=$|[^\w])/g,
     (match, prefix, numerator, denominator) => {
       const unwrap = (part) => part.startsWith('(') && part.endsWith(')')
@@ -140,12 +177,7 @@ function wrapDetectedQuestionMath(value) {
         : part;
       return `${prefix}$\\frac{${unwrap(numerator)}}{${unwrap(denominator)}}$`;
     }
-  );
-
-  output = output.replace(
-    /(^|[^$\\])(\\(?:frac|sqrt|sum|prod|int|lim|theta|alpha|beta|gamma|delta|lambda|mu|sigma|pi|infty)\b(?:\s*[_^]\s*(?:\{[^{}\n]+\}|[A-Za-z0-9]+)|\s*\{[^{}\n]+\})*)/g,
-    (match, prefix, expression) => `${prefix}$${expression}$`
-  );
+  ));
 
   return output;
 }

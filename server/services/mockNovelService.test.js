@@ -12,6 +12,22 @@ const template = {
   subject: 'Cloud Computing', subjectCode: 'CS504',
 };
 
+test('numeric validation distinguishes subtraction from unary negatives', () => {
+  const candidate = {
+    sourceQuestionId: template._id, questionType: 'numerical', difficulty: 'hard',
+    questionText: 'A reservoir starts with 12 litres and loses 4 litres. Calculate the remaining volume.',
+    expectedAnswer: 'The remaining volume is 8 litres, found by subtracting the loss from the initial volume.',
+    keyPoints: ['Subtract the loss', 'State volume with units'],
+    markingScheme: [{ criterion: 'Method', marks: 2 }, { criterion: 'Result', marks: 3 }],
+    numericCheck: { expression: '12-4', result: 8 },
+  };
+  assert.ok(validateNovelQuestion(candidate, { ...template, questionType: 'numerical' }, [], [], 'hard'));
+  assert.equal(validateNovelQuestionDetailed({ ...candidate,
+    numericCheck: { expression: '-12-4', result: -16 },
+    expectedAnswer: 'The remaining value is -16 in the stated units after the subtraction.',
+  }, template, [], [], 'hard').reason, 'missing_numeric_values');
+});
+
 test('arithmetic verifier accepts simple valid expressions only', () => {
   assert.equal(arithmetic('(2+3)*4'), 20);
   assert.equal(arithmetic('process.exit()'), null);

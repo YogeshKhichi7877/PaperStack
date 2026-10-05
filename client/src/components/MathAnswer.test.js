@@ -122,3 +122,8 @@ test('preserves explicit math, inline code, fenced code, and ordinary prose', ()
   expect(normalized).toContain('```text\nx^4\n```');
   expect(normalized).toContain('The archive/year label stays plain.');
 });
+
+test('normalizing roots with powers never nests dollar delimiters', () => {
+  expect(normalizeQuestionMath('Calculate sqrt(x^2+y^2).')).toBe('Calculate $\\sqrt{x^2+y^2}$.');
+  expect(normalizeQuestionMath('Use \\frac{x^2}{4}.')).toBe('Use $\\frac{x^2}{4}$.');
+});

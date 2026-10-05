@@ -2392,3 +2392,7 @@
   font-size: 13px;
   text-align: right;
 }
+
+fieldset.me-builder-grid { margin: 0; padding: 0; border: 0; min-width: 0; }
+.me-options button:disabled, .me-builder-grid select:disabled { cursor: wait; opacity: .65; }
+.me-q-meta .fresh { display: inline-flex; align-items: center; gap: 4px; }

@@ -217,7 +217,7 @@ function answerExists(
 function getSourceLabel(question) {
   return question.source ===
     'generated'
-    ? 'Fresh practice question'
+    ? 'AI-generated question'
     : 'Previous paper';
 }
 

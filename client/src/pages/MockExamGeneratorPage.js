@@ -49,6 +49,7 @@ import './MockExamGeneratorPage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 import LoadingButton from '../components/LoadingButton';
+import MockGenerationAnimation from '../components/MockGenerationAnimation';
 
 const MathAnswer = React.lazy(() => import('../components/MathAnswer'));
 
@@ -129,7 +130,7 @@ function readAttempt(mockId) {
 function sourceLabel(question) {
   return question.source ===
     'generated'
-    ? 'Fresh practice'
+    ? 'AI-generated'
     : 'Previous paper';
 }
 
@@ -336,7 +337,7 @@ export default function MockExamGeneratorPage({
         if (list.length) {
           setSubjectCode(
             (current) =>
-              current ||
+              (list.some((item) => item.subjectCode === current) ? current : '') ||
               preferredSubject(ordered, semester)
                 .subjectCode
           );
@@ -390,6 +391,10 @@ export default function MockExamGeneratorPage({
   const examTypes =
     selectedSubject?.examTypes ||
     [];
+
+  useEffect(() => {
+    if (selectedSubject && examType && !selectedSubject.examTypes?.includes(examType)) setExamType('');
+  }, [selectedSubject, examType]);
 
   const mockHistory =
     useMemo(
@@ -489,6 +494,9 @@ export default function MockExamGeneratorPage({
             createSeed(),
         });
 
+      if (!result?.questions?.length || !Array.isArray(result.sections)) {
+        throw new Error('The server returned an incomplete paper. Please try again.');
+      }
       setMock(result);
 
       try {
@@ -523,7 +531,10 @@ export default function MockExamGeneratorPage({
       const serverMessage = error.response?.data?.error || '';
       const message = /Only \d+ of \d+ fresh questions passed validation/i.test(serverMessage)
         ? "We couldn't complete this mock right now. Try again, or choose a different difficulty."
-        : serverMessage || "We couldn't complete this mock right now. Please try again.";
+        : serverMessage || (error.code === 'ECONNABORTED'
+          ? 'Generation took too long. Please try again, or choose PYQ Only for immediate practice.'
+          : error.message === 'The server returned an incomplete paper. Please try again.' ? error.message
+            : "We couldn't complete this mock right now. Please try again.");
       setGenerationError(message);
       console.error(
         'Mock generation failed:',
@@ -672,6 +683,10 @@ export default function MockExamGeneratorPage({
 
       const updated = {
         ...mock,
+        blueprint: mock.blueprint?.map((item) => item.number === question.number
+          ? { ...item, difficulty: replacement.difficulty, topic: replacement.primaryTopic,
+            marks: replacement.marks, questionType: replacement.questionType, source: replacement.source }
+          : item),
 
         questions:
           mock.questions.map(
@@ -700,6 +715,7 @@ export default function MockExamGeneratorPage({
       };
 
       setMock(updated);
+      persistAttempt({ ...attempt, completed: attempt.completed.filter((id) => id !== question._id) });
 
       try {
         localStorage.setItem(
@@ -817,7 +833,7 @@ export default function MockExamGeneratorPage({
         ================================================= */}
 
         <section className="me-options me-no-print">
-          <fieldset>
+          <fieldset disabled={generating}>
             <legend>
               Question source
             </legend>
@@ -863,12 +879,12 @@ export default function MockExamGeneratorPage({
             </div>
             {mockType === 'new' && (
               <small className="me-source-hint">
-                Fresh Only uses AI questions at your selected difficulty. If a complete paper cannot be verified, generation will fail instead of substituting PYQs.
+                Fresh Only creates AI questions at your selected difficulty. Each question is checked before the complete paper appears.
               </small>
             )}
           </fieldset>
 
-          <fieldset>
+          <fieldset disabled={generating}>
             <legend>
               Quick duration
             </legend>
@@ -887,17 +903,6 @@ export default function MockExamGeneratorPage({
                         value
                       );
 
-                      setTotalMarks(
-                        value === 10
-                          ? 10
-                          : value ===
-                            20
-                          ? 20
-                          : value ===
-                            30
-                          ? 25
-                          : 50
-                      );
                     }}
                   >
                     {value} min
@@ -907,7 +912,7 @@ export default function MockExamGeneratorPage({
             </div>
           </fieldset>
 
-          <fieldset>
+          <fieldset disabled={generating}>
             <legend>
               Difficulty
             </legend>
@@ -955,6 +960,7 @@ export default function MockExamGeneratorPage({
             <input
               type="checkbox"
               checked={adaptive}
+              disabled={generating}
               onChange={(event) =>
                 setAdaptive(
                   event.target.checked
@@ -997,7 +1003,7 @@ export default function MockExamGeneratorPage({
             </div>
           </div>
 
-          <div className="me-builder-grid">
+          <fieldset className="me-builder-grid" disabled={generating || loadingSubjects} aria-label="Mock paper settings">
             <label className="me-field-subject">
               <span>Subject</span>
 
@@ -1197,14 +1203,8 @@ export default function MockExamGeneratorPage({
             >
               Generate Mock
             </LoadingButton>
-          </div>
+          </fieldset>
         </section>
-
-        {generating && (
-          <p className="me-generation-status" role="status" aria-live="polite">
-            Creating and checking questions. Invalid candidates are replaced automatically…
-          </p>
-        )}
 
         {generationError && (
           <div className="me-generation-error me-no-print" role="alert">
@@ -1274,7 +1274,12 @@ export default function MockExamGeneratorPage({
             EMPTY STATE
         ================================================= */}
 
-        {!mock && (
+        {generating && (
+          <MockGenerationAnimation subject={selectedSubject?.subject || subjectCode}
+            totalMarks={totalMarks} durationMinutes={durationMinutes} mockType={mockType} />
+        )}
+
+        {!mock && !generating && (
           <section className="me-state">
             <span className="me-state-icon">
               <FileText
@@ -1332,7 +1337,7 @@ export default function MockExamGeneratorPage({
             GENERATED MOCK
         ================================================= */}
 
-        {mock && (
+        {mock && !generating && (
           <>
             {/* COMMAND BAR */}
 
@@ -1493,7 +1498,7 @@ export default function MockExamGeneratorPage({
                         <small>
                           {item.source ===
                           'generated'
-                            ? 'Fresh practice'
+                            ? 'AI-generated'
                             : 'Previous paper'}
                         </small>
                       </div>
@@ -1793,6 +1798,7 @@ export default function MockExamGeneratorPage({
                                         : 'pyq'
                                     }
                                   >
+                                    {question.source === 'generated' && <Sparkles size={12} aria-hidden="true" />}
                                     {sourceLabel(
                                       question
                                     )}

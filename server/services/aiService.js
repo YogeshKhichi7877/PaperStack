@@ -191,17 +191,20 @@ async function runTask(task, prompt, options = {}, dependencies = {}) {
     throw error;
   }
   const providers = providerOrder(env, task, options);
-  const requestedRetries = Number(env.AI_MAX_RETRIES ?? 2);
+  const requestedRetries = Number(options.maxRetries ?? env.AI_MAX_RETRIES ?? 2);
   const retries = Math.max(0, Math.min(2, Number.isFinite(requestedRetries) ? requestedRetries : 2));
   const failures = [];
   const stopped = new Set();
+  const deadline = options.totalTimeoutMs ? Date.now() + Math.max(1, options.totalTimeoutMs) : Infinity;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
+    if (Date.now() >= deadline) break;
     if (attempt) {
       const baseDelay = attempt === 1 ? 1000 : 2250;
       const jitter = Math.floor(Math.random() * (attempt === 1 ? 250 : 500));
       await new Promise((resolve) => setTimeout(resolve, baseDelay + jitter));
     }
     for (const provider of providers) {
+      if (Date.now() >= deadline) break;
       if (stopped.has(provider)) continue;
       if (providerInCooldown(task, provider)) {
         failures.push({ provider, category: 'circuit_cooldown' });
@@ -210,7 +213,9 @@ async function runTask(task, prompt, options = {}, dependencies = {}) {
       const started = Date.now();
       const model = modelForProvider(provider, env);
       try {
-        const result = await requestProvider(provider, prompt, options, env, request);
+        const result = await requestProvider(provider, prompt, {
+          ...options, timeoutMs: Math.min(Number(options.timeoutMs || env.AI_TIMEOUT_MS) || 30000, deadline - Date.now()),
+        }, env, request);
         if (typeof options.validateResponse === 'function') {
           try { options.validateResponse(result); } catch {
             const invalid = new Error('Invalid AI response');

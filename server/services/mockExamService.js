@@ -136,12 +136,9 @@ function questionTopics(question = {}) {
 }
 
 function questionFingerprint(question = {}) {
-  return normalizeText(
-    question.questionText
-  )
-    .split(' ')
-    .slice(0, 18)
-    .join(' ');
+  // Numbers, operators, and later subparts distinguish mathematical problems.
+  return String(question.questionText || '').toLowerCase().replace(/\s+/g, ' ').trim()
+    .replace(/[.?]+$/g, '').replace(/([a-z]{2,})!$/, '$1');
 }
 
 function sectionForMarks(marksInput) {
@@ -315,7 +312,7 @@ function findExactMarkSelection(
       || Math.abs(markUnits / markScale - marks) > 1e-6) return;
     for (let total = targetUnits - markUnits; total >= 0; total -= 1) {
       const state = states[total];
-      if (!state) continue;
+      if (!state || state.selected.length >= 30) continue;
       const nextTotal = total + markUnits;
       const nextScore = state.score + rankCandidate(question, {
         strategy,
@@ -428,7 +425,7 @@ function selectQuestions(
 
   while (
     marksUsed < targetMarks &&
-    safety < 500
+    safety < 500 && selected.length < 30
   ) {
     safety += 1;
 
@@ -453,7 +450,7 @@ function selectQuestions(
             questionMarks(
               question
             ) <=
-            remaining + 2
+            remaining
         );
 
     if (
@@ -542,7 +539,7 @@ function selectQuestions(
   if (
     marksUsed <
       targetMarks &&
-    selected.length
+    selected.length && selected.length < 30
   ) {
     const remaining =
       targetMarks -
@@ -574,15 +571,7 @@ function selectQuestions(
 
     if (
       filler &&
-      Math.abs(
-        (
-          marksUsed +
-          questionMarks(
-            filler
-          )
-        ) -
-        targetMarks
-      ) <= 2
+      questionMarks(filler) <= remaining
     ) {
       selected.push(
         filler
@@ -662,6 +651,7 @@ function publicQuestion(
     questionType:
       question.questionType ||
       '',
+    difficulty: question.difficulty || 'unknown',
     unit:
       question.unit ??
       null,
@@ -790,8 +780,28 @@ function buildMockExam(
       }
     );
 
+  return buildMockPaper(selection.selected, {
+    subject, examType, totalMarks: selection.targetMarks, durationMinutes: duration, strategy, seed,
+  });
+}
+
+// Render an already planned paper without deduplicating its AI reference slots.
+function buildMockPaper(selected = [], {
+  subject = {}, examType = '', totalMarks = 25, durationMinutes = 60,
+  strategy = 'balanced', seed = 'paperstack',
+} = {}) {
+  const duration = clampNumber(durationMinutes, 10, 240, 60);
+  const marksUsed = Math.round(selected.reduce((sum, question) => sum + questionMarks(question), 0) * 100) / 100;
+  const selection = {
+    selected, targetMarks: clampNumber(totalMarks, 10, 100, 25), marksUsed,
+    exactMarks: Math.abs(marksUsed - clampNumber(totalMarks, 10, 100, 25)) < 1e-6,
+  };
+
   const publicQuestions =
-    selection.selected.map(
+    [...selection.selected].sort((a, b) => {
+      const order = { short: 0, medium: 1, long: 2 };
+      return order[sectionForMarks(questionMarks(a)).key] - order[sectionForMarks(questionMarks(b)).key];
+    }).map(
       (
         question,
         index
@@ -931,6 +941,7 @@ function buildMockExam(
 
 module.exports = {
   buildMockExam,
+  buildMockPaper,
   buildSections,
   clampNumber,
   createSeededRandom,

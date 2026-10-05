@@ -7,15 +7,9 @@ const Question =
 const QuestionSolution =
   require('../models/QuestionSolution');
 const GeneratedMock = require('../models/GeneratedMock');
-const { combineMock, generateNovelQuestions } = require('../services/mockNovelService');
+const { generateNovelQuestions, novelQuestionAiEnabled: mockAiEnabled } = require('../services/mockNovelService');
+const { generatePracticeMock } = require('../services/mockGenerationService');
 const { clampNumber, publicQuestion } = require('../services/mockExamService');
-
-const {
-  generateMockWithMode,
-  mockAiEnabled,
-} = require(
-  '../services/mockExamAiService'
-);
 
 const router =
   express.Router();
@@ -185,7 +179,6 @@ router.post(
         ? req.body.adaptiveTopics.slice(0, 12).map((item) => String(item).toLowerCase().trim())
         : [];
 
-      const mode = mockAiEnabled() ? 'ai' : 'local';
 
       const seed =
         String(
@@ -318,124 +311,20 @@ router.post(
       const first =
         enriched[0];
 
-      const baseMock =
-        await generateMockWithMode(
-          enriched,
-          {
-            subject: {
-              subjectCode,
-              subject:
-                first
-                  ?.subject ||
-                '',
-              branch:
-                first
-                  ?.branch ||
-                '',
-              semester:
-                first
-                  ?.semester ??
-                null,
-            },
-            examType,
-            totalMarks,
-            durationMinutes,
-            strategy,
-            seed,
-            mode: mockType === 'pyq' ? mode : 'local',
-          }
+      const { mock, generated } = await generatePracticeMock(enriched, {
+        subject: {
+          subjectCode, subject: first?.subject || '', branch: first?.branch || '',
+          semester: first?.semester ?? null,
+        },
+        examType, totalMarks: requestedMarks, durationMinutes, strategy, seed, mockType, difficulty,
+      });
+      if (generated.length) {
+        await GeneratedMock.findOneAndUpdate(
+          { mockId: mock.mockId },
+          { mockId: mock.mockId, subjectCode, questions: generated,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+          { upsert: true, returnDocument: 'after' }
         );
-
-      if (!baseMock.exactMarks || baseMock.generatedMarks !== requestedMarks) {
-        console.warn('Mock exam exact-mark selection unavailable', {
-          subjectCode,
-          examType: examType || 'all',
-          requestedMarks,
-          generatedMarks: baseMock.generatedMarks,
-          strategy,
-        });
-        return res.status(422).json({
-          error: 'We could not build the exact mark total for this mock. Try another exam scope or mark total.',
-        });
-      }
-
-      let mock = combineMock(baseMock, [], 'pyq');
-      if (mockType !== 'pyq' && mockAiEnabled()) {
-        try {
-          const byId = new Map(enriched.map((item) => [String(item._id), item]));
-          const selected = baseMock.questions.map((item) => byId.get(String(item._id))).filter(Boolean);
-          const templates = mockType === 'new' ? selected : selected.filter((_, index) => index % 2 === 0);
-          if (!templates.length) {
-            return res.status(422).json({
-              error: 'No suitable source questions were found for fresh practice. Choose another subject or exam scope.',
-            });
-          }
-          const generated = await generateNovelQuestions(templates, enriched, {
-            subject: baseMock.subject, examType, difficulty,
-          });
-          if (mockType === 'new' && generated.length !== templates.length) {
-            console.warn('Fresh mock generation exhausted replacement budget', {
-              subjectCode,
-              difficulty,
-              requestedSlots: templates.length,
-              validSlots: generated.length,
-              missingSlots: templates.length - generated.length,
-            });
-            return res.status(503).json({
-              error: "We couldn't complete this mock right now. Try again, or choose a different difficulty.",
-            });
-          }
-          if (generated.length) {
-            mock = combineMock(baseMock, generated, mockType);
-            mock.generationMode = 'ai';
-            if (generated.length < templates.length) {
-              mock.warnings = ['Some new questions did not pass validation, so archived questions filled those slots.'];
-            }
-
-            const finalMarks = mock.questions.reduce(
-              (sum, question) => sum + Number(question.marks || 0),
-              0
-            );
-            const freshOnlySatisfied = mockType !== 'new'
-              || (mock.questions.length === templates.length
-                && mock.questions.every((question) => question.source === 'generated'));
-            if (finalMarks !== requestedMarks
-              || mock.questions.length !== baseMock.questions.length
-              || !freshOnlySatisfied) {
-              console.error('Generated mock failed final integrity check', {
-                subjectCode,
-                mockType,
-                requestedMarks,
-                finalMarks,
-                requestedQuestions: baseMock.questions.length,
-                finalQuestions: mock.questions.length,
-                freshOnlySatisfied,
-              });
-              return res.status(503).json({
-                error: "We couldn't complete this mock right now. Try again, or choose a different difficulty.",
-              });
-            }
-
-            await GeneratedMock.findOneAndUpdate(
-              { mockId: baseMock.mockId },
-              { mockId: baseMock.mockId, subjectCode, questions: generated,
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-              { upsert: true, returnDocument: 'after' }
-            );
-          } else {
-            mock.warnings = ['New questions were unavailable; this mock uses verified archived questions.'];
-          }
-        } catch (error) {
-          console.warn('Generated mock fallback:', error.message);
-          if (mockType === 'new') {
-            return res.status(503).json({
-              error: "We couldn't complete this mock right now. Try again, or choose a different difficulty.",
-            });
-          }
-          mock.warnings = ['New questions were unavailable; this mock uses verified archived questions.'];
-        }
-      } else if (mockType !== 'pyq') {
-        mock.warnings = ['New questions were unavailable; this mock uses verified archived questions.'];
       }
 
       res.json({
@@ -459,10 +348,10 @@ router.post(
       );
 
       res
-        .status(500)
+        .status(error.status || 500)
         .json({
-          error:
-            'Failed to generate mock exam',
+          code: error.code || 'GENERATION_FAILED',
+          error: error.status ? error.message : 'Failed to generate mock exam',
         });
     }
   }
@@ -477,15 +366,17 @@ router.post('/regenerate-question', async (req, res) => {
     const record = await GeneratedMock.findOne({ mockId });
     const current = record?.questions.find((item) => String(item._id) === questionId);
     if (!current) return res.status(404).json({ error: 'This generated mock question was not found.' });
-    const template = await Question.findById(current.sourceQuestionId).lean();
+    const source = await Question.findById(current.sourceQuestionId).lean();
+    const template = source ? { ...source, marks: current.marks } : null;
     if (!template) return res.status(404).json({ error: 'The source concept is no longer available.' });
     let replacement;
     if (mockAiEnabled()) {
-      for (let attempt = 0; attempt < 2 && !replacement; attempt += 1) {
+      for (let attempt = 0; attempt < 1 && !replacement; attempt += 1) {
         try {
           const candidates = await generateNovelQuestions([template], [template, ...record.questions], {
             subject: { subjectCode: record.subjectCode, subject: template.subject },
             examType: template.examType,
+            direction, referenceQuestion: current.questionText, generationTimeoutMs: 50000,
             difficulty: direction === 'easier' ? 'easy' : direction === 'harder' ? 'hard' : current.difficulty,
           });
           replacement = candidates[0];
@@ -504,7 +395,7 @@ router.post('/regenerate-question', async (req, res) => {
     await record.save();
     res.json({ question: {
       ...publicQuestion(replacement, Number(req.body?.number) || 1),
-      source: 'generated', difficulty: replacement.difficulty,
+      source: 'generated', aiGenerated: true, difficulty: replacement.difficulty,
     } });
   } catch (error) {
     console.error('Mock question regeneration failed:', error);

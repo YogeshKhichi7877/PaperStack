@@ -2,7 +2,7 @@
 /* eslint-env serviceworker */
 /* global self, caches, URL */
 
-const CACHE_NAME = 'paperstack-pwa-v3';
+const CACHE_NAME = 'paperstack-pwa-v4';
 
 const STATIC_ASSETS = [
   '/',
@@ -68,7 +68,10 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
+      fetch(request).catch(async () => (await caches.match('/index.html')) || new Response(
+        '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PaperStack is offline</title><body><h1>You are offline</h1><p>Reconnect to load PaperStack and generate a mock paper.</p><button onclick="location.reload()">Try again</button></body></html>',
+        { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      ))
     );
     return;
   }
@@ -89,7 +92,7 @@ self.addEventListener('fetch', (event) => {
       .catch(async () => {
         const cached = await caches.match(request);
         if (cached) return cached;
-        throw new Error('Resource unavailable offline');
+        return new Response('Resource unavailable offline', { status: 503 });
       })
   );
 });

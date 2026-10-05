@@ -1,0 +1,36 @@
+.me-generation-animation { overflow: hidden; min-height: 390px; }
+.me-assembly { position: relative; width: 230px; height: 210px; margin: 0 auto 24px; }
+.me-assembly-sheet {
+  position: absolute; left: 39px; top: 10px; width: 156px; height: 192px;
+  padding: 18px 15px; border: 1px solid var(--me-border-strong); border-radius: 12px;
+  background: var(--me-white); box-shadow: 0 12px 30px #00838c18;
+  transform: rotate(-4deg); animation: me-sheet-float 4s ease-in-out infinite;
+}
+.me-assembly-heading { display: flex; align-items: center; gap: 14px; color: var(--me-primary); margin-bottom: 19px; }
+.me-assembly-heading > span { height: 7px; width: 78px; border-radius: 8px; background: var(--me-primary); }
+.me-assembly-row { display: flex; align-items: center; gap: 8px; margin-top: 13px; }
+.me-assembly-row b { font-size: 10px; color: var(--me-primary); }
+.me-assembly-row > div { flex: 1; }
+.me-assembly-row div span { display: block; height: 4px; background: var(--me-border); border-radius: 4px; margin-bottom: 5px; transform-origin: left; animation: me-write-line 3.2s ease-in-out infinite; animation-delay: calc(var(--row) * .3s); }
+.me-assembly-row div span + span { width: 65%; }
+.me-assembly-row i { color: var(--me-primary); font-size: 12px; font-style: normal; animation: me-check-appear 3.2s ease-in-out infinite; animation-delay: calc(var(--row) * .3s); }
+.me-assembly-scan { position: absolute; left: 0; top: 45px; width: 100%; height: 30px; background: linear-gradient(transparent, #00838c16, transparent); animation: me-scan-paper 3.2s ease-in-out infinite; }
+.me-floating-symbol { position: absolute; color: var(--me-primary); font-size: 22px; font-weight: 600; animation: me-symbol-float 4s ease-in-out infinite; }
+.me-symbol-one { top: 36px; left: 3px; }
+.me-symbol-two { top: 54px; right: 0; animation-delay: -.8s; }
+.me-symbol-three { bottom: 25px; left: 10px; animation-delay: -1.6s; }
+.me-loading-dots { display: inline-block; animation: me-dots-pulse 1.5s ease-in-out infinite; }
+.me-generation-animation [role="status"] p { color: var(--me-muted); max-width: 520px; margin: 12px auto 18px; line-height: 1.6; }
+.me-assembly-settings { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.me-assembly-settings span { border: 1px solid var(--me-border); border-radius: 20px; padding: 5px 12px; color: var(--me-primary-dark); background: var(--me-soft); font-size: 12px; }
+.me-generation-animation > small { color: var(--me-muted); font-size: 12px; }
+@keyframes me-sheet-float { 50% { transform: rotate(1deg) translateY(-6px); } }
+@keyframes me-write-line { 0%, 10% { transform: scaleX(.2); opacity: .45; } 45%, 90% { transform: scaleX(1); opacity: 1; } }
+@keyframes me-check-appear { 0%, 25% { opacity: .15; } 55%, 90% { opacity: 1; } }
+@keyframes me-scan-paper { 0% { transform: translateY(0); opacity: 0; } 20%, 70% { opacity: 1; } 100% { transform: translateY(120px); opacity: 0; } }
+@keyframes me-symbol-float { 50% { transform: translateY(-10px); opacity: .5; } }
+@keyframes me-dots-pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) {
+  .me-generation-animation *, .me-generation-animation *::before, .me-generation-animation *::after { animation: none !important; }
+  .me-assembly-scan { display: none; }
+}

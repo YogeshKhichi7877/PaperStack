@@ -7,10 +7,14 @@ const { buildSections, normalizeText, publicQuestion, questionMarks } = require(
 const MAX_GENERATION_ROUNDS = 5;
 const INITIAL_OVERGENERATION_FACTOR = 1.3;
 const REPLACEMENT_OVERGENERATION_FACTOR = 1.5;
-const GENERATION_CONCURRENCY = 1;
+const GENERATION_CONCURRENCY = 2;
 const INITIAL_TEMPLATES_PER_BATCH = 3;
 const REPLACEMENT_TEMPLATES_PER_BATCH = 1;
 const NUMERIC_TOLERANCE = 5e-3;
+
+function novelQuestionAiEnabled(env = process.env) {
+  return env.MOCK_AI_ENABLED !== 'false' && aiAvailable(env, 'NOVEL_QUESTION_GENERATION');
+}
 
 function tokens(text) {
   return new Set(normalizeText(text).split(' ').filter((word) => word.length > 2));
@@ -48,7 +52,10 @@ function rejection(reason, details = {}) {
 }
 
 function numericLiterals(value) {
-  return String(value || '').match(/-?\d+(?:\.\d+)?/g)?.map(Number)
+  // A binary minus is not part of the next literal; retain unary negatives,
+  // scientific notation, and thousands separators used in worked answers.
+  return normalizeNumericExpression(value).replace(/(?<=\d),(?=\d{3}\b)/g, '')
+    .match(/(?<![\d)}\]])-?\d+(?:\.\d+)?(?:e[+-]?\d+)?|\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number)
     .filter(Number.isFinite) || [];
 }
 
@@ -119,7 +126,7 @@ function validateNovelQuestionDetailed(
   if (duplicateSimilarity > 0.58) {
     return rejection('duplicate_similarity', { similarity: Number(duplicateSimilarity.toFixed(3)) });
   }
-  if ((requestedDifficulty === 'easy' || requestedDifficulty === 'hard')
+  if (['easy', 'moderate', 'hard'].includes(requestedDifficulty)
     && raw.difficulty !== requestedDifficulty) {
     return rejection('difficulty_mismatch', {
       expected: requestedDifficulty,
@@ -152,7 +159,8 @@ function validateNovelQuestionDetailed(
 
   return { valid: true, reason: '', details: {}, question: {
     _id: crypto.randomBytes(12).toString('hex'),
-    sourceQuestionId: String(template._id),
+    sourceQuestionId: String(template.archiveQuestionId || template._id),
+    generationSlotId: String(template._id),
     source: 'generated',
     questionText,
     expectedAnswer,
@@ -199,7 +207,7 @@ function repairCandidateRow(raw, template, requestedDifficulty = 'balanced') {
         questionType: repaired.questionType,
       });
   if (!['easy', 'moderate', 'hard'].includes(repaired.difficulty)
-    && ['easy', 'hard'].includes(requestedDifficulty)) {
+    && ['easy', 'moderate', 'hard'].includes(requestedDifficulty)) {
     repaired.difficulty = requestedDifficulty;
   }
 
@@ -342,9 +350,11 @@ async function mapLimited(items, limit, callback) {
   return results.flat();
 }
 
-async function generateNovelQuestions(templates, archive, options = {},
-  request = (prompt, settings) => generateForTask('NOVEL_QUESTION_GENERATION', prompt, settings)) {
-  if (!aiAvailable(options.env || process.env, 'NOVEL_QUESTION_GENERATION') || !templates.length) return [];
+async function generateNovelQuestions(templates, archive, options = {}, request) {
+  if (!novelQuestionAiEnabled(options.env || process.env) || !templates.length) return [];
+  request = request || ((prompt, settings) => generateForTask('NOVEL_QUESTION_GENERATION', prompt, settings,
+    { env: options.env || process.env }));
+  const deadline = Date.now() + (options.generationTimeoutMs || 150000);
   const archiveTexts = archive.map((item) => item.questionText || '');
   const acceptedBySource = new Map();
   const failureHints = new Map();
@@ -368,6 +378,7 @@ async function generateNovelQuestions(templates, archive, options = {},
   }
 
   async function generateBatch(allocations, round) {
+    if (Date.now() >= deadline) return [];
     const batch = allocations.map((item) => item.template);
     const requestedCandidates = allocations.reduce((sum, item) => sum + item.count, 0);
     const ids = new Set(batch.map((item) => String(item._id)));
@@ -378,13 +389,14 @@ async function generateNovelQuestions(templates, archive, options = {},
       'Keep the same topic and exact marks, but use a different scenario and wording. Do not paraphrase or copy the source.',
       `Subject: ${options.subject?.subject || ''} (${options.subject?.subjectCode || ''}). Semester: ${options.subject?.semester ?? 'not specified'}.`,
       `Exam scope: ${options.examType || 'All exams'}. Academic level: undergraduate engineering. Replacement round: ${round}.`,
-      options.difficulty === 'easy' || options.difficulty === 'hard'
+      ['easy', 'moderate', 'hard'].includes(options.difficulty)
         ? `Every question must have ${options.difficulty} difficulty.`
         : 'Match each source question’s approximate difficulty.',
       'Difficulty must come from reasoning depth, not ambiguity or missing information.',
       'Every question must belong to the selected subject, be self-contained, academically answerable, unambiguous, exam-appropriate, and include all variables and values needed to solve it.',
       'Alternatives for the same source must be meaningfully different from each other and from the reference. Avoid duplicates and near-duplicates.',
       'Each markingScheme must sum exactly to the source marks. Include at least two keyPoints and a complete expectedAnswer. Format expectedAnswer with standard Markdown and blank lines; never use HTML or <br> tags.',
+      'Format questionText and expectedAnswer as Markdown. Enclose ALL mathematics in $...$ for inline math or $$...$$ on separate lines for display math. Use valid KaTeX LaTeX for fractions, roots, integrals, sets, Greek symbols, and matrices. Escape every LaTeX backslash as \\ in JSON. Preserve paragraph breaks and subparts. Never return HTML.',
       'For numerical questions, include every value used by numericCheck.expression in the question text. numericCheck.expression must be one scalar MathJS expression containing only explicit numbers, parentheses, +, -, *, /, ^, sqrt, log, ln, exp, sin, cos, tan, abs, round, floor, or ceil. Never put variables, equations, units, percentages, LaTeX, vectors, or matrices in numericCheck.expression.',
       'numericCheck.result must be one finite JSON number equal to that scalar expression, never a string, array, vector, or object. State that scalar result as a plain decimal in expectedAnswer. For a vector or matrix problem, use one clearly named component as the scalar numeric checkpoint. Check the arithmetic before returning JSON.',
       replacement
@@ -394,6 +406,15 @@ async function generateNovelQuestions(templates, archive, options = {},
       JSON.stringify({
         subject: options.subject,
         examType: options.examType,
+        ...(options.direction ? {
+          adjustment: options.direction,
+          currentQuestion: options.referenceQuestion,
+          adjustmentInstructions: options.direction === 'similar'
+            ? 'Keep the current problem type and concept; create a new scenario with new givens.'
+            : options.direction === 'replace'
+              ? 'Choose a different scenario and problem structure within the same source topic.'
+              : `Change the reasoning depth to make this question ${options.direction}.`,
+        } : {}),
         requiredCandidateCount: requestedCandidates,
         references: allocations.map(({ template, count }) => ({
           sourceQuestionId: String(template._id),
@@ -402,7 +423,7 @@ async function generateNovelQuestions(templates, archive, options = {},
           marks: questionMarks(template),
           topic: template.primaryTopic,
           questionType: template.questionType,
-          difficulty: options.difficulty === 'easy' || options.difficulty === 'hard'
+          difficulty: ['easy', 'moderate', 'hard'].includes(options.difficulty)
             ? options.difficulty : estimateDifficulty(template),
           rejectionHints: [...(failureHints.get(String(template._id)) || [])].slice(0, 4),
           correctionInstructions: [...(failureHints.get(String(template._id)) || [])]
@@ -416,12 +437,31 @@ async function generateNovelQuestions(templates, archive, options = {},
         temperature: replacement ? 0.35 : 0.5,
         reasoningEffort: 'low',
         maxOutputTokens: Math.min(7000, 900 + requestedCandidates * 1200),
+        maxRetries: 0,
+        totalTimeoutMs: Math.max(1, deadline - Date.now()),
+        timeoutMs: Math.min(25000, Math.max(1, deadline - Date.now())),
         validateResponse: (response) => {
           const parsed = parseCandidateRowsDetailed(response, {
             templates: batch,
             difficulty: options.difficulty,
           });
-          if (!parsed.rows.some((row) => ids.has(row.sourceQuestionId))) {
+          // Remember malformed rows so a repair round receives concrete hints.
+          parsed.rejected.forEach((item) => {
+            if (!failureHints.has(item.sourceQuestionId)) failureHints.set(item.sourceQuestionId, new Set());
+            failureHints.get(item.sourceQuestionId).add(item.reason);
+          });
+          const valid = parsed.rows.some((row) => {
+            const template = batch.find((item) => String(item._id) === row.sourceQuestionId);
+            if (!template || !ids.has(row.sourceQuestionId)) return false;
+            const result = validateNovelQuestionDetailed(row, template, archiveTexts,
+              [...acceptedBySource.values()].map((item) => item.questionText), options.difficulty);
+            if (!result.valid) {
+              if (!failureHints.has(row.sourceQuestionId)) failureHints.set(row.sourceQuestionId, new Set());
+              failureHints.get(row.sourceQuestionId).add(result.reason);
+            }
+            return result.valid;
+          });
+          if (!valid) {
             throw new TypeError('AI response invalid');
           }
         },
@@ -468,6 +508,7 @@ async function generateNovelQuestions(templates, archive, options = {},
   }
 
   for (let round = 0; round < MAX_GENERATION_ROUNDS; round += 1) {
+    if (Date.now() >= deadline) break;
     const missing = templates.filter((item) => !acceptedBySource.has(String(item._id)));
     if (!missing.length) break;
     const remainingBudget = maxTotalCandidates - totalCandidatesRequested;
@@ -517,14 +558,17 @@ async function generateNovelQuestions(templates, archive, options = {},
 }
 
 function combineMock(base, generated, mockType) {
-  const bySource = new Map(generated.map((item) => [item.sourceQuestionId, item]));
+  const bySource = new Map(generated.map((item) => [item.generationSlotId || item.sourceQuestionId, item]));
   const selected = base.questions.map((item) => bySource.get(item._id) || { ...item, source: 'pyq' });
   const questions = selected.map((item, index) => ({
     ...publicQuestion(item, index + 1),
     source: item.source,
+    aiGenerated: item.source === 'generated',
     difficulty: item.source === 'generated' ? item.difficulty : estimateDifficulty(item),
   }));
   const generatedCount = questions.filter((item) => item.source === 'generated').length;
+  const years = [...new Set(questions.map((item) => item.year).filter(Boolean))].sort((a, b) => b - a);
+  const topics = [...new Set(questions.flatMap((item) => item.topics).filter(Boolean))];
   return {
     ...base,
     version: 'mock-exam-v2',
@@ -533,11 +577,17 @@ function combineMock(base, generated, mockType) {
       : 'pyq',
     sections: buildSections(questions),
     questions,
-    summary: { ...base.summary, generatedCount, pyqCount: questions.length - generatedCount },
+    summary: { totalQuestions: questions.length, yearsCovered: years.length, years,
+      topicsCovered: topics.length, topics,
+      repeatBacked: questions.filter((item) => item.repeatCount > 1).length,
+      solutionReady: questions.filter((item) => item.approvedSolutionCount > 0).length,
+      generatedCount, pyqCount: questions.length - generatedCount },
     blueprint: questions.map((item) => ({
       number: item.number, marks: item.marks, questionType: item.questionType,
       topic: item.primaryTopic, source: item.source, difficulty: item.difficulty,
     })),
+    generationNotes: { ...base.generationNotes,
+      disclaimer: 'This practice mock is not an official IIIT Surat paper and does not predict future exam questions. AI-generated questions are marked separately from previous-paper questions.' },
     instructions: [
       ...base.instructions.filter((line) => !line.startsWith('Questions are selected')),
       generatedCount
@@ -547,6 +597,6 @@ function combineMock(base, generated, mockType) {
   };
 }
 
-module.exports = { arithmetic, combineMock, estimateDifficulty, generateNovelQuestions,
+module.exports = { arithmetic, combineMock, estimateDifficulty, generateNovelQuestions, novelQuestionAiEnabled,
   parseCandidateRows, repairCandidateRow, similarity, validateNovelQuestion,
   validateNovelQuestionDetailed };

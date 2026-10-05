@@ -85,6 +85,8 @@
   margin: 0;
 }
 
+.ps-math-answer.ps-question-math p + p { margin-top: .7em; }
+
 .ps-math-answer.ps-question-math .katex {
   font-size: 1.04em;
 }
