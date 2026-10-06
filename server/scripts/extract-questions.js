@@ -5,9 +5,9 @@ const {
   disconnectQuietly,
 } = require('../utils/scriptDatabase');
 const {
-  extractPaperQuestions,
   extractQuestionBatch,
 } = require('../services/questionExtractionService');
+const { processQueuedPaper } = require('../services/paperProcessingQueue');
 
 function args() {
   const values = process.argv.slice(2);
@@ -17,6 +17,7 @@ function args() {
     limit: 5,
     force: false,
     allowAi: false,
+    afterId: '',
   };
 
   for (let index = 0; index < values.length; index += 1) {
@@ -25,6 +26,8 @@ function args() {
     if (value === '--paper') {
       result.paperId = String(values[index + 1] || '');
       index += 1;
+    } else if (value === '--after') {
+      result.afterId = String(values[++index] || '');
     } else if (value === '--all') {
       result.all = true;
     } else if (value === '--limit') {
@@ -46,7 +49,7 @@ async function main() {
   if (!options.paperId && !options.all) {
     console.log('Usage:');
     console.log('  node scripts/extract-questions.js --paper <paperId> [--force] [--ai]');
-    console.log('  node scripts/extract-questions.js --all [--limit 5] [--force] [--ai]');
+    console.log('  node scripts/extract-questions.js --all [--limit 5] [--after <paperId>] [--force] [--ai]');
     process.exitCode = 1;
     return;
   }
@@ -55,23 +58,21 @@ async function main() {
     await connectScriptDatabase();
 
     if (options.paperId) {
-      const result = await extractPaperQuestions({
-        paperId: options.paperId,
-        force: options.force,
-        allowAi: options.allowAi,
-      });
+      const result = await processQueuedPaper(options.paperId, { force: options.force, allowAi: options.allowAi });
 
       console.log(JSON.stringify(result, null, 2));
       return;
     }
 
-    const result = await extractQuestionBatch({
-      limit: options.limit,
-      force: options.force,
-      allowAi: options.allowAi,
-    });
-
-    console.log(JSON.stringify(result, null, 2));
+    if (options.afterId && !/^[a-f0-9]{24}$/i.test(options.afterId)) throw new Error('Invalid --after cursor');
+    let cursor = options.afterId;
+    do {
+      const result = await extractQuestionBatch({ limit: options.limit, force: options.force,
+        allowAi: options.allowAi, afterId: cursor });
+      console.log(JSON.stringify(result, null, 2));
+      cursor = result.nextCursor;
+      if (!result.hasMore) break;
+    } while (cursor);
   } finally {
     await disconnectQuietly();
   }

@@ -38,9 +38,7 @@ module.exports = function createQuestionSolutionRoutes({
         });
       }
 
-      const question = await Question.findById(
-        req.params.questionId
-      )
+      const question = await Question.findOne({ _id: req.params.questionId, status: { $ne: 'rejected' }, needsReview: { $ne: true } })
         .select(
           '_id paperId questionLabel questionText subject subjectCode year examType'
         )
@@ -127,9 +125,7 @@ module.exports = function createQuestionSolutionRoutes({
           });
         }
 
-        const question = await Question.findById(
-          req.params.questionId
-        )
+        const question = await Question.findOne({ _id: req.params.questionId, status: { $ne: 'rejected' }, needsReview: { $ne: true } })
           .select(
             '_id paperId questionLabel questionText'
           )

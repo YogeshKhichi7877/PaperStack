@@ -42,7 +42,7 @@ router.get('/queue', async (req, res) => {
   try {
     const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 200);
 
-    const papers = await Paper.find({})
+    const papers = await Paper.find({ reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } })
       .sort({ year: -1, createdAt: -1 })
       .limit(limit)
       .lean();

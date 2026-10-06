@@ -12,7 +12,13 @@ const paperSchema = new mongoose.Schema({
     examType: { type: String, index: true },
     
     year: Number,
+    examDate: String,
+    totalMarks: { type: Number, min: 0 },
     originalFileName: String,
+    importBatchId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaperImportBatch', index: true },
+    reviewStatus: { type: String, enum: ['processing', 'needs_review', 'approved', 'failed'], default: 'approved', index: true },
+    actualUploaderUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, select: false },
+    communityContribution: { type: Boolean, default: false, index: true },
     filePath: String,
     filePublicId: String,
     fileHash: { type: String, index: true, unique: true, sparse: true },
@@ -37,6 +43,26 @@ const paperSchema = new mongoose.Schema({
     },
     questionExtractionVersion: { type: String, default: '' },
     questionsUpdatedAt: { type: Date, default: null },
+    processing: {
+      stage: { type: String, default: 'uploaded' },
+      jobId: { type: String, index: true },
+      attempts: { type: Number, default: 0 },
+      force: { type: Boolean, default: false },
+      allowAi: { type: Boolean, default: true },
+      leaseToken: String,
+      leaseUntil: Date,
+      retryAt: Date,
+      startedAt: Date,
+      finishedAt: Date,
+      durationMs: Number,
+      pages: Number,
+      ocrPages: [Number],
+      unreadablePages: [Number],
+      reviewCount: { type: Number, default: 0 },
+      metadata: mongoose.Schema.Types.Mixed,
+      error: { stage: String, code: String, message: String, retryable: Boolean },
+      result: mongoose.Schema.Types.Mixed,
+    },
     reportedIssuesCount: { type: Number, default: 0 },
     contributedBy: String,
     contributedByName: String,
@@ -54,6 +80,7 @@ paperSchema.index({ semester: 1, subject: 1 });
 paperSchema.index({ branch: 1, semester: 1, normalizedSubject: 1, year: 1, examType: 1 });
 paperSchema.index({ semester: 1, year: -1, createdAt: -1 });
 paperSchema.index({ subjectCode: 1, examType: 1, year: -1 });
+paperSchema.index({ questionExtractionStatus: 1, 'processing.retryAt': 1, 'processing.leaseUntil': 1 });
 
 paperSchema.pre('save', function setUpdatedAt() {
     this.updatedAt = new Date();

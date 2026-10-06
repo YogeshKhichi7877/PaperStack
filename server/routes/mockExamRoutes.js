@@ -219,6 +219,8 @@ router.post(
           examType;
       }
 
+      filter.needsReview = { $ne: true };
+
       const questions =
         await Question.find(
           filter

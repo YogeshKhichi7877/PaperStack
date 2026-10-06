@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const papers = await Paper.find()
+    const papers = await Paper.find({ reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } })
       .select('title subject normalizedSubject subjectCode shortCode branch semester sem year examType type')
       .lean();
 

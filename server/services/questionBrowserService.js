@@ -53,6 +53,7 @@ function buildQuestionFilter(query = {}) {
   const filters = normalizeBrowserQuery(query);
   const filter = {
     status: { $ne: 'rejected' },
+    needsReview: { $ne: true },
   };
 
   if (filters.q) {
@@ -76,9 +77,7 @@ function buildQuestionFilter(query = {}) {
     filter.difficulty = filters.difficulty;
   }
 
-  if (filters.needsReview !== null) {
-    filter.needsReview = filters.needsReview;
-  }
+  // Public browsing cannot opt into unpublished review candidates.
 
   if (filters.topic) {
     const topicRegex = new RegExp(escapeRegex(filters.topic), 'i');

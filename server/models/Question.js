@@ -223,6 +223,10 @@ const questionSchema = new mongoose.Schema({
     confidence: { type: Number, min: 0, max: 1, default: null },
     reason: { type: String, default: '' },
   },
+  choiceGroup: { type: String, default: '' },
+  choiceInstructions: { type: String, default: '' },
+  hasVisualContext: { type: Boolean, default: false },
+  repeatClusterId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question', default: null, index: true },
 }, {
   timestamps: true,
 });

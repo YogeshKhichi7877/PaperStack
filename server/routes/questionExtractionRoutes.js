@@ -1,3 +1,4 @@
+const { queuePaperProcessing, getProcessingJob } = require('../services/paperProcessingQueue');
 const express = require('express');
 const mongoose = require('mongoose');
 const Paper = require('../models/Paper');
@@ -10,7 +11,6 @@ const { createRateLimiters } = require('../middleware/aiRateLimiters');
 
 const {
   EXTRACTION_VERSION,
-  extractPaperQuestions,
   extractQuestionBatch,
   extractionThreshold,
   listExtractionPapers,
@@ -38,12 +38,19 @@ module.exports = function createQuestionExtractionRouter({ authenticateAdmin }) 
       batchLimit: 10,
       backgroundJobs: true,
       queueBackend: 'process',
+      recoveryBackend: 'mongodb-paper',
+      selectiveOcr: true,
+      stages: ['queued', 'extracting_text', 'ocr', 'extracting_metadata', 'extracting_questions', 'classifying', 'saving', 'needs_review', 'completed', 'failed'],
       queueConcurrency: config.extractionConcurrency,
     });
   });
 
-  router.get('/jobs/:jobId', (req, res) => {
-    const job = getJob(req.params.jobId);
+  router.get('/jobs/:jobId', async (req, res) => {
+    if (!/^[a-zA-Z0-9-]{1,80}$/.test(req.params.jobId)) return res.status(400).json({ error: 'Invalid job id' });
+    let job;
+    try { job = getJob(req.params.jobId) || await getProcessingJob(req.params.jobId);
+      if (job?.type === 'question-extraction') job = await getProcessingJob(req.params.jobId);
+    } catch { return res.status(503).json({ error: 'Processing status is temporarily unavailable.' }); }
     if (!job) return res.status(404).json({ error: 'Extraction job not found or expired' });
     return res.json({ job });
   });
@@ -96,22 +103,7 @@ module.exports = function createQuestionExtractionRouter({ authenticateAdmin }) 
         });
       }
 
-      await Paper.findByIdAndUpdate(req.params.paperId, {
-        $set: { questionExtractionStatus: 'queued', questionsUpdatedAt: new Date() },
-      });
-      const job = enqueueJob(
-        'question-extraction',
-        () => extractPaperQuestions({
-          paperId: req.params.paperId,
-          force: Boolean(req.body?.force),
-          allowAi: req.body?.allowAi !== false,
-        }),
-        {
-          queue: 'question-extraction',
-          concurrency: config.extractionConcurrency,
-          dedupeKey: req.extractionDedupeKey,
-        }
-      );
+      const job = await queuePaperProcessing(req.params.paperId, { force: Boolean(req.body?.force), allowAi: req.body?.allowAi !== false });
       return res.status(202).json({ success: true, queued: true, job });
     } catch (error) {
       const statusCode = error.statusCode || 500;
@@ -120,7 +112,7 @@ module.exports = function createQuestionExtractionRouter({ authenticateAdmin }) 
       }
       return res.status(statusCode).json({
         success: false,
-        error: error.message || 'Question extraction failed',
+        error: statusCode < 500 ? error.message : 'Paper processing failed.',
       });
     }
   });
@@ -133,10 +125,12 @@ module.exports = function createQuestionExtractionRouter({ authenticateAdmin }) 
           limit: req.body?.limit || 5,
           allowAi: Boolean(req.body?.allowAi),
           force: Boolean(req.body?.force),
+          afterId: mongoose.Types.ObjectId.isValid(String(req.body?.afterId || '')) ? String(req.body.afterId) : '',
         }),
         {
-          queue: 'question-extraction',
-          concurrency: config.extractionConcurrency,
+          // The coordinator awaits child jobs; it must not consume their worker slot.
+          queue: 'question-extraction-batch',
+          concurrency: 1,
           dedupeKey: 'question-extraction:batch',
         }
       );
@@ -150,7 +144,7 @@ module.exports = function createQuestionExtractionRouter({ authenticateAdmin }) 
       console.error('Question batch extraction failed:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Batch extraction failed',
+        error: 'Batch processing failed.',
       });
     }
   });

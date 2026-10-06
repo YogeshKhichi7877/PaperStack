@@ -82,7 +82,7 @@ function enqueueJob(type, processor, options = {}) {
   }
   const now = new Date();
   const job = {
-    id: crypto.randomUUID(),
+    id: options.jobId || crypto.randomUUID(),
     type: String(type || 'job'),
     status: 'queued',
     createdAt: now,

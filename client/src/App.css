@@ -15823,26 +15823,6 @@ body,
   width: min(260px, 100%);
 }
 
-.admin-upload-template-card {
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid rgba(15, 159, 159, 0.16);
-  border-radius: 18px;
-  background: rgba(15, 159, 159, 0.05);
-}
-
-.admin-upload-template-card h3 {
-  margin: 0 0 4px;
-  color: var(--text);
-}
-
-.admin-upload-template-card p {
-  margin: 0;
-  color: var(--muted);
-}
-
-.admin-upload-template-card button,
 .admin-upload-secondary-btn {
   justify-self: start;
   border: 1px solid rgba(15, 159, 159, 0.24);
@@ -15858,84 +15838,6 @@ body,
 .admin-upload-tabs button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.admin-upload-template-card pre {
-  max-width: 100%;
-  overflow-x: auto;
-  margin: 0;
-  padding: 14px;
-  border-radius: 14px;
-  background: rgba(3, 39, 42, 0.06);
-  color: var(--text);
-  font-size: 12px;
-}
-
-.admin-upload-actions-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.admin-upload-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.admin-upload-summary span {
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(15, 159, 159, 0.08);
-  color: #087373;
-  font-weight: 900;
-}
-
-.admin-upload-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  border: 1px solid rgba(15, 159, 159, 0.14);
-  border-radius: 18px;
-}
-
-.admin-upload-table-wrap h3 {
-  margin: 16px 16px 0;
-  color: var(--text);
-}
-
-.admin-upload-table {
-  width: 100%;
-  min-width: 820px;
-  border-collapse: collapse;
-}
-
-.admin-upload-table th,
-.admin-upload-table td {
-  padding: 13px 14px;
-  border-bottom: 1px solid rgba(15, 159, 159, 0.1);
-  text-align: left;
-  color: var(--text);
-  vertical-align: top;
-}
-
-.admin-upload-table th {
-  background: rgba(15, 159, 159, 0.07);
-  color: #087373;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.admin-upload-table small {
-  display: block;
-  margin-top: 6px;
-  color: #ef4444;
-  font-weight: 700;
-}
-
-.admin-upload-table small.warning {
-  color: #b7791f;
 }
 
 .admin-upload-status {
@@ -15990,17 +15892,12 @@ body,
     border-radius: 18px;
   }
 
-  .admin-upload-actions-row,
-  .admin-upload-actions-row button,
   .admin-upload-submit,
-  .admin-upload-template-card button,
   .admin-upload-secondary-btn {
     width: 100%;
   }
 
-  .admin-upload-template-card pre {
-    font-size: 11px;
-  }
+
 }
 
 /* BACK TO TOP BUTTON */

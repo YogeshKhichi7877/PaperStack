@@ -160,6 +160,7 @@ module.exports = {
   FLAT_SUBJECT_CATALOG,
   flattenSubjectCatalog,
   normalizeSubjectText,
+  normalizeSubjectCode,
   normalizeBranchList,
   normalizeSubjectKey,
   resolveSubject,

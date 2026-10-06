@@ -19,6 +19,7 @@ import './components/CompactLayout.css';
 import PaperVerificationModal from './components/PaperVerificationModal';
 import { getSubjectHubPath } from './utils/subjectRoute';
 import SmartPaperUpload from './components/SmartPaperUpload';
+import BulkPaperImport from './components/BulkPaperImport';
 import { analyzeContributionPdf } from './services/contributionApi';
 import {
   API_URL,
@@ -3242,11 +3243,6 @@ const ADMIN_UPLOAD_INITIAL_FORM = {
   notes: ''
 };
 
-const CSV_TEMPLATE_CONTENT = `fileName,solutionFileName,branch,semester,subject,subjectCode,examType,year,title
-dsa_mid_2024.pdf,dsa_mid_2024_solution.pdf,CSE,2,Data Structure and Algorithms,DSA,Mid-Sem,2024,Branch : CSE
-dm_mid_2024.pdf,,CSE,2,Discrete Mathematics,DM,Mid-Sem,2024,Branch : CSE
-`;
-
 function AdminAccessRequired({ setIsAdmin, toast }) {
   const navigate = useNavigate();
 
@@ -3268,39 +3264,12 @@ function AdminAccessRequired({ setIsAdmin, toast }) {
 }
 
 function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast }) {
-  const [uploadMode, setUploadMode] = useState('single');
+  const [uploadMode, setUploadMode] = useState('bulk');
   const [singleForm, setSingleForm] = useState(ADMIN_UPLOAD_INITIAL_FORM);
   const [paperFile, setPaperFile] = useState(null);
   const [solutionFile, setSolutionFile] = useState(null);
   const [singleUploading, setSingleUploading] = useState(false);
-  const [csvFile, setCsvFile] = useState(null);
-  const [paperFiles, setPaperFiles] = useState([]);
-  const [solutionFiles, setSolutionFiles] = useState([]);
-  const [previewRows, setPreviewRows] = useState([]);
-  const [previewSummary, setPreviewSummary] = useState(null);
-  const [bulkResults, setBulkResults] = useState([]);
-  const [bulkUploading, setBulkUploading] = useState(false);
   const navigate = useNavigate();
-
-  const clearBulkPreview = () => {
-    setPreviewRows([]);
-    setPreviewSummary(null);
-    setBulkResults([]);
-  };
-
-  const fileListLabel = (files) => files.length ? `${files.length} file${files.length === 1 ? '' : 's'} selected` : 'No files selected';
-
-  const downloadCsvTemplate = () => {
-    const blob = new Blob([CSV_TEMPLATE_CONTENT], { type: 'text/csv;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'paperstack_bulk_upload_template.csv';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  };
 
   const submitSingleUpload = async (event) => {
     event.preventDefault();
@@ -3339,73 +3308,6 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast }) {
     }
   };
 
-  const buildBulkFormData = () => {
-    const data = new FormData();
-    if (csvFile) data.append('csv', csvFile);
-    paperFiles.forEach((file) => data.append('papers', file));
-    solutionFiles.forEach((file) => data.append('solutions', file));
-    return data;
-  };
-
-  const previewBulkUpload = async () => {
-    if (!csvFile) {
-      toast('CSV mapping file is required.', 'error');
-      return;
-    }
-    if (!paperFiles.length) {
-      toast('Select at least one paper PDF.', 'error');
-      return;
-    }
-
-    setBulkUploading(true);
-    setBulkResults([]);
-    try {
-      const res = await axios.post(`${API_URL}/api/admin/upload/bulk/preview`, buildBulkFormData(), {
-        headers: { ...adminHeader(), 'Content-Type': 'multipart/form-data' }
-      });
-      setPreviewRows(res.data.rows || []);
-      setPreviewSummary(res.data.summary || null);
-      toast('CSV preview generated.', 'success');
-    } catch (err) {
-      toast(err.response?.data?.message || err.response?.data?.error || 'Bulk preview failed', 'error');
-    } finally {
-      setBulkUploading(false);
-    }
-  };
-
-  const confirmBulkUpload = async () => {
-    if (!previewSummary || previewSummary.errorRows > 0) {
-      toast('Fix preview errors before confirming bulk upload.', 'error');
-      return;
-    }
-
-    setBulkUploading(true);
-    try {
-      const res = await axios.post(`${API_URL}/api/admin/upload/bulk/confirm`, buildBulkFormData(), {
-        headers: { ...adminHeader(), 'Content-Type': 'multipart/form-data' }
-      });
-      setBulkResults(res.data.results || []);
-      const summary = res.data.summary || {};
-      toast(`Bulk upload completed: ${summary.uploaded || 0} uploaded, ${summary.skipped || 0} skipped, ${summary.failed || 0} failed.`, summary.failed ? 'warning' : 'success');
-    } catch (err) {
-      const rows = err.response?.data?.rows;
-      if (Array.isArray(rows)) {
-        setPreviewRows(rows);
-        setPreviewSummary({
-          totalRows: rows.length,
-          readyRows: rows.filter((row) => !row.errors?.length).length,
-          errorRows: rows.filter((row) => row.errors?.length).length
-        });
-      }
-      toast(err.response?.data?.message || err.response?.data?.error || 'Bulk upload failed', 'error');
-    } finally {
-      setBulkUploading(false);
-    }
-  };
-
-  const statusClass = (status = '') => String(status).toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const confirmDisabled = !previewSummary || previewSummary.errorRows > 0 || bulkUploading;
-
   if (!isAdmin) {
     return (
       <div className="app-container">
@@ -3438,7 +3340,7 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast }) {
         <section className="admin-upload-hero">
           <span>Admin Upload Center</span>
           <h1>Upload Papers to PaperStack</h1>
-          <p>Use single upload for one paper, or bulk upload with CSV mapping for many papers.</p>
+          <p>Upload question papers and PaperStack will automatically organize them and extract the questions.</p>
         </section>
 
         <section className="admin-upload-shell">
@@ -3447,7 +3349,7 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast }) {
               Single Upload
             </button>
             <button type="button" className={uploadMode === 'bulk' ? 'active' : ''} onClick={() => setUploadMode('bulk')}>
-              Bulk Upload
+              Bulk Import
             </button>
           </div>
 
@@ -3501,112 +3403,9 @@ function AdminUploadCenter({ user, setUser, isAdmin, setIsAdmin, toast }) {
               </button>
             </form>
           ) : (
-            <div className="admin-upload-form">
-              <div className="admin-upload-file-grid">
-                <label className="admin-upload-file-box">CSV Mapping File <span>*</span>
-                  <input type="file" accept=".csv,text/csv" onChange={(e) => { setCsvFile(e.target.files?.[0] || null); clearBulkPreview(); }} />
-                  <strong>{csvFile?.name || 'Choose CSV file'}</strong>
-                </label>
-                <label className="admin-upload-file-box">Paper PDFs <span>*</span>
-                  <input type="file" accept="application/pdf,.pdf" multiple onChange={(e) => { setPaperFiles(Array.from(e.target.files || [])); clearBulkPreview(); }} />
-                  <strong>{fileListLabel(paperFiles)}</strong>
-                </label>
-                <label className="admin-upload-file-box">Optional Solution PDFs
-                  <input type="file" accept="application/pdf,.pdf" multiple onChange={(e) => { setSolutionFiles(Array.from(e.target.files || [])); clearBulkPreview(); }} />
-                  <strong>{fileListLabel(solutionFiles)}</strong>
-                </label>
-              </div>
-
-              <div className="admin-upload-template-card">
-                <div>
-                  <h3>CSV template</h3>
-                  <p>Required columns: fileName, solutionFileName, branch, semester, subject, subjectCode, examType, year, title</p>
-                </div>
-                <button type="button" onClick={downloadCsvTemplate}>Download CSV Template</button>
-                <pre>{CSV_TEMPLATE_CONTENT.trim()}</pre>
-              </div>
-
-              <div className="admin-upload-actions-row">
-                <button type="button" className="login-btn-gradient" onClick={previewBulkUpload} disabled={bulkUploading}>
-                  {bulkUploading ? 'Working...' : 'Preview CSV'}
-                </button>
-                <button type="button" className="admin-upload-secondary-btn" onClick={confirmBulkUpload} disabled={confirmDisabled}>
-                  Confirm Bulk Upload
-                </button>
-              </div>
-
-              {previewSummary && (
-                <div className="admin-upload-summary">
-                  <span>Total rows: {previewSummary.totalRows}</span>
-                  <span>Ready: {previewSummary.readyRows}</span>
-                  <span>Errors: {previewSummary.errorRows}</span>
-                </div>
-              )}
-
-              {previewRows.length > 0 && (
-                <div className="admin-upload-table-wrap">
-                  <table className="admin-upload-table">
-                    <thead>
-                      <tr>
-                        <th>Row</th>
-                        <th>File Name</th>
-                        <th>Branch</th>
-                        <th>Semester</th>
-                        <th>Subject</th>
-                        <th>Exam Type</th>
-                        <th>Year</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewRows.map((row) => (
-                        <tr key={`${row.rowNumber}-${row.fileName}`}>
-                          <td>{row.rowNumber}</td>
-                          <td>{row.fileName}</td>
-                          <td>{row.branch}</td>
-                          <td>{row.semester}</td>
-                          <td>{row.subject}</td>
-                          <td>{row.examType}</td>
-                          <td>{row.year}</td>
-                          <td>
-                            <span className={`admin-upload-status status-${statusClass(row.status)}`}>{row.status}</span>
-                            {row.errors?.length > 0 && <small>{row.errors.join(', ')}</small>}
-                            {row.warnings?.length > 0 && <small className="warning">{row.warnings.join(', ')}</small>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {bulkResults.length > 0 && (
-                <div className="admin-upload-table-wrap">
-                  <h3>Bulk upload results</h3>
-                  <table className="admin-upload-table">
-                    <thead>
-                      <tr>
-                        <th>Row</th>
-                        <th>File Name</th>
-                        <th>Status</th>
-                        <th>Paper ID / Message</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bulkResults.map((result) => (
-                        <tr key={`${result.rowNumber}-${result.fileName}-${result.status}`}>
-                          <td>{result.rowNumber}</td>
-                          <td>{result.fileName}</td>
-                          <td><span className={`admin-upload-status status-${statusClass(result.status)}`}>{result.status}</span></td>
-                          <td>{result.paperId || result.error || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+            <BulkPaperImport toast={toast} />
           )}
+
         </section>
       </main>
       <Footer />

@@ -80,7 +80,8 @@ test('extractMarks removes common trailing mark annotations', () => {
     extractMarks('Explain boundary fill algorithm. [5 Marks]'),
     { text: 'Explain boundary fill algorithm.', marks: 5 }
   );
-  assert.equal(extractMarks('Define pixel. (2)').marks, 2);
+  // A bare parenthesized number can be a formula argument, not a mark annotation.
+  assert.equal(extractMarks('Evaluate f(2)').marks, null);
 });
 
 test('question type classifier handles common exam prompts', () => {

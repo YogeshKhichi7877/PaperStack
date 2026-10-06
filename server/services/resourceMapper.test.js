@@ -52,3 +52,10 @@ test('does not create solution resource when paper has no solution', () => {
   const solution = buildSolutionResource({ ...samplePaper, solutionPath: '' });
   assert.equal(solution, null);
 });
+test('an imported paper awaiting review is never an active public resource', () => {
+  for (const reviewStatus of ['processing', 'needs_review', 'failed']) {
+    assert.equal(buildQuestionPaperResource({ ...samplePaper, reviewStatus }).status, 'pending');
+    assert.equal(buildSolutionResource({ ...samplePaper, reviewStatus }).status, 'pending');
+  }
+  assert.equal(buildQuestionPaperResource({ ...samplePaper, reviewStatus: 'approved' }).status, 'active');
+});

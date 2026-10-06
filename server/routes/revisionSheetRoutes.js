@@ -47,7 +47,7 @@ router.get('/subjects', async (req, res) => {
     const rows = await Question.aggregate([
       {
         $match: {
-          status: { $ne: 'rejected' },
+          status: { $ne: 'rejected' }, needsReview: { $ne: true },
           subjectCode: { $nin: ['', null] },
         },
       },
@@ -134,7 +134,7 @@ router.get('/subject/:subjectCode', async (req, res) => {
 
     const filter = {
       subjectCode,
-      status: { $ne: 'rejected' },
+      status: { $ne: 'rejected' }, needsReview: { $ne: true },
     };
 
     if (examType) {

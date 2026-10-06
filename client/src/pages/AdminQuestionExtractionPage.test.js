@@ -8,6 +8,7 @@ import {
   getQuestionExtractionPapers,
   getQuestionExtractionStatus,
 } from '../services/questionExtractionApi';
+import { getImportBatches } from '../services/bulkPaperImportApi';
 
 jest.mock('../services/questionExtractionApi', () => ({
   extractQuestionBatch: jest.fn(),
@@ -16,9 +17,11 @@ jest.mock('../services/questionExtractionApi', () => ({
   getQuestionExtractionJob: jest.fn(),
   getQuestionExtractionStatus: jest.fn(),
 }));
+jest.mock('../services/bulkPaperImportApi', () => ({ getImportBatches: jest.fn().mockResolvedValue({ batches: [] }) }));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  getImportBatches.mockResolvedValue({ batches: [] });
   getQuestionExtractionStatus.mockResolvedValue({ ai: { configured: true }, minimumConfidence: 72 });
   getQuestionExtractionPapers.mockResolvedValue({ papers: [{
     _id: 'paper-1', title: 'Example exam', hasPdf: true, questionExtractionStatus: 'not_started',

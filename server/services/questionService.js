@@ -3,7 +3,7 @@ const { resolveSubject } = require('./subjectService');
 
 function normalizeQuestionText(value) {
   return String(value || '')
-    .normalize('NFKC')
+    .normalize('NFC')
     .replace(/\u00a0/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -120,7 +120,7 @@ function buildQuestionDocument({ paper, input = {}, sequence }) {
     throw new Error('Question sequence must be a positive integer.');
   }
 
-  const questionText = cleanLabel(input.questionText || input.text);
+  const questionText = String(input.questionText || input.text || '').normalize('NFC').replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').trim();
   if (!questionText) {
     throw new Error('Question text is required.');
   }
@@ -209,6 +209,9 @@ function buildQuestionDocument({ paper, input = {}, sequence }) {
       ? input.status
       : 'extracted',
     needsReview: Boolean(input.needsReview),
+    choiceGroup: cleanLabel(input.choiceGroup),
+    choiceInstructions: cleanLabel(input.choiceInstructions),
+    hasVisualContext: Boolean(input.hasVisualContext),
   };
 }
 
@@ -273,6 +276,10 @@ function publicQuestion(question = {}) {
     },
     status: question.status || 'extracted',
     needsReview: Boolean(question.needsReview),
+    choiceGroup: question.choiceGroup || '',
+    choiceInstructions: question.choiceInstructions || '',
+    hasVisualContext: Boolean(question.hasVisualContext),
+    repeatClusterId: question.repeatClusterId || null,
     duplicateReview: question.duplicateReview || null,
     similarity: question.similarity ?? null,
     createdAt: question.createdAt,

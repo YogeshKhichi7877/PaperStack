@@ -14,7 +14,7 @@ const router = express.Router();
 
 async function buildFacets() {
   const baseMatch = {
-    status: { $ne: 'rejected' },
+    status: { $ne: 'rejected' }, needsReview: { $ne: true },
   };
 
   const [
@@ -183,7 +183,7 @@ router.get('/random', async (req, res) => {
 router.get('/:questionId/related', async (req, res, next) => {
   if (req.params.questionId === 'facets' || req.params.questionId === 'random' || req.params.questionId === 'mini-practice') return next();
   try {
-    const question = await Question.findOne({ _id: req.params.questionId, status: { $ne: 'rejected' } }).lean();
+    const question = await Question.findOne({ _id: req.params.questionId, status: { $ne: 'rejected' }, needsReview: { $ne: true } }).lean();
     if (!question) return res.status(404).json({ error: 'Question not found' });
     const questions = await findRelatedQuestions(question, { limit: req.query.limit });
     return res.json({ schemaVersion: 'question-browser-v2', questionId: String(question._id), questions });
@@ -197,14 +197,14 @@ router.get('/mini-practice', async (req, res) => {
   try {
     const limit = Math.min(10, Math.max(3, Number(req.query.limit) || 5));
     let base = null;
-    if (req.query.questionId) base = await Question.findOne({ _id: req.query.questionId, status: { $ne: 'rejected' } }).lean();
+    if (req.query.questionId) base = await Question.findOne({ _id: req.query.questionId, status: { $ne: 'rejected' }, needsReview: { $ne: true } }).lean();
     if (!base) {
       const filter = buildQuestionFilter({ subjectCode: req.query.subjectCode, subjectKey: req.query.subjectKey, topic: req.query.topic });
       base = await Question.findOne(filter).sort({ year: -1, sequence: 1 }).lean();
     }
     if (!base) return res.json({ schemaVersion: 'question-browser-v2', questions: [] });
     const subjectFilter = base.subjectCode ? { subjectCode: base.subjectCode } : { subjectKey: base.subjectKey };
-    const candidates = await Question.find({ ...subjectFilter, status: { $ne: 'rejected' } })
+    const candidates = await Question.find({ ...subjectFilter, status: { $ne: 'rejected' }, needsReview: { $ne: true } })
       .sort({ year: -1, sequence: 1 }).limit(220)
       .populate('paperId', '_id title filePath solutionPath questionExtractionStatus').lean();
     const questions = buildMiniPracticeSet(base, candidates, limit).map(browserQuestion);

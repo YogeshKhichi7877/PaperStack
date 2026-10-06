@@ -36,6 +36,10 @@ test('builds text search and subject filters', () => {
   assert.equal(filter.examType, 'Mid-Sem');
 });
 
+test('public browsing cannot request unpublished review candidates', () => {
+  assert.deepEqual(buildQuestionFilter({ needsReview: 'true' }).needsReview, { $ne: true });
+});
+
 test('topic filter is escaped and matches primary/topic arrays', () => {
   const filter = buildQuestionFilter({ topic: 'A+B?' });
   assert.equal(Array.isArray(filter.$or), true);

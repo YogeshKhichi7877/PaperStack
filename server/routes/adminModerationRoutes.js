@@ -117,11 +117,32 @@ module.exports = function createAdminModerationRoutes({
             });
         }
 
+        const edits = {};
+        if (req.body?.questionText !== undefined) {
+          const questionText = String(req.body.questionText).normalize('NFC').trim();
+          if (questionText.length > 30000 || !require('../services/questionExtractionRules').isQuestionText(questionText)) return res.status(400).json({ error: 'Enter a complete exam question.' });
+          const { normalizeQuestionText, hashQuestionText } = require('../services/questionService');
+          Object.assign(edits, { questionText, normalizedText: normalizeQuestionText(questionText), textHash: hashQuestionText(questionText) });
+        }
+        if (req.body?.marks !== undefined) {
+          const marks = req.body.marks === null || req.body.marks === '' ? null : Number(req.body.marks);
+          if (marks !== null && (!Number.isFinite(marks) || marks < 0 || marks > 200)) return res.status(400).json({ error: 'Check the question marks.' });
+          edits.marks = marks;
+        }
+        if (status !== 'rejected') {
+          const existing = await Question.findById(req.params.questionId).select('paperId').lean();
+          if (existing?.paperId) {
+            const paper = await require('../models/Paper').findById(existing.paperId).select('importBatchId processing.metadata').lean();
+            const metadata = paper?.processing?.metadata;
+            if (paper?.importBatchId && (metadata?.missing?.length || metadata?.conflicts?.length || metadata?.uncertain?.length)) return res.status(409).json({ error: 'Approve the detected paper metadata before approving its questions.' });
+          }
+        }
         const question =
           await Question.findByIdAndUpdate(
             req.params.questionId,
             {
               $set: {
+                ...edits,
                 status,
                 needsReview:
                   false,
@@ -144,6 +165,8 @@ module.exports = function createAdminModerationRoutes({
             });
         }
 
+        if (Object.keys(edits).length) await require('../services/semanticAiAnswerService').invalidateQuestionAnswers([question._id]);
+        await require('../services/questionExtractionService').syncPaperQuestionReview(question.paperId);
         return res.json({
           message:
             `Question marked ${status}.`,

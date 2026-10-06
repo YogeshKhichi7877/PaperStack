@@ -61,7 +61,7 @@ router.get('/', async (req, res) => {
       .filter(Boolean);
 
     const [papers, resources, questions] = await Promise.all([
-      Paper.find({ semester })
+      Paper.find({ semester, reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } })
         .select(
           'title subject normalizedSubject subjectCode branch semester examType year'
         )
@@ -79,7 +79,7 @@ router.get('/', async (req, res) => {
       Question.find({
         subjectCode: { $in: subjectCodes },
         semester,
-        status: { $ne: 'rejected' },
+        status: { $ne: 'rejected' }, needsReview: { $ne: true },
         ...(examType ? { examType } : {}),
       })
         .sort({ year: -1, sequence: 1 })

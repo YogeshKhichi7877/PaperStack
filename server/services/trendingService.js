@@ -64,7 +64,7 @@ function paperFilter({
   branch,
   semester,
 } = {}) {
-  const filter = {};
+  const filter = { reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } };
 
   if (branch) {
     const normalized = String(branch)
@@ -284,7 +284,7 @@ async function getTrending({
   const paperIds = topPapers.map((paper) => paper._id);
 
   const questions = paperIds.length
-    ? await Question.find({
+    ? await Question.find({ needsReview: { $ne: true },
         paperId: {
           $in: paperIds,
         },

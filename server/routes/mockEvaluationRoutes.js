@@ -64,7 +64,7 @@ router.post('/evaluate', async (req, res) => {
 
     const questions = await Question.find({
       _id: { $in: objectIds },
-      status: { $ne: 'rejected' },
+      status: { $ne: 'rejected' }, needsReview: { $ne: true },
     })
       .lean();
 

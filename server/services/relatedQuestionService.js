@@ -42,7 +42,7 @@ async function findRelatedQuestions(question, { limit = 6, Model = Question } = 
   const candidates = await Model.find({
     ...subjectFilter,
     _id: { $ne: question._id },
-    status: { $ne: 'rejected' },
+    status: { $ne: 'rejected' }, needsReview: { $ne: true },
   }).sort({ year: -1, sequence: 1 }).limit(220).populate('paperId', '_id title filePath solutionPath').lean();
   return rankRelatedQuestions(question, candidates, limit).map(browserQuestion);
 }

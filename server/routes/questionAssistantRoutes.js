@@ -26,7 +26,7 @@ async function loadContext(questionId) {
     includeRelatedQuestions: true,
   });
   const question = academic.question;
-  if (!question || question.status === 'rejected') {
+  if (!question || question.status === 'rejected' || question.needsReview) {
     return null;
   }
   const approvedSolutions = academic.approvedSolutions || [];

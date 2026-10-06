@@ -17,7 +17,7 @@ async function verifyEntity(entityType, entityKey) {
   const Model = MODELS[entityType];
   if (!Model) return null;
   const filter = { _id: entityKey };
-  if (entityType === 'question') filter.status = { $ne: 'rejected' };
+  if (entityType === 'question') { filter.status = { $ne: 'rejected' }; filter.needsReview = { $ne: true }; }
   if (entityType === 'resource') filter.status = 'active';
   return Model.findOne(filter).select('_id title questionText subject subjectName subjectCode').lean();
 }

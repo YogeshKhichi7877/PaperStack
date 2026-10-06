@@ -9,6 +9,8 @@ import {
 } from '../services/questionExtractionApi';
 import './AdminQuestionExtractionPage.css';
 import QuestionText from '../components/QuestionText';
+import BulkImportProgress from '../components/BulkImportProgress';
+import { getImportBatches } from '../services/bulkPaperImportApi';
 
 function statusLabel(value) {
   return String(value || 'not_started')
@@ -16,10 +18,11 @@ function statusLabel(value) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-async function waitForExtractionJob(jobId) {
+async function waitForExtractionJob(jobId, onProgress = () => {}) {
   for (let attempt = 0; attempt < 400; attempt += 1) {
     const response = await getQuestionExtractionJob(jobId);
     const job = response?.job;
+    onProgress(job);
     if (['complete', 'partial'].includes(job?.status)) return job.result;
     if (job?.status === 'failed') throw new Error(job.error || 'Question extraction failed');
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -28,6 +31,23 @@ async function waitForExtractionJob(jobId) {
 }
 
 export default function AdminQuestionExtractionPage({ toast }) {
+  const [importBatches, setImportBatches] = useState([]);
+  const [historyCursor, setHistoryCursor] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(() => new URLSearchParams(window.location.search).get('batch') || '');
+  useEffect(() => {
+    let disposed = false;
+    getImportBatches().then((response) => {
+      if (!disposed) { setImportBatches(response.batches || []); setHistoryCursor(response.nextCursor || null); setSelectedBatch((current) => current || response.batches?.[0]?.batchId || ''); }
+    }).catch(() => {});
+    return () => { disposed = true; };
+  }, []);
+  const loadOlderImports = async () => {
+    setHistoryLoading(true);
+    try { const response = await getImportBatches(historyCursor); setImportBatches((current) => [...current, ...(response.batches || [])]); setHistoryCursor(response.nextCursor || null); }
+    catch { toast?.('Could not load older imports.', 'error'); }
+    finally { setHistoryLoading(false); }
+  };
   const [papers, setPapers] = useState([]);
   const [system, setSystem] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -63,6 +83,19 @@ export default function AdminQuestionExtractionPage({ toast }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  const hasActivePapers = papers.some((paper) => ['queued', 'processing'].includes(paper.questionExtractionStatus));
+  useEffect(() => {
+    if (!hasActivePapers) return undefined;
+    let disposed = false;
+    const timer = setInterval(async () => {
+      try {
+        const response = await getQuestionExtractionPapers({ limit: 200 });
+        if (!disposed) setPapers(response?.papers || []);
+      } catch { /* Keep the last known progress while connectivity recovers. */ }
+    }, 5000);
+    return () => { disposed = true; clearInterval(timer); };
+  }, [hasActivePapers]);
 
   const counts = useMemo(() => {
     const result = {
@@ -120,13 +153,16 @@ export default function AdminQuestionExtractionPage({ toast }) {
         ? { ...item, questionExtractionStatus: response?.job?.status || 'queued' }
         : item));
       const result = response?.queued
-        ? await waitForExtractionJob(response.job?.id)
+        ? await waitForExtractionJob(response.job?.id, (job) => {
+          if (job?.processing) setPapers((current) => current.map((item) => String(item._id) === paperId
+            ? { ...item, processing: job.processing, questionExtractionStatus: job.status } : item));
+        })
         : response?.result;
       setLastResult(result || null);
       if (toast) {
         toast(
-          `Extracted ${result?.totalQuestionCount ?? result?.questionCount ?? 0} questions.`,
-          'success'
+          `Extracted ${result?.totalQuestionCount ?? result?.questionCount ?? 0} questions.${result?.reviewCount ? ` ${result.reviewCount} need review.` : ''}`,
+          result?.reviewCount ? 'info' : 'success'
         );
       }
       await load();
@@ -189,6 +225,17 @@ export default function AdminQuestionExtractionPage({ toast }) {
       </Helmet>
 
       <div className="qe-shell">
+        <section className="qe-result">
+          <h2>Bulk imports</h2>
+          <p>PDFs are processed automatically after upload. You can return here to check progress and review uncertain details.</p>
+          <label>Import batch <select value={selectedBatch} onChange={(event) => setSelectedBatch(event.target.value)}>
+            <option value="">Choose an import batch</option>
+            {selectedBatch && !importBatches.some((batch) => batch.batchId === selectedBatch) && <option value={selectedBatch}>Import #{selectedBatch.slice(-8)}</option>}
+            {importBatches.map((batch) => <option key={batch.batchId} value={batch.batchId}>#{batch.batchId.slice(-8)} · {batch.totalFiles} papers · {new Date(batch.createdAt).toLocaleDateString()}</option>)}
+          </select></label>
+          {historyCursor && <button type="button" disabled={historyLoading} onClick={loadOlderImports}>{historyLoading ? 'Loading…' : 'Load older imports'}</button>}
+          {selectedBatch && <BulkImportProgress batchId={selectedBatch} toast={toast} />}
+        </section>
         <section className="qe-hero">
           <div>
             <span>Feature #9 · Admin Tool</span>
@@ -311,7 +358,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
               return (
                 <article className="qe-paper" key={paper._id}>
                   <div className={`qe-status qe-status-${paperStatus}`}>
-                    {statusLabel(paperStatus)}
+                    {statusLabel(paper.processing?.stage || paperStatus)}
                   </div>
 
                   <div className="qe-paper-main">
@@ -320,6 +367,8 @@ export default function AdminQuestionExtractionPage({ toast }) {
                       {paper.subjectCode || '—'} · {paper.branch || '—'} · Sem {paper.semester || '—'}
                       {' · '}{paper.examType || '—'} · {paper.year || '—'}
                     </p>
+                    {paper.processing?.reviewCount > 0 && <p>{paper.processing.reviewCount} questions need review</p>}
+                    {paper.processing?.error?.code && <p>{paper.processing.error.code} · {statusLabel(paper.processing.error.stage)}</p>}
                   </div>
 
                   <div className="qe-count">
@@ -339,7 +388,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
                           ? paperStatus === 'queued' ? 'Queued…' : 'Processing…'
                         : paperStatus === 'complete'
                           ? 'Re-extract'
-                          : 'Extract questions'}
+                          : paperStatus === 'failed' ? 'Retry' : 'Extract questions'}
                     </button>
                   </div>
                 </article>

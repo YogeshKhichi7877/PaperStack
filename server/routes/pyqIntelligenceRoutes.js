@@ -40,7 +40,7 @@ router.get('/subjects', async (req, res) => {
     const rows = await Question.aggregate([
       {
         $match: {
-          status: { $ne: 'rejected' },
+          status: { $ne: 'rejected' }, needsReview: { $ne: true },
           subjectCode: { $nin: ['', null] },
         },
       },
@@ -105,7 +105,7 @@ router.get('/subject/:subjectCode', async (req, res) => {
 
     const questions = await Question.find({
       subjectCode,
-      status: { $ne: 'rejected' },
+      status: { $ne: 'rejected' }, needsReview: { $ne: true },
     })
       .sort({ year: -1, sequence: 1 })
       .limit(1000)

@@ -41,15 +41,15 @@ router.get('/meta', (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     const [totalQuestions, papersWithQuestions, byExamType, byYear] = await Promise.all([
-      Question.countDocuments({ status: { $ne: 'rejected' } }),
-      Question.distinct('paperId', { status: { $ne: 'rejected' } }),
+      Question.countDocuments({ status: { $ne: 'rejected' }, needsReview: { $ne: true } }),
+      Question.distinct('paperId', { status: { $ne: 'rejected' }, needsReview: { $ne: true } }),
       Question.aggregate([
-        { $match: { status: { $ne: 'rejected' }, examType: { $ne: '' } } },
+        { $match: { status: { $ne: 'rejected' }, needsReview: { $ne: true }, examType: { $ne: '' } } },
         { $group: { _id: '$examType', count: { $sum: 1 } } },
         { $sort: { count: -1, _id: 1 } },
       ]),
       Question.aggregate([
-        { $match: { status: { $ne: 'rejected' }, year: { $ne: null } } },
+        { $match: { status: { $ne: 'rejected' }, needsReview: { $ne: true }, year: { $ne: null } } },
         { $group: { _id: '$year', count: { $sum: 1 } } },
         { $sort: { _id: -1 } },
       ]),
@@ -81,14 +81,14 @@ router.get('/paper/:paperId', async (req, res) => {
     }
 
     const paper = await Paper.findById(req.params.paperId)
-      .select('_id title subject subjectCode branch semester year examType filePath questionCount questionExtractionStatus questionExtractionVersion')
+      .select('_id title subject subjectCode branch semester year examType filePath questionCount questionExtractionStatus questionExtractionVersion reviewStatus')
       .lean();
 
-    if (!paper) return res.status(404).json({ error: 'Paper not found' });
+    if (!paper || (paper.reviewStatus && paper.reviewStatus !== 'approved')) return res.status(404).json({ error: 'Paper not found' });
 
     const questions = await Question.find({
       paperId: paper._id,
-      status: { $ne: 'rejected' },
+      status: { $ne: 'rejected' }, needsReview: { $ne: true },
     })
       .sort({ sequence: 1, questionKey: 1 })
       .lean();
@@ -109,7 +109,7 @@ router.get('/paper/:paperId', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const filter = {
-      status: { $ne: 'rejected' },
+      status: { $ne: 'rejected' }, needsReview: { $ne: true },
     };
 
     if (req.query.paperId) {
@@ -127,7 +127,7 @@ router.get('/', async (req, res) => {
     if (req.query.examType) filter.examType = String(req.query.examType);
     if (req.query.topic) filter.topics = String(req.query.topic);
     if (req.query.unit) filter.unit = Number(req.query.unit);
-    if (req.query.needsReview === 'true') filter.needsReview = true;
+    // Review candidates are restricted to authenticated admin moderation.
 
     if (req.query.q && String(req.query.q).trim()) {
       filter.$text = { $search: String(req.query.q).trim() };
@@ -166,7 +166,7 @@ router.get('/:questionId', async (req, res) => {
     }
 
     const question = await Question.findById(req.params.questionId).lean();
-    if (!question || question.status === 'rejected') {
+    if (!question || question.status === 'rejected' || question.needsReview) {
       return res.status(404).json({ error: 'Question not found' });
     }
 

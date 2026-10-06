@@ -16,7 +16,7 @@ router.get('/subjects', async (req, res) => {
     const rows = await Question.aggregate([
       {
         $match: {
-          status: { $ne: 'rejected' },
+          status: { $ne: 'rejected' }, needsReview: { $ne: true },
           subjectCode: { $nin: ['', null] },
         },
       },
@@ -73,7 +73,7 @@ router.post('/query', async (req, res) => {
     if (subjectCode.length > 30 || examType.length > 30) return res.status(400).json({ error: 'Invalid subject or exam type' });
 
     const filter = {
-      status: { $ne: 'rejected' },
+      status: { $ne: 'rejected' }, needsReview: { $ne: true },
     };
 
     if (subjectCode) {

@@ -333,7 +333,7 @@ async function searchV2({
     }
 
     jobs.push(
-      Paper.find(filter)
+      Paper.find({ ...filter, reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } })
         .sort({
           year: -1,
           downloads: -1,
@@ -408,6 +408,7 @@ async function searchV2({
 
   if (['all', 'question'].includes(safeType)) {
     const filter = {
+      needsReview: { $ne: true },
       status: {
         $ne: 'rejected',
       },

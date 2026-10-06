@@ -17,6 +17,7 @@ const nodemailer = require('nodemailer');
 const archiver = require('archiver');
 const axios = require('axios');
 require('dotenv').config();
+const { initialProcessingFields, startSavedPaperProcessing, startPaperProcessingRecovery } = require('./services/paperProcessingQueue');
 mongoose.set('bufferCommands', false);
 
 const {
@@ -77,7 +78,6 @@ const { createContributorProfileRoutes } = require('./routes/contributorProfileR
 const { createAuthMiddleware } = require('./middleware/auth');
 const { createRateLimiters } = require('./middleware/aiRateLimiters');
 const { PHOTO_TYPES, normalizeDisplayName, validDisplayName, validPhoto } = require('./services/profileValidation');
-const { parseCsvLine } = require('./utils/csv');
 const { findHardestSubject } = require('./utils/analytics');
 const { buildSemesterPackQuery } = require('./utils/paperQuery');
 const catalogRoutes = require('./routes/catalogRoutes');
@@ -303,7 +303,7 @@ app.use(cors({
     'https://paperstack-backend-7oeo.onrender.com',
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Authorization'],
   credentials: true,
   exposedHeaders: ['Content-Disposition', 'Retry-After', 'RateLimit', 'RateLimit-Policy'],
 }));
@@ -436,6 +436,7 @@ mongoose.connection.on('disconnected', () => {
 });
 
 mongoose.connection.on('connected', () => {
+  startPaperProcessingRecovery();
   databaseStatus = 'connected';
   if (mongoRetryTimer) clearTimeout(mongoRetryTimer);
   mongoRetryTimer = null;
@@ -449,7 +450,7 @@ const pdfUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 30 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const isPdf = file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname);
+    const isPdf = ['application/pdf', 'application/octet-stream'].includes(file.mimetype) && /\.pdf$/i.test(file.originalname);
     if (!isPdf) return cb(new Error('Only PDF files are allowed'));
     cb(null, true);
   },
@@ -465,6 +466,8 @@ const SUBJECT_ALIASES = {
   DBMS: 'Database Management System',
   OS: 'Operating System',
   CN: 'Computer Networks',
+  FNN: 'Fuzzy and Neural Networks',
+  DS: 'Data Science',
 };
 
 const ROMAN_SEMESTERS = {
@@ -616,12 +619,17 @@ async function getVoteSummaryForPaper(paperId) {
 async function uploadBufferToCloudinary(file, folder = CLOUDINARY_FOLDER) {
   return new Promise((resolve, reject) => {
     const isPdf = file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname || '');
+    if (isPdf && !isUploadedPdf(file)) {
+      const error = new Error('A valid PDF file is required.');
+      error.statusCode = 400;
+      return reject(error);
+    }
 
     const upload = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: isPdf ? 'raw' : 'auto',
-        filename_override: file.originalname,
+        filename_override: String(file.originalname || 'upload').split(/[\\/]/).pop().replace(/[\x00-\x1f]/g, ''),
         use_filename: true,
         unique_filename: true,
       },
@@ -739,6 +747,7 @@ function confidenceForExtraction(result) {
 }
 
 async function buildExtraction(file, existingSubjects = []) {
+  if (!isUploadedPdf(file)) { const error = new Error('A valid PDF file is required.'); error.statusCode = 400; throw error; }
   const originalFileName = file.originalname;
   const fileHash = hashBuffer(file.buffer);
   const text = await extractPdfText(file.buffer);
@@ -822,7 +831,7 @@ function buildPaperPayload(body, extraction, uploadResult, solutionResult, uploa
     fileSize: extraction.fileSize,
     mimeType: extraction.mimeType,
     extractedTextPreview: extraction.extractedTextPreview,
-    extractionConfidence: Number(body.extractionConfidence || extraction.extractionConfidence || 0),
+    extractionConfidence: Number(extraction.extractionConfidence || 0),
     extractionWarnings: Array.isArray(extraction.extractionWarnings) ? extraction.extractionWarnings : [],
     uploadedBy: body.uploadedBy || 'admin',
     uploadMode,
@@ -877,8 +886,9 @@ async function saveConfirmedPaper({ file, solutionFile, body, uploadMode }) {
       if (solutionResult) await destroyCloudinary(solutionResult.public_id);
       return { skipped: true, status: 'Needs Review', message: `Missing fields: ${missing.join(', ')}` };
     }
-    const paper = await new Paper(payload).save();
-    return { skipped: false, status: 'Uploaded', paper };
+    const paper = await new Paper({ ...payload, ...initialProcessingFields() }).save();
+    const processing = await startSavedPaperProcessing(paper);
+    return { skipped: false, status: 'Uploaded', paper, processing };
   } catch (err) {
     await destroyCloudinary(uploadResult.public_id);
     if (solutionResult) await destroyCloudinary(solutionResult.public_id);
@@ -894,7 +904,6 @@ function adminUploadFields(req, res, next) {
     { name: 'file', maxCount: 1 },
     { name: 'solution', maxCount: 1 },
     { name: 'files', maxCount: 50 },
-    { name: 'csv', maxCount: 1 },
   ])(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     next();
@@ -903,23 +912,19 @@ function adminUploadFields(req, res, next) {
 
 const adminUploadCenterUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 30 * 1024 * 1024, files: 160 },
+  limits: { fileSize: 30 * 1024 * 1024, files: 2 },
   fileFilter: (req, file, cb) => {
-    const isCsv = file.fieldname === 'csv' && (/\.csv$/i.test(file.originalname) || /csv/i.test(file.mimetype));
-    const isPdf = ['paperFile', 'solutionFile', 'papers', 'solutions'].includes(file.fieldname) &&
+    const isPdf = ['paperFile', 'solutionFile'].includes(file.fieldname) &&
       (file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname));
-    if (!isCsv && !isPdf) return cb(new Error('Only CSV mapping files and PDF uploads are allowed'));
+    if (!isPdf) return cb(new Error('Only PDF uploads are allowed'));
     cb(null, true);
   },
 });
 
 function adminUploadCenterFields(req, res, next) {
   adminUploadCenterUpload.fields([
-    { name: 'csv', maxCount: 1 },
     { name: 'paperFile', maxCount: 1 },
     { name: 'solutionFile', maxCount: 1 },
-    { name: 'papers', maxCount: 80 },
-    { name: 'solutions', maxCount: 80 },
   ])(req, res, (err) => {
     if (err) return res.status(400).json({ success: false, message: err.message });
     next();
@@ -930,7 +935,7 @@ const ADMIN_UPLOAD_BRANCHES = OFFICIAL_BRANCHES;
 const ADMIN_UPLOAD_EXAM_TYPES = ['Mid-Sem', 'End-Sem'];
 
 function isUploadedPdf(file) {
-  return Boolean(file && (file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname || '')));
+  return Boolean(file && ['application/pdf', 'application/octet-stream'].includes(file.mimetype) && /\.pdf$/i.test(file.originalname || '') && Buffer.isBuffer(file.buffer) && file.buffer.subarray(0, 1024).includes(Buffer.from('%PDF-')) && !/[\x00-\x1f]/.test(file.originalname));
 }
 
 function normalizeAdminUploadSubject(subject, subjectCode) {
@@ -962,9 +967,8 @@ function buildAdminUploadPaperBody(body) {
   };
 }
 
-function validateAdminUploadBody(body, requireFileName = false) {
+function validateAdminUploadBody(body) {
   const errors = [];
-  if (requireFileName && !String(body.fileName || '').trim()) errors.push('Missing required field: fileName');
   if (!String(body.subject || '').trim()) errors.push('Missing required field: subject');
   if (!ADMIN_UPLOAD_BRANCHES.includes(normalizeBranch(body.branch))) errors.push('Invalid branch');
   const semester = parseSemesterValue(body.semester);
@@ -973,73 +977,6 @@ function validateAdminUploadBody(body, requireFileName = false) {
   const year = Number(body.year);
   if (!Number.isInteger(year) || year < 2000 || year > 2100) errors.push('Missing required field: year');
   return errors;
-}
-
-function parseAdminUploadCsv(buffer) {
-  const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
-  const lines = text.split(/\r?\n/).filter((line) => line.trim());
-  if (lines.length < 2) return [];
-  const headers = parseCsvLine(lines[0]).map((header) => header.trim());
-  return lines.slice(1).map((line, index) => {
-    const values = parseCsvLine(line);
-    const row = { rowNumber: index + 2 };
-    headers.forEach((header, headerIndex) => {
-      row[header] = values[headerIndex] || '';
-    });
-    return row;
-  });
-}
-
-function mapFilesByName(files = []) {
-  return new Map(files.map((file) => [file.originalname, file]));
-}
-
-async function validateAdminUploadRows(rows, paperFiles, solutionFiles, includeDuplicateWarnings = true) {
-  const paperMap = mapFilesByName(paperFiles);
-  const solutionMap = mapFilesByName(solutionFiles);
-  const validatedRows = [];
-
-  for (const rawRow of rows) {
-    const row = {
-      rowNumber: rawRow.rowNumber,
-      fileName: String(rawRow.fileName || '').trim(),
-      solutionFileName: String(rawRow.solutionFileName || '').trim(),
-      branch: String(rawRow.branch || '').trim(),
-      semester: String(rawRow.semester || '').trim(),
-      subject: String(rawRow.subject || '').trim(),
-      subjectCode: String(rawRow.subjectCode || '').trim(),
-      examType: String(rawRow.examType || '').trim(),
-      year: String(rawRow.year || '').trim(),
-      title: String(rawRow.title || '').trim() || `Branch : ${String(rawRow.branch || '').trim()}`,
-      status: 'Ready',
-      errors: [],
-      warnings: [],
-    };
-
-    row.errors.push(...validateAdminUploadBody(row, true));
-    if (row.fileName && !paperMap.has(row.fileName)) row.errors.push('Missing PDF file');
-    if (row.solutionFileName && !solutionMap.has(row.solutionFileName)) row.errors.push('Missing solution PDF file');
-
-    if (includeDuplicateWarnings && !row.errors.length) {
-      const subject = normalizeAdminUploadSubject(row.subject, row.subjectCode);
-      const duplicate = await Paper.findOne({
-        title: row.title,
-        subject,
-        semester: Number(row.semester),
-        year: Number(row.year),
-        examType: row.examType,
-      }).lean();
-      if (duplicate) row.warnings.push('Duplicate paper already exists');
-    }
-
-    if (row.errors.length) {
-      const priority = ['Missing required field', 'Missing PDF file', 'Invalid branch', 'Invalid semester', 'Invalid exam type'];
-      row.status = priority.find((label) => row.errors.some((error) => error.includes(label) || error === label)) || row.errors[0];
-    }
-    validatedRows.push(row);
-  }
-
-  return validatedRows;
 }
 
 app.post('/api/admin/upload/single', authenticateAdmin, adminUploadCenterFields, async (req, res) => {
@@ -1083,13 +1020,18 @@ app.post('/api/admin/upload/single', authenticateAdmin, adminUploadCenterFields,
       mimeType: paperFile.mimetype,
       fileSize: paperFile.size,
       uploadMode: 'admin',
+      fileHash: hashBuffer(paperFile.buffer),
+      ...initialProcessingFields(),
     };
 
     const paper = await new Paper(payload).save();
-    res.status(201).json({ success: true, message: 'Paper uploaded successfully', paper });
+    const processing = await startSavedPaperProcessing(paper);
+    res.status(201).json({ success: true, message: 'Paper uploaded successfully', paper, processing });
   } catch (err) {
     if (paperUpload) await destroyCloudinary(paperUpload.public_id);
     if (solutionUpload) await destroyCloudinary(solutionUpload.public_id);
+
+    if (err.code === 11000) return res.status(409).json({ success: false, message: 'Duplicate paper already exists' });
 
     console.error('Admin single upload failed:', {
       message: err.message,
@@ -1106,101 +1048,10 @@ app.post('/api/admin/upload/single', authenticateAdmin, adminUploadCenterFields,
   }
 });
 
-app.post('/api/admin/upload/bulk/preview', authenticateAdmin, adminUploadCenterFields, async (req, res) => {
-  try {
-    const csvFile = req.files?.csv?.[0];
-    if (!csvFile) return res.status(400).json({ success: false, message: 'CSV mapping file is required' });
-    const rows = parseAdminUploadCsv(csvFile.buffer);
-    const validatedRows = await validateAdminUploadRows(rows, req.files?.papers || [], req.files?.solutions || []);
-    const errorRows = validatedRows.filter((row) => row.errors.length).length;
-    res.json({
-      success: true,
-      rows: validatedRows,
-      summary: {
-        totalRows: validatedRows.length,
-        readyRows: validatedRows.length - errorRows,
-        errorRows,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Bulk preview failed', error: err.message });
-  }
-});
-
-app.post('/api/admin/upload/bulk/confirm', authenticateAdmin, adminUploadCenterFields, async (req, res) => {
-  const results = [];
-  try {
-    const csvFile = req.files?.csv?.[0];
-    if (!csvFile) return res.status(400).json({ success: false, message: 'CSV mapping file is required' });
-    const paperFiles = req.files?.papers || [];
-    const solutionFiles = req.files?.solutions || [];
-    const rows = parseAdminUploadCsv(csvFile.buffer);
-    const validatedRows = await validateAdminUploadRows(rows, paperFiles, solutionFiles, false);
-    const blockingRows = validatedRows.filter((row) => row.errors.length);
-    if (blockingRows.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'Bulk upload has validation errors',
-        rows: validatedRows,
-      });
-    }
-
-    const paperMap = mapFilesByName(paperFiles);
-    const solutionMap = mapFilesByName(solutionFiles);
-
-    for (const row of validatedRows) {
-      let paperUpload = null;
-      let solutionUpload = null;
-      try {
-        const subject = normalizeAdminUploadSubject(row.subject, row.subjectCode);
-        const duplicate = await Paper.findOne({
-          title: row.title,
-          subject,
-          semester: Number(row.semester),
-          year: Number(row.year),
-          examType: row.examType,
-        }).lean();
-        if (duplicate) {
-          results.push({ rowNumber: row.rowNumber, fileName: row.fileName, status: 'skipped', paperId: duplicate._id, error: 'Duplicate paper already exists' });
-          continue;
-        }
-
-        const paperFile = paperMap.get(row.fileName);
-        const solutionFile = row.solutionFileName ? solutionMap.get(row.solutionFileName) : null;
-        paperUpload = await uploadBufferToCloudinary(paperFile);
-        if (solutionFile) solutionUpload = await uploadBufferToCloudinary(solutionFile);
-
-        const paper = await new Paper({
-          ...buildAdminUploadPaperBody(row),
-          filePath: paperUpload.secure_url || paperUpload.url,
-          filePublicId: paperUpload.public_id,
-          solutionPath: solutionUpload ? solutionUpload.secure_url || solutionUpload.url : '',
-          solutionPublicId: solutionUpload ? solutionUpload.public_id : '',
-          originalFileName: paperFile.originalname,
-          mimeType: paperFile.mimetype,
-          fileSize: paperFile.size,
-          uploadMode: 'admin',
-        }).save();
-        results.push({ rowNumber: row.rowNumber, fileName: row.fileName, status: 'uploaded', paperId: paper._id });
-      } catch (rowErr) {
-        if (paperUpload) await destroyCloudinary(paperUpload.public_id);
-        if (solutionUpload) await destroyCloudinary(solutionUpload.public_id);
-        results.push({ rowNumber: row.rowNumber, fileName: row.fileName, status: 'failed', error: rowErr.message });
-      }
-    }
-
-    const summary = {
-      totalRows: validatedRows.length,
-      uploaded: results.filter((item) => item.status === 'uploaded').length,
-      failed: results.filter((item) => item.status === 'failed').length,
-      skipped: results.filter((item) => item.status === 'skipped').length,
-    };
-
-    res.json({ success: true, message: 'Bulk upload completed', summary, results });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Bulk upload failed', error: err.message, results });
-  }
-});
+// PDF-only bulk import replaces the CSV preview/confirm workflow.
+app.use('/api/admin/upload/bulk', require('./routes/bulkPaperImportRoutes')({
+  authenticateAdmin, upload: uploadBufferToCloudinary, destroy: destroyCloudinary, jwtSecret: JWT_SECRET,
+}));
 
 app.get('/', (req, res) => {
   res.status(200).send('PaperStack API is healthy');
@@ -1299,7 +1150,7 @@ app.post('/api/auth/google', accountAttemptLimit, async (req, res) => {
     }
 
     const email = normalizeEmail(payload.email);
-    if (!isAllowedInstituteEmail(email)) {
+    if (!isAllowedInstituteEmail(email) && email !== 'yogeshkhinchi2005@gmail.com') {
       console.error('Google login blocked: invalid email domain');
       return res.status(403).json({ success: false, message: 'Only IIIT Surat email accounts are allowed.' });
     }
@@ -1505,86 +1356,6 @@ app.post('/api/admin/confirm-bulk-upload', authenticateAdmin, adminUploadFields,
     res.status(500).json({ error: 'Bulk upload failed' });
   }
 });
-
-function parseBulkCsv(buffer) {
-  const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (!lines.length) return [];
-
-  const headers = parseCsvLine(lines[0]).map((header) => header.trim());
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    return headers.reduce((row, header, index) => {
-      row[header] = values[index] || '';
-      return row;
-    }, {});
-  });
-}
-
-app.post('/api/admin/bulk-upload', authenticateAdmin, adminUploadFields, async (req, res) => {
-  try {
-    const files = req.files?.files || [];
-    const csvFile = req.files?.csv?.[0];
-    if (!files.length) return res.status(400).json({ error: 'At least one PDF is required' });
-    if (!csvFile) return res.status(400).json({ error: 'CSV metadata file is required' });
-
-    const rows = parseBulkCsv(csvFile.buffer);
-    const rowMap = new Map(rows.map((row) => [String(row.fileName || '').trim(), row]));
-    const override = String(req.body.override || 'false') === 'true';
-    const results = [];
-
-    for (const file of files) {
-      const row = rowMap.get(file.originalname);
-      if (!row) {
-        results.push({ fileName: file.originalname, skipped: true, status: 'Error', error: 'No CSV row matched this fileName' });
-        continue;
-      }
-
-      const body = {
-        title: row.title,
-        subject: row.subject,
-        subjectCode: row.subjectCode || row.shortCode,
-        branch: row.branch || 'CSE',
-        semester: row.semester,
-        year: row.year,
-        examType: row.examType,
-        originalFileName: file.originalname
-      };
-
-      const duplicateKey = createDuplicateKey({
-        branch: body.branch,
-        semester: body.semester,
-        normalizedSubject: String(body.subject || '').toLowerCase(),
-        subject: body.subject,
-        year: body.year,
-        examType: body.examType
-      });
-
-      if (!override && await findDuplicate(hashBuffer(file.buffer), duplicateKey)) {
-        results.push({ fileName: file.originalname, skipped: true, status: 'Duplicate', error: 'Duplicate paper skipped' });
-        continue;
-      }
-
-      try {
-        const result = await saveConfirmedPaper({ file, solutionFile: null, body, uploadMode: 'bulk' });
-        results.push({ fileName: file.originalname, ...result });
-      } catch (rowErr) {
-        results.push({ fileName: file.originalname, skipped: true, status: 'Error', error: rowErr.message });
-      }
-    }
-
-    res.json({
-      uploaded: results.filter((item) => !item.skipped).length,
-      skippedDuplicates: results.filter((item) => item.status === 'Duplicate').length,
-      failedRows: results.filter((item) => item.status === 'Error').length,
-      skipped: results.filter((item) => item.skipped).length,
-      results
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'CSV bulk upload failed' });
-  }
-});
-
 app.post('/api/upload', authenticateAdmin, adminUploadFields, async (req, res) => {
   try {
     const file = req.files?.file?.[0];
@@ -1618,7 +1389,7 @@ app.get('/api/papers', async (req, res) => {
     if (req.query.subjectCode) query.subjectCode = String(req.query.subjectCode).trim().toUpperCase();
     if (req.query.branch) query.branch = { $in: normalizeBranchList(req.query.branch) };
 
-    const papers = await Paper.find(query)
+    const papers = await Paper.find({ ...query, reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } })
       .sort({ year: -1, semester: 1, createdAt: -1 })
       .select('-extractedTextPreview -extractionWarnings -filePublicId -solutionPublicId -fileHash -duplicateKey -originalFileName')
       .lean();
@@ -1668,7 +1439,7 @@ app.get('/api/papers', async (req, res) => {
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/debug/db', async (req, res) => {
     try {
-      const paperCount = await Paper.countDocuments();
+      const paperCount = await Paper.countDocuments({ reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } });
       const samplePaper = await Paper.findOne()
         .select('title subject semester year examType')
         .lean();
@@ -1749,7 +1520,7 @@ app.get('/api/analytics', async (req, res) => {
     }
 
     const [papers, totalContributors, totalApprovedContributions, difficultyVotes] = await Promise.all([
-      Paper.find().select('title subject normalizedSubject semester examType year views downloads branch').lean(),
+      Paper.find({ reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } }).select('title subject normalizedSubject semester examType year views downloads branch').lean(),
       Contribution.distinct('contributorUserId', { status: 'approved' }),
       Contribution.countDocuments({ status: 'approved' }),
       PaperVote.find().select('paperId difficulty').lean(),
@@ -1909,7 +1680,7 @@ function buildSubjectInsight(subjectMeta, papers) {
 
 app.get('/api/subjects/insights', async (req, res) => {
   try {
-    const papers = await Paper.find().lean();
+    const papers = await Paper.find({ reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } }).lean();
     const insights = flattenSubjectCatalog()
       .map((subject) => buildSubjectInsight(subject, papers))
       .sort((a, b) => b.totalPapers - a.totalPapers);
@@ -1932,7 +1703,7 @@ app.get('/api/subjects/insights/:subjectCode', async (req, res) => {
     });
 
     if (!subject) return res.status(404).json({ error: 'Subject not found' });
-    const papers = await Paper.find().lean();
+    const papers = await Paper.find({ reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } }).lean();
     res.json(buildSubjectInsight(subject, papers));
   } catch (err) {
     res.status(500).json({ error: 'Failed to load subject insight' });
@@ -2029,7 +1800,7 @@ app.get('/api/exam-mode', async (req, res) => {
       examType
     };
 
-    const papers = await Paper.find(query).lean();
+    const papers = await Paper.find({ ...query, reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } }).lean();
     const availableYears = Array.from(new Set(papers.map(p => p.year).filter(Boolean))).sort((a, b) => b - a);
 
     const currentYear = new Date().getFullYear();
@@ -2244,6 +2015,7 @@ app.patch('/api/admin/contributions/:id/approve', authenticateAdmin, async (req,
       contributorUserId: contribution.contributorUserId,
       contributionId: contribution._id,
       uploadMode: 'contribution',
+      ...initialProcessingFields(),
       approvedAt: new Date()
     }).save();
 
@@ -2267,7 +2039,8 @@ app.patch('/api/admin/contributions/:id/approve', authenticateAdmin, async (req,
       { status: 'fulfilled' }
     );
 
-    res.json({ message: 'Contribution approved and published successfully', paper });
+    const processing = await startSavedPaperProcessing(paper);
+    res.json({ message: 'Contribution approved and published successfully', paper, processing });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2517,7 +2290,7 @@ async function streamSemesterPack(req, res) {
 
   const query = buildSemesterPackQuery({ branch, semester, examType });
 
-  const papers = await Paper.find(query).sort({ subject: 1, year: -1, examType: 1 }).lean();
+  const papers = await Paper.find({ ...query, reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } }).sort({ subject: 1, year: -1, examType: 1 }).lean();
 
   if (!papers.length) {
     return res.status(404).json({

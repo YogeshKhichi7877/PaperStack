@@ -82,19 +82,19 @@ function compactResource(value) {
 
 async function defaultLoaders() {
   return {
-    loadQuestion: async (id) => Question.findById(id).populate('paperId', '_id title filePath solutionPath').lean(),
+    loadQuestion: async (id) => Question.findOne({ _id: id, status: { $ne: 'rejected' }, needsReview: { $ne: true } }).populate('paperId', '_id title filePath solutionPath').lean(),
     loadPaper: async (id) => Paper.findById(id).lean(),
     loadSolutions: async (questionId) => QuestionSolution.find({ questionId, status: 'approved' })
       .sort({ helpfulCount: -1, approvedAt: 1 }).limit(5).lean(),
     loadRelated: async (question) => Question.find({
-      _id: { $ne: question._id }, subjectCode: question.subjectCode, status: { $ne: 'rejected' },
+      _id: { $ne: question._id }, subjectCode: question.subjectCode, status: { $ne: 'rejected' }, needsReview: { $ne: true },
     }).sort({ year: -1, sequence: 1 }).limit(180).populate('paperId', '_id title filePath solutionPath').lean(),
     loadResources: async (subject) => Resource.find({
       status: 'active',
       ...(subject.subjectKey ? { subjectKey: subject.subjectKey } : { subjectCode: subject.subjectCode }),
     }).sort({ year: -1, createdAt: -1 }).limit(12).lean(),
     loadTopicStats: async (subject) => Question.aggregate([
-      { $match: { subjectCode: subject.subjectCode, status: { $ne: 'rejected' } } },
+      { $match: { subjectCode: subject.subjectCode, status: { $ne: 'rejected' }, needsReview: { $ne: true } } },
       { $project: { topic: '$primaryTopic', marks: 1, year: 1 } },
       { $match: { topic: { $nin: ['', null] } } },
       { $group: { _id: '$topic', questionCount: { $sum: 1 }, totalMarks: { $sum: { $ifNull: ['$marks', 0] } }, years: { $addToSet: '$year' } } },
@@ -102,7 +102,7 @@ async function defaultLoaders() {
       { $limit: 30 },
     ]),
     loadArchiveStats: async (subject) => Question.aggregate([
-      { $match: { subjectCode: subject.subjectCode, status: { $ne: 'rejected' } } },
+      { $match: { subjectCode: subject.subjectCode, status: { $ne: 'rejected' }, needsReview: { $ne: true } } },
       { $group: { _id: null, questionCount: { $sum: 1 }, years: { $addToSet: '$year' }, papers: { $addToSet: '$paperId' } } },
     ]),
     loadStudentContext: async (userId) => StudyActivity.find({ userId }).sort({ dayKey: -1 }).limit(30).lean(),
