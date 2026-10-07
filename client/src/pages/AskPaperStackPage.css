@@ -2159,7 +2159,9 @@
 
 .aps-composer-input
   > button {
-  display: inline-flex;
+  display: inline-grid;
+
+  white-space: nowrap;
 
   align-items: center;
 

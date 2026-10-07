@@ -24,7 +24,7 @@ function shouldBypassCache(request, url) {
   if (url.hostname.includes('cloudinary.com')) return true;
   if (url.hostname.includes('res.cloudinary.com')) return true;
 
-  return false;
+  return false
 }
 
 self.addEventListener('install', (event) => {

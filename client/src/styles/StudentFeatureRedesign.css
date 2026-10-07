@@ -178,7 +178,7 @@
 }
 
 .aps-page .aps-composer-input {
-  grid-template-columns: minmax(0, 1fr) 104px;
+  grid-template-columns: minmax(0, 1fr) max-content;
   gap: 8px;
   padding: 5px;
   border: 1px solid var(--sf-line-strong);
