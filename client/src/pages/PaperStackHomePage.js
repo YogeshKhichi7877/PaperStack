@@ -418,39 +418,9 @@ export default function PaperStackHomePage({ user }) {
         />
       </section>
 
-      {user && (
-        <section className="home-continue-learning" aria-labelledby="continue-learning-title">
-          <div>
-            <span className="home-continue-kicker">Today</span>
-            <h2 id="continue-learning-title">Continue learning</h2>
-            {learningSummary ? (
-              <p>
-                <strong>{learningSummary.dueReviews?.length || 0} reviews due</strong>
-                {learningSummary.mastery?.[0] && (
-                  <> · {learningSummary.mastery[0].topicName} {learningSummary.mastery[0].masteryScore}% mastery</>
-                )}
-              </p>
-            ) : (
-              <p>Log today’s class or begin a short practice session.</p>
-            )}
-          </div>
-          <div className="home-continue-actions">
-            <Link to="/learn">Log today’s learning</Link>
-            <Link to="/practice" className="secondary">Continue practice</Link>
-          </div>
-        </section>
-      )}
 
-      <section className="home-learning-journey" aria-labelledby="home-learning-journey-title">
-        <div className="home-learning-journey-copy">
-          <span className="landing-eyebrow">Learn → understand → practice → improve</span>
-          <h2 id="home-learning-journey-title">Understand what you learn. Practice it. Remember it when exams arrive.</h2>
-          <p>Tell PaperStack what your class covered today. Learn the concept with AI, practice when you’re ready, and let PaperStack build your mastery over the semester.</p>
-          <div className="home-learning-journey-actions"><Link to="/learn" className="landing-button landing-button-primary">Start learning <ArrowRight size={18} /></Link><a href="#learning-journey-steps" className="landing-button landing-button-secondary">See how it works</a></div>
-          <ol id="learning-journey-steps"><li><b>1</b> Log class</li><li><b>2</b> Understand</li><li><b>3</b> Practice</li><li><b>4</b> Review</li></ol>
-        </div>
-        <img src="/paperstack-learning-journey.png" alt="PaperStack owl moving through learn, learning log, practice, mastery and review" loading="lazy" width="1450" height="1079" />
-      </section>
+
+
 
       {errors.length > 0 && (
         <p
@@ -492,6 +462,40 @@ export default function PaperStackHomePage({ user }) {
             </div>
           )
         )}
+      </section>
+
+      {user && (
+        <section className="home-continue-learning" aria-labelledby="continue-learning-title">
+          <div>
+            <span className="home-continue-kicker">Today</span>
+            <h2 id="continue-learning-title">Continue learning</h2>
+            {learningSummary ? (
+              <p>
+                <strong>{learningSummary.dueReviews?.length || 0} reviews due</strong>
+                {learningSummary.mastery?.[0] && (
+                  <> · {learningSummary.mastery[0].topicName} {learningSummary.mastery[0].masteryScore}% mastery</>
+                )}
+              </p>
+            ) : (
+              <p>Log today’s class or begin a short practice session.</p>
+            )}
+          </div>
+          <div className="home-continue-actions">
+            <Link to="/learn">Log today’s learning</Link>
+            <Link to="/practice" className="secondary">Continue practice</Link>
+          </div>
+        </section>
+      )}
+
+      <section className="home-learning-journey" aria-labelledby="home-learning-journey-title">
+        <div className="home-learning-journey-copy">
+          <span className="landing-eyebrow">Learn → understand → practice → improve</span>
+          <h2 id="home-learning-journey-title">Understand what you learn. Practice it. Remember it when exams arrive.</h2>
+          <p>Tell PaperStack what your class covered today. Learn the concept with AI, practice when you’re ready, and let PaperStack build your mastery over the semester.</p>
+          <div className="home-learning-journey-actions"><Link to="/learn" className="landing-button landing-button-primary">Start learning <ArrowRight size={18} /></Link><a href="#learning-journey-steps" className="landing-button landing-button-secondary">See how it works</a></div>
+          <ol id="learning-journey-steps"><li><b>1</b> Log class</li><li><b>2</b> Understand</li><li><b>3</b> Practice</li><li><b>4</b> Review</li></ol>
+        </div>
+        <img src="/paperstack-learning-journey.png" alt="PaperStack owl moving through learn, learning log, practice, mastery and review" loading="lazy" width="1450" height="1079" />
       </section>
 
       {/* =========================

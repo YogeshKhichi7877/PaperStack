@@ -29,6 +29,9 @@ test('guest home preserves the original archive discovery experience', async () 
   await screen.findByText('Open Archive');
   expect(screen.getByText('Global Views')).toBeInTheDocument();
   expect(screen.getByText('Global Downloads')).toBeInTheDocument();
+  const statistics = screen.getByRole('region', { name: 'Archive at a glance' });
+  const learning = screen.getByRole('region', { name: /Understand what you learn/i });
+  expect(statistics.compareDocumentPosition(learning) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole('link', { name: /Find a paper/i })).toHaveAttribute('href', '/archive');
   expect(screen.queryByRole('heading', { name: 'Continue learning' })).not.toBeInTheDocument();
   expect(screen.queryByText('From the students')).not.toBeInTheDocument();

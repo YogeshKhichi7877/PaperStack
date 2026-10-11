@@ -3,21 +3,28 @@ import { Link } from 'react-router-dom';
 import { CalendarClock, Gauge, Loader2, TrendingUp } from 'lucide-react';
 import { getLearningDashboard, updateDoubtStatus } from '../services/learningApi';
 import { MasteryBar } from './LearningTodayPage';
+import LearningNav from '../components/LearningNav';
 import './Update4.css';
 
 export default function LearningDashboardPage({ user, toast }) {
   const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (!user) return;
+    let active = true;
+    setError('');
     getLearningDashboard()
-      .then(setData)
-      .catch((error) => toast?.(error.response?.data?.error || 'Could not load learning progress.', 'error'));
-  }, [toast, user]);
+      .then((value) => { if (active) setData(value); })
+      .catch((error) => { if (active) setError(error.response?.data?.error || 'Could not load learning progress.'); });
+    return () => { active = false; };
+  }, [toast, user, retry]);
 
   if (!user) {
     return <main className="u4-page"><div className="u4-empty"><Gauge /><div><b>Your learning intelligence is private.</b><Link to="/login">Sign in to continue</Link></div></div></main>;
   }
+  if (error) return <main className="u4-page"><LearningNav active="progress" /><section className="u4-empty" role="alert"><div><b>{error}</b><button className="u4-button secondary" onClick={() => setRetry((value) => value + 1)}>Try again</button></div></section></main>;
   if (!data) {
     return <main className="u4-page"><div className="u4-loading"><Loader2 className="spin" /> Calculating learning intelligence…</div></main>;
   }
@@ -36,8 +43,9 @@ export default function LearningDashboardPage({ user, toast }) {
 
   return (
     <main className="u4-page">
+      <LearningNav active="progress" />
       <header className="u4-simple-hero">
-        <div><span className="u4-eyebrow">Learning intelligence</span><h1>Your progress, with evidence.</h1><p>Mastery and confidence update from validated attempts. Class coverage is tracked separately.</p></div>
+        <div><span className="u4-eyebrow">My progress</span><h1>The work is adding up.</h1><p>See what’s sticking, what needs another look, and how far you’ve come.</p></div>
       </header>
 
       <section className="u4-dashboard-metrics">
