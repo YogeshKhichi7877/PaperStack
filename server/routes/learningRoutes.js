@@ -8,6 +8,9 @@ const { mapLearningTopics } = require('../services/topicMappingService');
 const { listCanonicalTopics } = require('../services/topicCatalogService');
 const { getLearningDashboard, indiaDayKey } = require('../services/learningDashboardService');
 const { createPracticeSession, getSession, submitAttempt } = require('../services/practiceService');
+const LearningTutorSession = require('../models/LearningTutorSession');
+const { completeTutorSession, tutorReply } = require('../services/learningTutorService');
+const { resolveSubject } = require('../services/subjectService');
 
 function clean(value, max) { return String(value || '').trim().slice(0, max); }
 
@@ -41,8 +44,9 @@ function createLearningRoutes({ authenticate }) {
   router.post('/checkins', async (req, res) => {
     try {
       const originalText = clean(req.body?.originalText, 3000);
-      const subjectCode = clean(req.body?.subjectCode, 30).toUpperCase();
-      const subjectName = clean(req.body?.subjectName, 160);
+      const subject = resolveSubject({ subjectCode: req.body?.subjectCode, subjectName: req.body?.subjectName, branch: req.user?.branch, semester: req.user?.semester });
+      const subjectCode = clean(subject.code, 30).toUpperCase();
+      const subjectName = clean(subject.name, 160);
       if (!originalText || !subjectCode || !subjectName) return res.status(400).json({ error: 'Learning text and subject are required.' });
       const canonical = await listCanonicalTopics(subjectCode);
       const byKey = new Map(canonical.map((item) => [item.topicKey, item]));
@@ -60,8 +64,29 @@ function createLearningRoutes({ authenticate }) {
         userId: req.user._id, dayKey: indiaDayKey(), subjectCode, subjectName, originalText, topics,
         doubt: doubtContent, doubtNoteId: doubtNote?._id || null, noteId: note?._id || null,
       });
-      return res.status(201).json({ checkin, note, doubtNote, nextAction: 'PRACTICE' });
+      return res.status(201).json({ checkin, note, doubtNote, nextActions: ['UNDERSTAND_WITH_AI', 'PRACTICE'] });
     } catch (error) { return res.status(500).json({ error: 'Could not save today’s learning.' }); }
+  });
+
+  router.post('/tutor', async (req, res) => {
+    try {
+      const result = await tutorReply(req.user._id, req.body || {});
+      return res.status(result.available ? 201 : 503).json(result);
+    } catch (error) {
+      console.error('Learning tutor failed:', error);
+      return res.status(error.statusCode || 502).json({ error: error.statusCode ? error.message : 'PaperStack AI could not prepare this explanation. Please try again.' });
+    }
+  });
+
+  router.get('/tutor/:id', async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid tutor session id.' });
+    const session = await LearningTutorSession.findOne({ _id: req.params.id, userId: req.user._id }).lean();
+    return session ? res.json({ session }) : res.status(404).json({ error: 'Tutor session not found.' });
+  });
+
+  router.post('/tutor/:id/complete', async (req, res) => {
+    try { return res.json({ session: await completeTutorSession(req.user._id, req.params.id) }); }
+    catch (error) { return res.status(error.statusCode || 500).json({ error: error.message || 'Could not complete this topic.' }); }
   });
 
   router.get('/notes', async (req, res) => {

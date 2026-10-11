@@ -44,6 +44,7 @@ import {
 import SaveButton from '../components/SaveButton';
 import { recordStudyProgressOnce } from '../services/studyProgressApi';
 import LoadingButton from '../components/LoadingButton';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 
 import './RevisionSheetsPage.css';
 import '../components/StudentUtility.css';
@@ -942,49 +943,7 @@ export default function RevisionSheetsPage({
           </div>
 
           <div className="rs-control-grid">
-            <label className="rs-subject-control">
-              <span>Subject</span>
-
-              <select
-                value={subjectCode}
-                onChange={(
-                  event
-                ) => {
-                  setSubjectCode(
-                    event.target.value
-                  );
-
-                  setExamType('');
-                }}
-              >
-                {!subjects.length && (
-                  <option value="">
-                    No extracted subjects
-                  </option>
-                )}
-
-                {subjects.map(
-                  (item, index) => (
-                    <option
-                      key={
-                        `${item.subjectCode}-${item.semester || 'all'}-${index}`
-                      }
-                      value={
-                        item.subjectCode
-                      }
-                    >
-                      {
-                        item.subjectCode
-                      }
-                      {' · '}
-                      {
-                        item.subject
-                      }
-                    </option>
-                  )
-                )}
-              </select>
-            </label>
+            <SearchableSubjectSelector label="Subject" value={subjectCode} options={subjects} onChange={({ subjectCode: code }) => { setSubjectCode(code); setExamType(''); }} />
 
             <label>
               <span>Exam</span>

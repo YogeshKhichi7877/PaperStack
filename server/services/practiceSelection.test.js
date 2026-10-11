@@ -17,6 +17,18 @@ test('practice selection mixes difficulty, covers topics and avoids recently rep
   assert.deepEqual(new Set(selected.flatMap((item) => item.topicKeys)), new Set(['os:a', 'os:b', 'os:c']));
 });
 
+test('practice selection adapts difficulty to current mastery', () => {
+  const candidates = [
+    { _id: 'e1', difficulty: 'easy', status: 'verified', sourceType: 'PYQ', topicKeys: ['CS301:a'] },
+    { _id: 'e2', difficulty: 'easy', status: 'verified', sourceType: 'PYQ', topicKeys: ['CS301:a'] },
+    { _id: 'm1', difficulty: 'medium', status: 'verified', sourceType: 'PYQ', topicKeys: ['CS301:a'] },
+    { _id: 'm2', difficulty: 'medium', status: 'verified', sourceType: 'PYQ', topicKeys: ['CS301:a'] },
+    { _id: 'h1', difficulty: 'hard', status: 'verified', sourceType: 'PYQ', topicKeys: ['CS301:a'] },
+  ];
+  assert.equal(selectBalancedQuestions(candidates, [], 3, 'TOPIC', 20)[0].difficulty, 'easy');
+  assert.equal(selectBalancedQuestions(candidates, [], 3, 'TOPIC', 85)[0].difficulty, 'medium');
+});
+
 test('review mode brings prior mistakes back before correctly repeated questions', () => {
   const candidates = [
     { _id: 'wrong', difficulty: 'easy', topicKeys: ['os:a'], status: 'verified', sourceType: 'PYQ' },

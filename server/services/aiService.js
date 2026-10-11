@@ -24,6 +24,7 @@ const TASK_ROUTES = Object.freeze({
   STUDY_PLANNER: ['groq', 'gemini'],
   GENERAL_ACADEMIC: ['groq', 'gemini'],
   TOPIC_MAPPING: ['groq', 'gemini'],
+  LEARNING_TUTOR: ['groq', 'gemini'],
   PRACTICE_QUESTION_GENERATION: ['groq', 'gemini'],
 });
 

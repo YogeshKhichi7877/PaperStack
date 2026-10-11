@@ -41,6 +41,7 @@ import {
 import './ImportantTopicsPage.css';
 import QuestionText from '../components/QuestionText';
 import LoadingButton from '../components/LoadingButton';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 
 /* =========================================================
    HELPERS
@@ -1221,57 +1222,7 @@ export default function ImportantTopicsPage({
           </div>
 
           <div className="it-control-grid">
-            <label className="it-subject-control">
-              <span>
-                Subject
-              </span>
-
-              <select
-                value={subjectCode}
-                disabled={
-                  subjectLoading
-                }
-                onChange={(
-                  event
-                ) =>
-                  setSubjectCode(
-                    event.target.value
-                  )
-                }
-              >
-                {!subjects.length && (
-                  <option value="">
-                    No extracted subjects
-                  </option>
-                )}
-
-                {subjects.map(
-                  (subject) => (
-                    <option
-                      key={
-                        subject.subjectCode
-                      }
-                      value={
-                        subject.subjectCode
-                      }
-                    >
-                      {
-                        subject.subjectCode
-                      }
-                      {' · '}
-                      {
-                        subject.subject
-                      }
-                      {' ('}
-                      {
-                        subject.totalQuestions
-                      }
-                      {' questions)'}
-                    </option>
-                  )
-                )}
-              </select>
-            </label>
+            <SearchableSubjectSelector label="Subject" value={subjectCode} options={subjects} disabled={subjectLoading} onChange={({ subjectCode: code }) => setSubjectCode(code)} />
 
             <label>
               <span>

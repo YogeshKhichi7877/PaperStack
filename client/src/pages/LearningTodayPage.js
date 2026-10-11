@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { BookOpen, Brain, CalendarClock, Check, ChevronRight, FileText, Flame, Gauge, Loader2, Paperclip, RefreshCw, Target, Trash2 } from 'lucide-react';
-import { API_URL } from '../config/appConfig';
+import { BookOpen, Brain, CalendarClock, Check, ChevronRight, FileText, Gauge, Info, Loader2, Paperclip, RefreshCw, Trash2 } from 'lucide-react';
 import { createPracticeSession, deletePrivateStudyResource, getLearningDashboard, getPrivateStudyResources, mapLearningTopics, practicePrivateStudyResource, retryPrivateStudyResource, saveLearningCheckin, uploadPrivateStudyResource } from '../services/learningApi';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 import './Update4.css';
 
 function MasteryBar({ value = 0 }) {
@@ -35,30 +34,31 @@ function LoginPrompt() {
 export default function LearningTodayPage({ user, toast }) {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
-  const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(Boolean(user));
   const [text, setText] = useState('');
   const [note, setNote] = useState('');
   const [doubt, setDoubt] = useState('');
   const [noteType, setNoteType] = useState('CLASS_NOTE');
   const [subjectCode, setSubjectCode] = useState('');
+  const [subjectName, setSubjectName] = useState('');
   const [mapping, setMapping] = useState(null);
   const [selected, setSelected] = useState([]);
   const [busy, setBusy] = useState('');
   const [materialFile, setMaterialFile] = useState(null);
   const [resources, setResources] = useState([]);
+  const [savedCheckin, setSavedCheckin] = useState(null);
+  const [showLearnInfo, setShowLearnInfo] = useState(false);
+  const [showPsrInfo, setShowPsrInfo] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [dashboardResult, subjectResult, resourceResult] = await Promise.allSettled([
+    const [dashboardResult, resourceResult] = await Promise.allSettled([
       getLearningDashboard(),
-      axios.get(`${API_URL}/api/ask-paperstack/subjects`),
       getPrivateStudyResources({ limit: 12 }),
     ]);
     if (dashboardResult.status === 'fulfilled') setDashboard(dashboardResult.value);
     else toast?.('Could not load your academic home.', 'error');
-    if (subjectResult.status === 'fulfilled') setSubjects(subjectResult.value.data.subjects || []);
     if (resourceResult.status === 'fulfilled') setResources(resourceResult.value.resources || []);
     setLoading(false);
   }, [toast, user]);
@@ -71,8 +71,6 @@ export default function LearningTodayPage({ user, toast }) {
     }, 5000);
     return () => window.clearInterval(timer);
   }, [resources]);
-  const chosenSubject = useMemo(() => subjects.find((item) => item.subjectCode === subjectCode), [subjectCode, subjects]);
-
   if (!user) return <LoginPrompt />;
   if (loading && !dashboard) return <main className="u4-page"><div className="u4-loading"><Loader2 className="spin" /> Building today’s focus…</div></main>;
 
@@ -81,15 +79,16 @@ export default function LearningTodayPage({ user, toast }) {
     if (!text.trim()) return toast?.('Write what you studied today.', 'info');
     setBusy('mapping');
     try {
-      const result = await mapLearningTopics({ text, subjectCode, subjectName: chosenSubject?.subject, semester: user.semester, branch: user.branch });
+      const result = await mapLearningTopics({ text, subjectCode, subjectName, semester: user.semester, branch: user.branch });
       setMapping(result);
       setSubjectCode(result.subject.code);
+      setSubjectName(result.subject.name);
       setSelected(result.topics.map((item) => item.topicKey));
     } catch (error) { toast?.(error.response?.data?.error || 'Choose the topics manually.', 'error'); }
     finally { setBusy(''); }
   };
 
-  const saveAndPractice = async () => {
+  const confirmLearning = async () => {
     if (!mapping) return;
     setBusy('saving');
     try {
@@ -108,10 +107,25 @@ export default function LearningTodayPage({ user, toast }) {
           toast?.(uploadError.response?.data?.error || 'Today’s learning was saved, but the class material could not be uploaded.', 'error');
         }
       }
-      const practice = await createPracticeSession({ checkinId: saved.checkin._id, subjectCode: mapping.subject.code, subjectName: mapping.subject.name, topics, mode: 'DAILY', count: 5 });
+      setSavedCheckin({ ...saved.checkin, selectedTopics: topics });
+      toast?.('Today’s learning is saved. Choose how you want to continue.', 'success');
+    } catch (error) { toast?.(error.response?.data?.error || 'Could not save today’s learning.', 'error'); }
+    finally { setBusy(''); }
+  };
+
+  const practiceSavedLearning = async () => {
+    if (!savedCheckin) return;
+    setBusy('practice');
+    try {
+      const practice = await createPracticeSession({ checkinId: savedCheckin._id, subjectCode: mapping.subject.code, subjectName: mapping.subject.name, topics: savedCheckin.selectedTopics, mode: 'DAILY', count: 5 });
       navigate(`/practice?sessionId=${practice.session._id}`);
     } catch (error) { toast?.(error.response?.data?.error || 'Could not prepare practice.', 'error'); }
     finally { setBusy(''); }
+  };
+
+  const understandTopic = (topic) => {
+    const query = new URLSearchParams({ subjectCode: mapping.subject.code, subjectName: mapping.subject.name, topicName: topic.name, checkinId: savedCheckin._id });
+    navigate(`/learn/topic/${encodeURIComponent(topic.topicKey)}?${query}`);
   };
 
   const practiceResource = async (resource) => {
@@ -154,24 +168,24 @@ export default function LearningTodayPage({ user, toast }) {
   const name = user.name || user.username || 'student';
   return (
     <main className="u4-page">
-      <header className="u4-today-header"><div><span className="u4-eyebrow">Today · {dashboard?.today}</span><h1>Good to see you, {name.split(' ')[0]}.</h1><p>One focused session today becomes academic confidence over time.</p></div><Link className="u4-rating-pill" to="/profile"><span>PSR</span><strong>{dashboard?.rating?.globalRating || 1000}</strong><small>{dashboard?.rating?.provisional ? 'Provisional' : dashboard?.rating?.tier}</small></Link></header>
+      <header className="u4-today-header"><div><span className="u4-eyebrow">Today · {dashboard?.today}</span><h1>Good to see you, {name.split(' ')[0]}.</h1><p>Tell PaperStack what your class covered. You choose when to understand or practice.</p></div><div className="u4-psr-wrap"><Link className="u4-rating-pill" to="/profile"><span>PSR</span><strong>{dashboard?.rating?.globalRating || 1000}</strong><small>{dashboard?.rating?.provisional ? 'Provisional' : dashboard?.rating?.tier}</small></Link><button type="button" aria-label="About PaperStack Rating" aria-expanded={showPsrInfo} onClick={() => setShowPsrInfo((shown) => !shown)} onFocus={() => setShowPsrInfo(true)} onBlur={() => setShowPsrInfo(false)}><Info /></button>{showPsrInfo && <div role="tooltip">PaperStack Rating measures eligible verified academic practice. Reading AI explanations does not increase it.</div>}</div></header>
 
-      <section className="u4-focus-grid">
+      <section className="u4-focus-grid u4-focus-single">
         <article className="u4-focus-main">
-          <div className="u4-card-heading"><span><BookOpen /></span><div><small>Today’s learning</small><h2>What did you study today?</h2></div></div>
+          <div className="u4-card-heading"><span><BookOpen /></span><div><small>Today’s learning</small><h2>What did your class cover today?</h2></div><div className="u4-info-wrap"><button type="button" className="u4-info-button" aria-label="About PaperStack Learn" aria-expanded={showLearnInfo} onMouseEnter={() => setShowLearnInfo(true)} onMouseLeave={() => setShowLearnInfo(false)} onClick={() => setShowLearnInfo((shown) => !shown)} onFocus={() => setShowLearnInfo(true)} onBlur={() => setShowLearnInfo(false)}><Info /></button>{showLearnInfo && <div role="tooltip">Learn connects today’s topics and private material to AI explanations, practice, mastery and future revision.</div>}</div></div>
           {!mapping ? <form onSubmit={mapTopics}>
             <textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Today sir explained process synchronization, semaphores and mutex…" rows={4} maxLength={3000} />
-            <details className="u4-note-details"><summary>Add a private note or doubt</summary><div><select value={noteType} onChange={(event) => setNoteType(event.target.value)}><option value="CLASS_NOTE">Class note</option><option value="IMPORTANT_POINT">Important point</option><option value="FORMULA">Formula</option><option value="REVISION_NOTE">Revision note</option></select><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Private note (never shown on your public profile)" rows={3} /><textarea value={doubt} onChange={(event) => setDoubt(event.target.value)} placeholder="Something I still do not understand…" rows={2} /></div></details>
-            <label className="u4-material-input">
+            <details className="u4-note-details"><summary>Add class material, a private note or doubt</summary><div><select value={noteType} onChange={(event) => setNoteType(event.target.value)}><option value="CLASS_NOTE">Class note</option><option value="IMPORTANT_POINT">Important point</option><option value="FORMULA">Formula</option><option value="REVISION_NOTE">Revision note</option></select><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Private note (never shown on your public profile)" rows={3} /><textarea value={doubt} onChange={(event) => setDoubt(event.target.value)} placeholder="Something I still do not understand…" rows={2} /><label className="u4-material-input">
               <Paperclip aria-hidden="true" />
               <span><strong>{materialFile ? materialFile.name : 'Add class material'}</strong><small>Private study material · PDF, PPT, PPTX or text · max 20 MB</small></span>
               <input type="file" accept=".pdf,.ppt,.pptx,.txt,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain" onChange={(event) => setMaterialFile(event.target.files?.[0] || null)} />
-            </label>
-            <div className="u4-form-row"><select value={subjectCode} onChange={(event) => setSubjectCode(event.target.value)}><option value="">Let PaperStack detect the subject</option>{subjects.map((item) => <option key={item.subjectCode} value={item.subjectCode}>{item.subject} ({item.subjectCode})</option>)}</select><button className="u4-button primary" disabled={Boolean(busy)}>{busy === 'mapping' ? <><Loader2 className="spin" /> Mapping topics…</> : 'Map my learning'}</button></div>
-          </form> : <div className="u4-confirm"><p>We think you studied:</p><div className="u4-topic-choices">{mapping.availableTopics.map((topic) => <label key={topic.topicKey} className={selected.includes(topic.topicKey) ? 'selected' : ''}><input type="checkbox" checked={selected.includes(topic.topicKey)} onChange={() => setSelected((items) => items.includes(topic.topicKey) ? items.filter((key) => key !== topic.topicKey) : [...items, topic.topicKey])} /><Check /> <span>{topic.name}<small>{topic.questionCount} bank questions</small></span></label>)}</div><div className="u4-actions"><button className="u4-button secondary" onClick={() => setMapping(null)}>Edit note</button><button className="u4-button primary" onClick={saveAndPractice} disabled={!selected.length || Boolean(busy)}>{busy === 'saving' ? 'Preparing practice…' : 'Confirm & practice 5 questions'}</button></div></div>}
+            </label></div></details>
+            <div className="u4-form-row"><SearchableSubjectSelector value={subjectCode} semester={user.semester} branch={user.branch} allowAuto onChange={(item) => { setSubjectCode(item.subjectCode); setSubjectName(item.subjectName); }} /><button className="u4-button primary" disabled={Boolean(busy)}>{busy === 'mapping' ? <><Loader2 className="spin" /> Mapping topics…</> : 'Continue'}</button></div>
+          </form> : !savedCheckin ? <div className="u4-confirm"><p>Confirm what you studied:</p><div className="u4-topic-choices">{mapping.availableTopics.map((topic) => <label key={topic.topicKey} className={selected.includes(topic.topicKey) ? 'selected' : ''}><input type="checkbox" checked={selected.includes(topic.topicKey)} onChange={() => setSelected((items) => items.includes(topic.topicKey) ? items.filter((key) => key !== topic.topicKey) : [...items, topic.topicKey])} /><Check /> <span>{topic.name}<small>{topic.questionCount} bank questions</small></span></label>)}</div><div className="u4-actions"><button className="u4-button secondary" onClick={() => setMapping(null)}>Edit learning</button><button className="u4-button primary" onClick={confirmLearning} disabled={!selected.length || Boolean(busy)}>{busy === 'saving' ? 'Saving…' : 'Confirm topics'}</button></div></div> : <div className="u4-next-choice"><span className="u4-eyebrow">Learning saved</span><h3>What would help next?</h3><p>Understanding is optional. Practice is the only step that changes mastery and PSR.</p><div className="u4-understand-topics">{savedCheckin.selectedTopics.map((topic) => <button type="button" key={topic.topicKey} onClick={() => understandTopic(topic)}><Brain /><span><b>Understand with AI</b><small>{topic.name}</small></span><ChevronRight /></button>)}</div><button type="button" className="u4-button primary" onClick={practiceSavedLearning} disabled={Boolean(busy)}>{busy === 'practice' ? 'Preparing practice…' : 'Practice 5 questions'}</button><button type="button" className="u4-text-button" onClick={() => { setMapping(null); setSavedCheckin(null); setText(''); }}>Done for now</button></div>}
         </article>
-        <aside className="u4-daily-card"><div className="u4-card-heading"><span><Target /></span><div><small>Daily goal</small><h2>{dashboard?.dailyGoal?.attempted || 0} / {dashboard?.dailyGoal?.target || 6}</h2></div></div><MasteryBar value={Math.min(100, ((dashboard?.dailyGoal?.attempted || 0) / (dashboard?.dailyGoal?.target || 6)) * 100)} /><p>{dashboard?.dailyGoal?.complete ? 'Daily practice complete. Nice work.' : 'A few careful answers are better than empty activity.'}</p><div className="u4-streak"><Flame /> <strong>{dashboard?.streak?.current || 0} day</strong> meaningful streak</div></aside>
       </section>
+
+      {dashboard?.recentCheckins?.length > 0 && <section className="u4-section u4-learning-timeline"><div className="u4-section-title"><div><span className="u4-eyebrow">Your learning timeline</span><h2>Recent classes</h2></div><Link to="/learning-dashboard">Full progress</Link></div><div>{dashboard.recentCheckins.slice(0, 4).map((checkin) => <article key={checkin._id}><div><b>{checkin.subjectName}</b><small>{new Date(checkin.createdAt).toLocaleDateString('en-IN')} · {(checkin.topics || []).map((topic) => topic.name).join(', ')}</small><small>{checkin.understoodTopicKeys?.length ? 'AI study completed' : 'Ready to understand'} · {checkin.completedPractice ? 'practice completed' : 'practice pending'}</small></div>{checkin.topics?.[0] && <div className="u4-actions"><button type="button" onClick={() => { const topic = checkin.topics[0]; const query = new URLSearchParams({ subjectCode: checkin.subjectCode, subjectName: checkin.subjectName, topicName: topic.name, checkinId: checkin._id }); navigate(`/learn/topic/${encodeURIComponent(topic.topicKey)}?${query}`); }}>Understand again</button><button type="button" onClick={() => startFocusedPractice({ subjectCode: checkin.subjectCode, subjectName: checkin.subjectName, topicKey: checkin.topics[0].topicKey, topicName: checkin.topics[0].name }, 'REVIEW')}>Practice</button></div>}</article>)}</div></section>}
 
       <section className="u4-section u4-resources" aria-labelledby="private-material-heading">
         <div className="u4-section-title"><div><span className="u4-eyebrow">Visible only to you</span><h2 id="private-material-heading">Private class material</h2></div></div>
@@ -191,9 +205,6 @@ export default function LearningTodayPage({ user, toast }) {
 
       <section className="u4-section"><div className="u4-section-title"><div><span className="u4-eyebrow">Next best action</span><h2>Reviews due</h2></div><Link to="/practice">Open Practice</Link></div>{dashboard?.dueReviews?.length ? <div className="u4-topic-grid">{dashboard.dueReviews.slice(0, 4).map((topic) => <button key={topic.topicKey} onClick={() => startFocusedPractice(topic)} disabled={Boolean(busy)}><span><b>{topic.topicName}</b><small>{topic.subjectName || topic.subjectCode} · due {new Date(topic.nextReviewAt).toLocaleDateString('en-IN')}</small></span><strong>{topic.masteryScore}%</strong><MasteryBar value={topic.masteryScore} /></button>)}</div> : <div className="u4-empty"><CalendarClock /><div><b>No scheduled review is overdue.</b><span>Log today’s learning or practice a subject to start your revision cycle.</span></div></div>}</section>
 
-      <section className="u4-two-column"><article className="u4-panel"><div className="u4-section-title"><div><span className="u4-eyebrow">Learning intelligence</span><h2>Weak topics</h2></div><Link to="/learning-dashboard">Full progress</Link></div>{dashboard?.weakTopics?.length ? dashboard.weakTopics.slice(0, 4).map((topic, index) => <button className="u4-weak-row" key={topic.topicKey} onClick={() => startFocusedPractice(topic, 'WEAK_TOPIC')}><span className="u4-priority">P{index + 1}</span><span><b>{topic.topicName}</b><small>{topic.reason}</small></span><strong>{topic.masteryScore}%</strong></button>) : <p className="u4-muted">Your weak-topic engine will appear after practice evidence is recorded.</p>}</article>
-        <article className="u4-panel u4-identity-card"><span className="u4-eyebrow">Your academic identity</span><div className="u4-big-rating"><strong>{dashboard?.rating?.globalRating || 1000}</strong><span>{dashboard?.rating?.tier}</span></div><p>{dashboard?.rating?.provisional ? `${Math.max(0, 20 - (dashboard?.rating?.ratedCount || 0))} rated questions until your ranking becomes established.` : `${dashboard?.rating?.weeklyDelta >= 0 ? '+' : ''}${dashboard?.rating?.weeklyDelta || 0} this week.`}</p>{dashboard?.rating?.nextTier && <small>{dashboard.rating.nextTier.pointsAway} points to {dashboard.rating.nextTier.name}</small>}<Link to="/profile">View academic profile <ChevronRight /></Link></article>
-      </section>
     </main>
   );
 }

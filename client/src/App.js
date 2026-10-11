@@ -83,6 +83,7 @@ const pageLoaders = {
   '/admin/question-extraction': () => import('./pages/AdminQuestionExtractionPage'),
   '/admin/question-solutions': () => import('./pages/AdminQuestionSolutionsPage'),
   '/learn': () => import('./pages/LearningTodayPage'),
+  '/learn/topic': () => import('./pages/LearningTutorPage'),
   '/practice': () => import('./pages/PracticePage'),
   '/leaderboard': () => import('./pages/AcademicLeaderboardPage'),
   '/profile': () => import('./pages/AcademicProfilePage'),
@@ -118,6 +119,7 @@ const AdminProductAnalyticsPage = lazyPage(pageLoaders['/admin/product-analytics
 const AdminQuestionExtractionPage = lazyPage(pageLoaders['/admin/question-extraction']);
 const AdminQuestionSolutionsPage = lazyPage(pageLoaders['/admin/question-solutions']);
 const LearningTodayPage = lazyPage(pageLoaders['/learn']);
+const LearningTutorPage = lazyPage(pageLoaders['/learn/topic']);
 const PracticePage = lazyPage(pageLoaders['/practice']);
 const AcademicLeaderboardPage = lazyPage(pageLoaders['/leaderboard']);
 const AcademicProfilePage = lazyPage(pageLoaders['/profile']);
@@ -128,6 +130,7 @@ function preloadRoute(path) {
   if (path.startsWith('/questions/')) return pageLoaders['/questions']();
   if (path.startsWith('/contributors/')) return pageLoaders['/contributor-profile']();
   if (path.startsWith('/subject/')) return pageLoaders['/subject']();
+  if (path.startsWith('/learn/topic/')) return pageLoaders['/learn/topic']();
   return null;
 }
 
@@ -3529,6 +3532,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
         <Route path="/learn" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><LearningTodayPage user={user} toast={toast} /><Footer /></div>} />
+        <Route path="/learn/topic/:topicId" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><LearningTutorPage user={user} toast={toast} /><Footer /></div>} />
         <Route path="/practice" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><PracticePage user={user} toast={toast} /><Footer /></div>} />
         <Route path="/leaderboard" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><AcademicLeaderboardPage /><Footer /></div>} />
         <Route path="/profile" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><AcademicProfilePage user={user} toast={toast} /><Footer /></div>} />

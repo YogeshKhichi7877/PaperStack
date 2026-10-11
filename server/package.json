@@ -11,6 +11,8 @@
     "migrate:resources": "node scripts/backfillResources.js",
     "migrate:update4:dry": "node scripts/migrate-update4.js",
     "migrate:update4": "node scripts/migrate-update4.js --apply",
+    "migrate:subjects:dry": "node scripts/reconcile-subjects.js",
+    "migrate:subjects": "node scripts/reconcile-subjects.js --apply",
     "questions:status": "node scripts/question-model-status.js",
     "questions:extract": "node scripts/extract-questions.js"
   },

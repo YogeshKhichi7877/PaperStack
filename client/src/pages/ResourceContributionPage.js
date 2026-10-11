@@ -48,6 +48,7 @@ import { OFFICIAL_BRANCHES } from '../config/branches';
 
 import './ResourceContributionPage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 
 /* =========================================================
    FALLBACK CONFIG
@@ -1156,49 +1157,7 @@ export default function ResourceContributionPage({
                     </small>
                   </label>
 
-                  <label>
-                    <span>
-                      Subject *
-                    </span>
-
-                    <input
-                      value={
-                        form.subjectName
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        update(
-                          'subjectName',
-                          event.target
-                            .value
-                        )
-                      }
-                      placeholder="Computer Graphics"
-                    />
-                  </label>
-
-                  <label>
-                    <span>
-                      Subject code
-                    </span>
-
-                    <input
-                      value={
-                        form.subjectCode
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        update(
-                          'subjectCode',
-                          event.target
-                            .value
-                        )
-                      }
-                      placeholder="CS502"
-                    />
-                  </label>
+                  <SearchableSubjectSelector label="Subject *" value={form.subjectCode} semester={preferredSemester} onChange={({ subjectCode, subjectName }) => setForm((current) => ({ ...current, subjectCode, subjectName }))} />
                 </div>
               </div>
             </section>

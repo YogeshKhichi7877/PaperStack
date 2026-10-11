@@ -68,6 +68,7 @@ import './ExamWarRoomPage.css';
 import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 import LoadingButton from '../components/LoadingButton';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 
 const MathAnswer = React.lazy(
   () =>
@@ -1173,55 +1174,7 @@ export default function ExamWarRoomPage({
           </div>
 
           <div className="wr-control-grid">
-            <label className="wr-subject-control">
-              <span>
-                Subject
-              </span>
-
-              <select
-                value={
-                  subjectCode
-                }
-                onChange={(
-                  event
-                ) => {
-                  setSubjectCode(
-                    event.target
-                      .value
-                  );
-
-                  setExamType('');
-                }}
-              >
-                {!subjects.length && (
-                  <option value="">
-                    No extracted
-                    subjects
-                  </option>
-                )}
-
-                {subjects.map(
-                  (item) => (
-                    <option
-                      key={
-                        item.subjectCode
-                      }
-                      value={
-                        item.subjectCode
-                      }
-                    >
-                      {
-                        item.subjectCode
-                      }
-                      {' · '}
-                      {
-                        item.subject
-                      }
-                    </option>
-                  )
-                )}
-              </select>
-            </label>
+            <SearchableSubjectSelector label="Subject" value={subjectCode} semester={semester} options={subjects} onChange={({ subjectCode: code }) => { setSubjectCode(code); setExamType(''); }} />
 
             <label>
               <span>

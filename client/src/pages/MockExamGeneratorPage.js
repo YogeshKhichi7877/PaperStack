@@ -50,6 +50,7 @@ import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 import LoadingButton from '../components/LoadingButton';
 import MockGenerationAnimation from '../components/MockGenerationAnimation';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 
 const MathAnswer = React.lazy(() => import('../components/MathAnswer'));
 
@@ -1004,57 +1005,7 @@ export default function MockExamGeneratorPage({
           </div>
 
           <fieldset className="me-builder-grid" disabled={generating || loadingSubjects} aria-label="Mock paper settings">
-            <label className="me-field-subject">
-              <span>Subject</span>
-
-              <select
-                value={subjectCode}
-                disabled={
-                  loadingSubjects
-                }
-                onChange={(
-                  event
-                ) => {
-                  setSubjectCode(
-                    event.target.value
-                  );
-
-                  setExamType('');
-                }}
-              >
-                {!subjects.length && (
-                  <option value="">
-                    No extracted subjects
-                  </option>
-                )}
-
-                {subjects.map(
-                  (subject, index) => (
-                    <option
-                      key={
-                        `${subject.subjectCode}-${subject.semester || 'all'}-${index}`
-                      }
-                      value={
-                        subject.subjectCode
-                      }
-                    >
-                      {
-                        subject.subjectCode
-                      }
-                      {' · '}
-                      {
-                        subject.subject
-                      }
-                      {' ('}
-                      {
-                        subject.totalQuestions
-                      }
-                      {')'}
-                    </option>
-                  )
-                )}
-              </select>
-            </label>
+            <SearchableSubjectSelector label="Subject" value={subjectCode} semester={semester} options={subjects} disabled={loadingSubjects} onChange={({ subjectCode: code }) => { setSubjectCode(code); setExamType(''); }} />
 
             <label>
               <span>Exam scope</span>

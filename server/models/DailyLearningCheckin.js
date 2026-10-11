@@ -20,6 +20,8 @@ const schema = new mongoose.Schema({
   resourceIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'PrivateStudyResource' }],
   practiceSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'PracticeSession', default: null },
   completedPractice: { type: Boolean, default: false },
+  understoodTopicKeys: { type: [String], default: [] },
+  lastUnderstoodAt: { type: Date, default: null },
 }, { timestamps: true });
 
 schema.index({ userId: 1, dayKey: -1 });

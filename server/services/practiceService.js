@@ -10,6 +10,7 @@ const { enqueueQuestionBankRefill } = require('./questionBankService');
 const { evaluateBatchWithMode, evaluationAiEnabled } = require('./mockEvaluationAiService');
 const { applyAttemptToTopics } = require('./masteryService');
 const { applyRating } = require('./ratingService');
+const UserTopicMastery = require('../models/UserTopicMastery');
 
 function questionTopicKeys(question) {
   if (question.topicKeys?.length) return question.topicKeys;
@@ -24,7 +25,7 @@ function selectionRank(question) {
   return status * 10 + source;
 }
 
-function selectBalancedQuestions(candidates, attempts, count, mode = 'TOPIC') {
+function selectBalancedQuestions(candidates, attempts, count, mode = 'TOPIC', masteryScore = null) {
   const attemptStats = new Map();
   for (const attempt of attempts || []) {
     const key = String(attempt.questionId);
@@ -48,7 +49,13 @@ function selectBalancedQuestions(candidates, attempts, count, mode = 'TOPIC') {
   });
   const difficultyOrder = mode === 'EXAM'
     ? ['medium', 'hard', 'medium', 'easy', 'hard']
-    : ['easy', 'medium', 'medium', 'hard', 'easy'];
+    : masteryScore == null
+      ? ['easy', 'medium', 'medium', 'hard', 'easy']
+      : masteryScore < 40
+      ? ['easy', 'medium', 'easy', 'medium', 'hard']
+      : masteryScore >= 70
+        ? ['medium', 'hard', 'hard', 'medium', 'easy']
+        : ['medium', 'easy', 'medium', 'hard', 'medium'];
   const selected = [];
   const remaining = [...ranked];
   const coveredTopics = new Set();
@@ -88,7 +95,9 @@ async function createPracticeSession(userId, input, dependencies = {}) {
   const requestedKeys = new Set(topics.map((item) => item.topicKey));
   const matching = candidates.filter((question) => !requestedKeys.size || questionTopicKeys(question).some((key) => requestedKeys.has(key)));
   const attempts = matching.length ? await QuestionAttempt.find({ userId, questionId: { $in: matching.map((item) => item._id) } }).select('questionId actualScore createdAt').sort({ createdAt: -1 }).lean() : [];
-  const selected = selectBalancedQuestions(matching, attempts, count, mode);
+  const masteryRows = topics.length ? await (dependencies.MasteryModel || UserTopicMastery).find({ userId, topicKey: { $in: topics.map((item) => item.topicKey) } }).select('masteryScore').lean() : [];
+  const masteryScore = masteryRows.length ? Math.round(masteryRows.reduce((sum, item) => sum + Number(item.masteryScore || 0), 0) / masteryRows.length) : 50;
+  const selected = selectBalancedQuestions(matching, attempts, count, mode, masteryScore);
   if (!selected.length) throw Object.assign(new Error('No practice questions are available for these topics yet.'), { statusCode: 409 });
   const ratingEligible = selected.some((item) => item.ratingEligible && ['verified', 'reviewed'].includes(item.status));
   const session = await SessionModel.create({
@@ -103,7 +112,7 @@ async function createPracticeSession(userId, input, dependencies = {}) {
       count: 15,
     }, dependencies);
   }
-  return { session: session.toObject(), questions: selected.map((item) => publicQuestion({ ...item, topicKeys: questionTopicKeys(item) })), generationQueued: Boolean(generationJob), estimatedMinutes: Math.max(5, Math.ceil(selected.length * 1.4)) };
+  return { session: session.toObject(), questions: selected.map((item) => publicQuestion({ ...item, topicKeys: questionTopicKeys(item) })), generationQueued: Boolean(generationJob), estimatedMinutes: Math.max(5, Math.ceil(selected.length * 1.4)), adaptive: { masteryScore } };
 }
 
 function normalizeAnswer(value) {
@@ -142,6 +151,8 @@ async function submitAttempt(userId, sessionId, input, dependencies = {}) {
   const firstAttempt = !(await AttemptModel.exists({ userId, questionId: question._id }));
   const evaluation = await evaluateAnswer(question, answer, dependencies);
   const keys = questionTopicKeys(question);
+  const masteryBeforeRows = keys.length ? await (dependencies.MasteryModel || UserTopicMastery).find({ userId, topicKey: { $in: keys } }).select('topicKey masteryScore').lean() : [];
+  const masteryBefore = new Map(masteryBeforeRows.map((item) => [item.topicKey, item.masteryScore]));
   let attempt;
   try {
     attempt = await AttemptModel.create({
@@ -175,7 +186,7 @@ async function submitAttempt(userId, sessionId, input, dependencies = {}) {
   if (complete && !session.completedAt) session.completedAt = new Date();
   await session.save();
   if (complete) await DailyLearningCheckin.updateMany({ userId, practiceSessionId: session._id }, { $set: { completedPractice: true } });
-  return { attempt: attempt.toObject(), evaluation, mastery, rating, session: session.toObject(), complete };
+  return { attempt: attempt.toObject(), evaluation, mastery: mastery.map((item) => ({ ...item, previousMasteryScore: masteryBefore.get(item.topicKey) ?? 50 })), rating, session: session.toObject(), complete };
 }
 
 async function getSession(userId, sessionId) {
