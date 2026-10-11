@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test",
     "start": "node index.js",
-    "dev": "nodemon index.js",
+    "dev": "node --watch index.js",
     "migrate:resources:dry": "node scripts/backfillResources.js --dry-run",
     "migrate:resources": "node scripts/backfillResources.js",
     "migrate:update4:dry": "node scripts/migrate-update4.js",
@@ -23,10 +23,10 @@
   },
   "dependencies": {
     "archiver": "^8.0.0",
-    "axios": "^1.18.1",
+    "axios": "^1.20.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.11.0",
-    "compression": "^1.8.1",
+    "compression": "^1.8.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
@@ -39,11 +39,8 @@
     "mathjs": "^15.2.0",
     "mongoose": "^9.0.2",
     "multer": "^2.0.2",
-    "nodemailer": "^9.0.2",
+    "nodemailer": "^10.0.9",
     "pdf-parse": "^2.4.5",
     "zod": "^4.6.5"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.11"
   }
 }
