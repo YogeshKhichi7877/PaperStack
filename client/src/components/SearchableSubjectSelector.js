@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { getCanonicalSubjects } from '../services/learningApi';
 import './SearchableSubjectSelector.css';
 
-export default function SearchableSubjectSelector({ value, onChange, semester, branch, options, allowAuto = false, label = 'Subject', disabled = false }) {
+export default function SearchableSubjectSelector({ value, onChange, semester, branch, options, allowAuto = false, label = 'Subject', disabled = false, emptyLabel, emptyOptionLabel }) {
   const [subjects, setSubjects] = useState([]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -40,12 +40,12 @@ export default function SearchableSubjectSelector({ value, onChange, semester, b
   return <div className="subject-picker" ref={rootRef}>
     <span className="subject-picker-label">{label}</span>
     <button type="button" className="subject-picker-trigger" onClick={() => setOpen((shown) => !shown)} disabled={disabled} aria-haspopup="listbox" aria-expanded={open}>
-      <span>{selected ? <><b>{selected.code}</b> {selected.name}</> : allowAuto ? 'Let PaperStack detect the subject' : 'Choose a subject'}</span><Search size={17} />
+      <span>{selected ? <><b>{selected.code}</b> {selected.name}</> : emptyLabel || (allowAuto ? 'Let PaperStack detect the subject' : 'Choose a subject')}</span><Search size={17} />
     </button>
     {open && <div className="subject-picker-popover">
       <label><Search size={16} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search code, name or alias" /></label>
       <div role="listbox">
-        {allowAuto && <button type="button" role="option" aria-selected={!value} onClick={() => choose(null)}>Detect from my learning</button>}
+        {allowAuto && <button type="button" role="option" aria-selected={!value} onClick={() => choose(null)}>{emptyOptionLabel || 'Detect from my learning'}</button>}
         {filtered.map((item, index) => <React.Fragment key={item.code}>
           {index === 0 && item.current && <small>Your current semester</small>}
           {index > 0 && !item.current && filtered[index - 1]?.current && <small>Other subjects</small>}

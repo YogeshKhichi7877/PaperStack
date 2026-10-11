@@ -802,6 +802,7 @@ import ContentSkeleton from '../components/ContentSkeleton';
 import QuestionText from '../components/QuestionText';
 import SaveButton from '../components/SaveButton';
 import RelatedPyqs from '../components/RelatedPyqs';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 import { recordStudyProgressOnce } from '../services/studyProgressApi';
 import '../components/StudentUtility.css';
 
@@ -2142,44 +2143,15 @@ export default function InteractiveQuestionsPage({
 
           {filtersExpanded && (
             <div className="iq-filter-grid">
-              <label>
-                <span>Subject</span>
-
-                <select
-                  value={
-                    filters.subjectCode
-                  }
-                  onChange={(event) =>
-                    updateFilter(
-                      'subjectCode',
-                      event.target.value
-                    )
-                  }
-                >
-                  <option value="">
-                    All subjects
-                  </option>
-
-                  {(facets?.subjects ||
-                    []).map((item) => (
-                    <option
-                      key={`${item.subjectKey}-${item.subjectCode}`}
-                      value={
-                        item.subjectCode
-                      }
-                    >
-                      {item.subjectCode ||
-                        item.shortCode ||
-                        'SUB'}
-                      {' · '}
-                      {item.subject}
-                      {' ('}
-                      {item.count}
-                      {')'}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SearchableSubjectSelector
+                label="Subject"
+                value={filters.subjectCode}
+                options={facets?.subjects || []}
+                allowAuto
+                emptyLabel="All subjects"
+                emptyOptionLabel="All subjects"
+                onChange={({ subjectCode }) => updateFilter('subjectCode', subjectCode)}
+              />
 
               <label>
                 <span>Branch</span>

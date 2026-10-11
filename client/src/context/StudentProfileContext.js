@@ -9,6 +9,7 @@ import paperStackWordmark from '../assets/Paperstack_auth_wordmark.png';
 import onboardingStudyOwl from '../assets/paperstack-onboarding-study-owl.png';
 import '../components/StudentProfile.css';
 import { OFFICIAL_BRANCHES } from '../config/branches';
+import CurrentSubjectsSelector from '../components/CurrentSubjectsSelector';
 
 const SUPPORTED_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 const StudentProfileContext = createContext({
@@ -34,7 +35,7 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
   const [displayName, setDisplayName] = useState(initialProfile.displayName || '');
   const [semester, setSemester] = useState(validSemester(initialProfile.semester));
   const [branch, setBranch] = useState(initialProfile.branch || 'CSE');
-  const [currentSubjects, setCurrentSubjects] = useState((initialProfile.currentSubjectCodes || []).join(', '));
+  const [currentSubjects, setCurrentSubjects] = useState(initialProfile.currentSubjectCodes || []);
   const dialogRef = useRef(null);
   const nameRef = useRef(null);
   const isValid = cleanName(displayName).length >= 2 && Boolean(semester) && Boolean(branch);
@@ -70,7 +71,7 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
       displayName: cleanName(displayName),
       semester,
       branch,
-      currentSubjectCodes: currentSubjects.split(',').map((value) => value.trim().toUpperCase()).filter(Boolean),
+      currentSubjectCodes: currentSubjects,
     });
   };
 
@@ -155,14 +156,12 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
             <select id="student-branch" className="student-profile-select" value={branch} onChange={(event) => setBranch(event.target.value)}>
               {OFFICIAL_BRANCHES.map((item) => <option key={item.key} value={item.key}>{item.key}</option>)}
             </select>
-            <label htmlFor="student-current-subjects">Current subjects <small>(optional)</small></label>
-            <input
-              id="student-current-subjects"
-              className="student-profile-subjects"
+            <CurrentSubjectsSelector
+              label="Current subjects (optional)"
               value={currentSubjects}
-              maxLength={240}
-              placeholder="CS301, CS302"
-              onChange={(event) => setCurrentSubjects(event.target.value)}
+              semester={semester}
+              branch={branch}
+              onChange={setCurrentSubjects}
             />
             <div className="student-profile-actions">
               {!onboarding && <button type="button" className="student-profile-cancel" onClick={onClose}>Cancel</button>}

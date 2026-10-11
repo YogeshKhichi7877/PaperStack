@@ -65,6 +65,7 @@ import {
 } from '../services/semesterSurvivalApi';
 
 import { getLearningDashboard } from '../services/learningApi';
+import CurrentSubjectsSelector from '../components/CurrentSubjectsSelector';
 
 import './PersonalDashboardPage.css';
 
@@ -1405,16 +1406,12 @@ export default function PersonalDashboardPage({
                   </select>
                 </label>
 
-                <label>
-                  <span>Current subjects</span>
-                  <input
-                    value={currentSubjects}
-                    onChange={(event) => setCurrentSubjects(event.target.value)}
-                    placeholder="CS301, CS302, EC305"
-                    maxLength={240}
-                  />
-                  <small>Enter subject codes separated by commas.</small>
-                </label>
+                <CurrentSubjectsSelector
+                  value={currentSubjects}
+                  semester={semester}
+                  branch={branch}
+                  onChange={(codes) => setCurrentSubjects(codes.join(', '))}
+                />
               </div>
 
               <button

@@ -43,6 +43,7 @@ import { useStudentProfile } from '../context/StudentProfileContext';
 import { preferredSubject, prioritizeSubjects } from '../utils/semesterPersonalization';
 import QuestionText from '../components/QuestionText';
 import LoadingButton from '../components/LoadingButton';
+import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 
 const MathAnswer = React.lazy(
   () =>
@@ -527,58 +528,17 @@ export default function AskPaperStackPage({
             </div>
           </div>
 
-          <label>
-            <span>
-              Subject
-            </span>
-
-            <select
-              value={
-                subjectCode
-              }
-              onChange={(
-                event
-              ) => {
-                setSubjectCode(
-                  event.target
-                    .value
-                );
-
-                setExamType('');
-              }}
-              disabled={
-                subjectsLoading
-              }
-            >
-              {!subjects.length && (
-                <option value="">
-                  No extracted
-                  subjects
-                </option>
-              )}
-
-              {subjects.map(
-                (subject, index) => (
-                  <option
-                    key={
-                      `${subject.subjectCode}-${subject.semester || 'all'}-${index}`
-                    }
-                    value={
-                      subject.subjectCode
-                    }
-                  >
-                    {
-                      subject.subjectCode
-                    }
-                    {' · '}
-                    {
-                      subject.subject
-                    }
-                  </option>
-                )
-              )}
-            </select>
-          </label>
+          <SearchableSubjectSelector
+            label="Subject"
+            value={subjectCode}
+            semester={semester}
+            options={subjects}
+            disabled={subjectsLoading}
+            onChange={({ subjectCode: code }) => {
+              setSubjectCode(code);
+              setExamType('');
+            }}
+          />
 
           <label>
             <span>
