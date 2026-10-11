@@ -2,6 +2,7 @@ const express = require('express');
 
 const Question = require('../models/Question');
 const QuestionSolution = require('../models/QuestionSolution');
+const { formatLearningContext, retrieveLearningContext } = require('../services/learningContextService');
 
 const {
   answerQuery,
@@ -124,9 +125,16 @@ router.post('/query', async (req, res) => {
       ? `${questions[0]?.subject || 'Selected subject'} (${subjectCode})`
       : 'the selected PaperStack archive';
 
+    const learningContext = req.user?._id
+      ? await retrieveLearningContext({ userId: req.user._id, subjectCode, query })
+      : { privateChunks: [], verifiedResources: [], sources: [] };
+    const orderedContext = formatLearningContext(learningContext);
+
     const result = await answerQuery(enriched, query, {
       subjectLabel,
       enableAi: true,
+      privateContext: orderedContext.privateText,
+      verifiedContext: orderedContext.verifiedText,
     });
 
     res.json({
@@ -134,6 +142,7 @@ router.post('/query', async (req, res) => {
       subjectCode,
       examType,
       aiAvailable: isAiConfigured(),
+      contextSources: learningContext.sources,
       ...result,
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axios from 'axios';
 import PaperStackHomePage from './PaperStackHomePage';
+import { getLearningDashboard } from '../services/learningApi';
 
 jest.mock('react-router-dom', () => ({
   Link: ({ children, to, ...props }) => <a href={to} {...props}>{children}</a>,
@@ -8,14 +9,38 @@ jest.mock('react-router-dom', () => ({
 
 jest.mock('axios');
 jest.mock('../services/contributorApi', () => ({ getContributorLeaderboard: () => Promise.resolve([]) }));
+jest.mock('../services/learningApi', () => ({
+  getLearningDashboard: jest.fn(() => Promise.resolve({
+    dueReviews: [{ topicKey: 'os:semaphore' }],
+    mastery: [{ topicKey: 'os:semaphore', topicName: 'Semaphore', masteryScore: 42 }],
+  })),
+}));
 
-test('home does not render student voices when there are no real testimonials', async () => {
+beforeEach(() => {
+  axios.get.mockReset();
+  getLearningDashboard.mockResolvedValue({
+    dueReviews: [{ topicKey: 'os:semaphore' }, { topicKey: 'dbms:indexing' }],
+    mastery: [{ topicKey: 'os:semaphore', topicName: 'Semaphore', masteryScore: 42 }],
+  });
+});
+test('guest home preserves the original archive discovery experience', async () => {
   axios.get.mockImplementation((url) => Promise.resolve({ data: url.includes('analytics') ? {} : [] }));
   render(<PaperStackHomePage user={null} />);
   await screen.findByText('Open Archive');
   expect(screen.getByText('Global Views')).toBeInTheDocument();
   expect(screen.getByText('Global Downloads')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Find a paper/i })).toHaveAttribute('href', '/archive');
+  expect(screen.queryByRole('heading', { name: 'Continue learning' })).not.toBeInTheDocument();
   expect(screen.queryByText('From the students')).not.toBeInTheDocument();
+});
+test('signed-in home adds a compact Continue learning section without replacing archive sections', async () => {
+  axios.get.mockImplementation((url) => Promise.resolve({ data: url.includes('analytics') ? {} : [] }));
+  render(<PaperStackHomePage user={{ name: 'Yogesh' }} />);
+  expect(await screen.findByRole('heading', { name: 'Continue learning' })).toBeInTheDocument();
+  expect(screen.getByText(/2 reviews due/i)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Log today’s learning/i })).toHaveAttribute('href', '/learn');
+  expect(screen.getByText('Open Archive')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /All Semester Subjects/i })).toBeInTheDocument();
 });
 
 test('home rotates the newest five reviews and refreshes when the tab regains focus', async () => {

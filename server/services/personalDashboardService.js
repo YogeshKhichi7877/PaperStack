@@ -68,7 +68,7 @@ function publicSolution(solution = {}) {
 
 async function getPersonalDashboard(userId) {
   const user = await User.findById(userId)
-    .select('username displayName email avatar authProvider semester currentSemester role bookmarks')
+    .select('username displayName email avatar authProvider semester currentSemester branch currentSubjectCodes role bookmarks')
     .populate({
       path: 'bookmarks',
       select:
@@ -201,6 +201,8 @@ async function getPersonalDashboard(userId) {
       avatar: user.avatar || '',
       role: user.role || 'student',
       semester: Number(user.semester || user.currentSemester) || null,
+      branch: user.branch || '',
+      currentSubjectCodes: Array.isArray(user.currentSubjectCodes) ? user.currentSubjectCodes : [],
     },
     stats,
     contributor: {

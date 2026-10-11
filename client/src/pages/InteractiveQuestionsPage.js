@@ -998,6 +998,15 @@ function QuestionCard({
         </button>
 
         <div className="iq-card-utility-actions">
+          {question.topicKeys?.[0] && subjectCode && (
+            <Link
+              to={`/practice?subjectCode=${encodeURIComponent(subjectCode)}&topicKey=${encodeURIComponent(question.topicKeys[0])}&topicName=${encodeURIComponent(question.primaryTopic || question.topics?.[0] || 'Topic')}`}
+              title="Start a personalized session for this topic"
+            >
+              <Target size={15} />
+              Practice topic
+            </Link>
+          )}
           {sourceUrl && (
             <a
               href={sourceUrl}

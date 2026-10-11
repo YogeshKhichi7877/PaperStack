@@ -64,6 +64,8 @@ import {
   getSemesterSurvivalPack,
 } from '../services/semesterSurvivalApi';
 
+import { getLearningDashboard } from '../services/learningApi';
+
 import './PersonalDashboardPage.css';
 
 /* =========================================================
@@ -444,6 +446,9 @@ export default function PersonalDashboardPage({
         scanLocalStudyState()
     );
 
+  const [currentSubjects, setCurrentSubjects] = useState('');
+  const [learningSummary, setLearningSummary] = useState(null);
+
   /* =========================================================
      PHOTO PREVIEW
   ========================================================= */
@@ -504,6 +509,9 @@ export default function PersonalDashboardPage({
               ?.name ||
               ''
           );
+
+          setBranch(result?.user?.branch || 'CSE');
+          setCurrentSubjects((result?.user?.currentSubjectCodes || []).join(', '));
 
           setAuthError(
             false
@@ -574,6 +582,14 @@ export default function PersonalDashboardPage({
   }, [
     toast,
   ]);
+
+  useEffect(() => {
+    let mounted = true;
+    getLearningDashboard()
+      .then((result) => { if (mounted) setLearningSummary(result); })
+      .catch(() => { if (mounted) setLearningSummary(null); });
+    return () => { mounted = false; };
+  }, []);
 
   /* =========================================================
      SEMESTER WORKSPACE
@@ -788,8 +804,12 @@ export default function PersonalDashboardPage({
     try {
       let updatedUser =
         await updateProfile(
-          nextName,
-          semester
+          {
+            displayName: nextName,
+            semester,
+            branch,
+            currentSubjectCodes: currentSubjects.split(',').map((value) => value.trim().toUpperCase()).filter(Boolean),
+          }
         );
 
       setDashboard(
@@ -807,6 +827,10 @@ export default function PersonalDashboardPage({
 
             semester:
               updatedUser.semester,
+
+            branch: updatedUser.branch,
+
+            currentSubjectCodes: updatedUser.currentSubjectCodes || [],
           },
         })
       );
@@ -825,6 +849,10 @@ export default function PersonalDashboardPage({
 
                 semester:
                   updatedUser.semester,
+
+                branch: updatedUser.branch,
+
+                currentSubjectCodes: updatedUser.currentSubjectCodes || [],
               }
             : current
       );
@@ -1369,6 +1397,24 @@ export default function PersonalDashboardPage({
                   </div>
                   <small>Changing this updates your homepage, archive defaults, subjects and study tools.</small>
                 </fieldset>
+
+                <label>
+                  <span>Branch</span>
+                  <select value={branch} onChange={(event) => setBranch(event.target.value)}>
+                    {BRANCHES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Current subjects</span>
+                  <input
+                    value={currentSubjects}
+                    onChange={(event) => setCurrentSubjects(event.target.value)}
+                    placeholder="CS301, CS302, EC305"
+                    maxLength={240}
+                  />
+                  <small>Enter subject codes separated by commas.</small>
+                </label>
               </div>
 
               <button
@@ -1582,6 +1628,24 @@ export default function PersonalDashboardPage({
               size={13}
             />
           </Link>
+        </section>
+
+        <section className="pd-learning-intelligence" aria-labelledby="pd-learning-title">
+          <div>
+            <span>My learning</span>
+            <h2 id="pd-learning-title">Learning intelligence</h2>
+            <p>Mastery changes only from validated practice evidence. Lecture logs record coverage separately.</p>
+          </div>
+          <dl>
+            <div><dt>Overall mastery</dt><dd>{learningSummary?.overallMastery == null ? '—' : `${learningSummary.overallMastery}%`}</dd></div>
+            <div><dt>Reviews due</dt><dd>{learningSummary?.dueReviews?.length ?? '—'}</dd></div>
+            <div><dt>Weak topics</dt><dd>{learningSummary?.weakTopics?.length ?? '—'}</dd></div>
+            <div><dt>PSR</dt><dd>{learningSummary?.rating?.globalRating ?? '—'}</dd></div>
+          </dl>
+          <div className="pd-learning-actions">
+            <Link to="/learn">Log today’s learning</Link>
+            <Link to="/learning-dashboard">View topic progress</Link>
+          </div>
         </section>
 
         {/* =================================================
@@ -2133,7 +2197,7 @@ export default function PersonalDashboardPage({
               </span>
             </Link>
 
-            <Link to="/streaks">
+            <Link to="/dashboard">
               <Flame
                 size={15}
               />

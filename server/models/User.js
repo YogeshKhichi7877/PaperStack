@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { OFFICIAL_BRANCHES } = require('../utils/branches');
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -52,6 +53,15 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+
+  branch: {
+    type: String,
+    enum: OFFICIAL_BRANCHES,
+    default: null,
+    index: true
+  },
+  currentSubjectCodes: { type: [{ type: String, maxlength: 30 }], default: [] },
+  academicProfilePublic: { type: Boolean, default: false },
 
   bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Paper' }]
 }, { timestamps: true });

@@ -8,6 +8,7 @@ import paperStackOwl from '../assets/Paperstack_auth_owl.png';
 import paperStackWordmark from '../assets/Paperstack_auth_wordmark.png';
 import onboardingStudyOwl from '../assets/paperstack-onboarding-study-owl.png';
 import '../components/StudentProfile.css';
+import { OFFICIAL_BRANCHES } from '../config/branches';
 
 const SUPPORTED_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 const StudentProfileContext = createContext({
@@ -32,9 +33,11 @@ function validSemester(value) {
 function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) {
   const [displayName, setDisplayName] = useState(initialProfile.displayName || '');
   const [semester, setSemester] = useState(validSemester(initialProfile.semester));
+  const [branch, setBranch] = useState(initialProfile.branch || 'CSE');
+  const [currentSubjects, setCurrentSubjects] = useState((initialProfile.currentSubjectCodes || []).join(', '));
   const dialogRef = useRef(null);
   const nameRef = useRef(null);
-  const isValid = cleanName(displayName).length >= 2 && Boolean(semester);
+  const isValid = cleanName(displayName).length >= 2 && Boolean(semester) && Boolean(branch);
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -47,7 +50,7 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
         return;
       }
       if (event.key !== 'Tab') return;
-      const focusable = dialogRef.current?.querySelectorAll('button:not([disabled]), input:not([disabled])');
+      const focusable = dialogRef.current?.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled])');
       if (!focusable?.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -63,7 +66,12 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
 
   const submit = (event) => {
     event.preventDefault();
-    if (isValid) onSave({ displayName: cleanName(displayName), semester });
+    if (isValid) onSave({
+      displayName: cleanName(displayName),
+      semester,
+      branch,
+      currentSubjectCodes: currentSubjects.split(',').map((value) => value.trim().toUpperCase()).filter(Boolean),
+    });
   };
 
   return (
@@ -143,6 +151,19 @@ function ProfileDialog({ initialProfile, onboarding, saving, onSave, onClose }) 
                 ))}
               </div>
             </fieldset>
+            <label htmlFor="student-branch">Branch</label>
+            <select id="student-branch" className="student-profile-select" value={branch} onChange={(event) => setBranch(event.target.value)}>
+              {OFFICIAL_BRANCHES.map((item) => <option key={item.key} value={item.key}>{item.key}</option>)}
+            </select>
+            <label htmlFor="student-current-subjects">Current subjects <small>(optional)</small></label>
+            <input
+              id="student-current-subjects"
+              className="student-profile-subjects"
+              value={currentSubjects}
+              maxLength={240}
+              placeholder="CS301, CS302"
+              onChange={(event) => setCurrentSubjects(event.target.value)}
+            />
             <div className="student-profile-actions">
               {!onboarding && <button type="button" className="student-profile-cancel" onClick={onClose}>Cancel</button>}
               <button type="submit" className="student-profile-save" disabled={!isValid || saving}>
@@ -181,11 +202,11 @@ export function StudentProfileProvider({ user, authReady, onUserUpdate, toast, c
       const onboardingCompleted = typeof user.onboardingCompleted === 'boolean'
         ? user.onboardingCompleted
         : Boolean(displayName && semester);
-      setProfile({ displayName, semester, onboardingCompleted });
+      setProfile({ displayName, semester, branch: user.branch || 'CSE', currentSubjectCodes: user.currentSubjectCodes || [], onboardingCompleted });
     } else {
       // Guests intentionally browse the complete archive. Academic preferences
       // belong to an account so they can be restored reliably on every device.
-      setProfile({ displayName: '', semester: null, onboardingCompleted: true });
+      setProfile({ displayName: '', semester: null, branch: '', currentSubjectCodes: [], onboardingCompleted: true });
     }
     setOnboardingDismissed(false);
   }, [authReady, user]);
@@ -194,6 +215,8 @@ export function StudentProfileProvider({ user, authReady, onUserUpdate, toast, c
     const next = {
       displayName: cleanName(changes.displayName ?? profile?.displayName),
       semester: validSemester(changes.semester ?? profile?.semester),
+      branch: changes.branch ?? profile?.branch ?? 'CSE',
+      currentSubjectCodes: Array.isArray(changes.currentSubjectCodes) ? changes.currentSubjectCodes.slice(0, 16) : profile?.currentSubjectCodes || [],
       onboardingCompleted: true,
     };
     if (next.displayName.length < 2 || !next.semester) return false;
@@ -207,6 +230,8 @@ export function StudentProfileProvider({ user, authReady, onUserUpdate, toast, c
           name: savedUser.displayName || next.displayName,
           displayName: savedUser.displayName || next.displayName,
           semester: savedUser.semester || next.semester,
+          branch: savedUser.branch || next.branch,
+          currentSubjectCodes: savedUser.currentSubjectCodes || next.currentSubjectCodes,
           onboardingCompleted: savedUser.onboardingCompleted ?? true,
         }));
       }

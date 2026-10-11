@@ -57,7 +57,10 @@ const questionSchema = new mongoose.Schema({
   paperId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Paper',
-    required: true,
+    // PYQs point to a Paper. Reusable PaperStack-generated practice questions
+    // intentionally do not need a synthetic parent paper.
+    required: false,
+    default: null,
     index: true,
   },
 
@@ -155,6 +158,27 @@ const questionSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+  topicKeys: {
+    type: [String],
+    default: [],
+    index: true,
+  },
+  conceptIds: {
+    type: [String],
+    default: [],
+  },
+  sourceType: {
+    type: String,
+    enum: ['PYQ', 'PAPERSTACK_GENERATED', 'FACULTY', 'COMMUNITY', 'ADMIN'],
+    default: 'PYQ',
+    index: true,
+  },
+  generatedByAI: { type: Boolean, default: false, index: true },
+  ratingEligible: { type: Boolean, default: false, index: true },
+  questionRating: { type: Number, min: 500, max: 2500, default: null },
+  options: { type: [String], default: [] },
+  // Kept out of ordinary queries and every public question projection.
+  answerKey: { type: String, default: '', select: false },
 
   sourceLocation: {
     type: sourceLocationSchema,
@@ -241,6 +265,8 @@ questionSchema.index({ subjectKey: 1, year: -1, examType: 1 });
 questionSchema.index({ subjectCode: 1, year: -1, examType: 1 });
 questionSchema.index({ branch: 1, semester: 1, year: -1 });
 questionSchema.index({ topics: 1 });
+questionSchema.index({ subjectCode: 1, topicKeys: 1, ratingEligible: 1, status: 1 });
+questionSchema.index({ sourceType: 1, subjectCode: 1, difficulty: 1, createdAt: -1 });
 questionSchema.index({ textHash: 1, subjectCode: 1 });
 questionSchema.index({ 'duplicateReview.classification': 1, needsReview: 1 });
 questionSchema.index(

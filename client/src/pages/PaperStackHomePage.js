@@ -145,6 +145,7 @@ import {
 import { API_URL } from '../config/appConfig';
 import { getPublicAnalytics, getPublicPapers } from '../services/paperApi';
 import { getContributorLeaderboard } from '../services/contributorApi';
+import { getLearningDashboard } from '../services/learningApi';
 import { getSubjectHubPath } from '../utils/subjectRoute';
 import { useStudentProfile } from '../context/StudentProfileContext';
 
@@ -188,7 +189,20 @@ export default function PaperStackHomePage({ user }) {
   const [testimonials, setTestimonials] = useState([]);
   const [activeTestimonialIndex, setActiveTestimonialIndex] = useState(0);
   const [reviewsPaused, setReviewsPaused] = useState(false);
+  const [learningSummary, setLearningSummary] = useState(null);
   const testimonialIds = useRef('');
+
+  useEffect(() => {
+    let active = true;
+    if (!user) {
+      setLearningSummary(null);
+      return undefined;
+    }
+    getLearningDashboard()
+      .then((result) => { if (active) setLearningSummary(result); })
+      .catch(() => { if (active) setLearningSummary(null); });
+    return () => { active = false; };
+  }, [user]);
 
   useEffect(() => {
     let active = true;
@@ -403,6 +417,29 @@ export default function PaperStackHomePage({ user }) {
           aria-hidden="true"
         />
       </section>
+
+      {user && (
+        <section className="home-continue-learning" aria-labelledby="continue-learning-title">
+          <div>
+            <span className="home-continue-kicker">Today</span>
+            <h2 id="continue-learning-title">Continue learning</h2>
+            {learningSummary ? (
+              <p>
+                <strong>{learningSummary.dueReviews?.length || 0} reviews due</strong>
+                {learningSummary.mastery?.[0] && (
+                  <> · {learningSummary.mastery[0].topicName} {learningSummary.mastery[0].masteryScore}% mastery</>
+                )}
+              </p>
+            ) : (
+              <p>Log today’s class or begin a short practice session.</p>
+            )}
+          </div>
+          <div className="home-continue-actions">
+            <Link to="/learn">Log today’s learning</Link>
+            <Link to="/practice" className="secondary">Continue practice</Link>
+          </div>
+        </section>
+      )}
 
       {errors.length > 0 && (
         <p

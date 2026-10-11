@@ -9,6 +9,7 @@ const {
   evaluateBatchWithMode,
   evaluationAiEnabled,
 } = require('../services/mockEvaluationAiService');
+const { recordMockEvaluation } = require('../services/practiceService');
 
 const router = express.Router();
 
@@ -127,6 +128,9 @@ router.post('/evaluate', async (req, res) => {
       items,
       mode
     );
+    const learningUpdate = req.user?._id
+      ? await recordMockEvaluation(req.user._id, String(req.body?.mockId || ''), items, evaluation)
+      : null;
 
     res.json({
       mockId: String(req.body?.mockId || ''),
@@ -136,6 +140,7 @@ router.post('/evaluate', async (req, res) => {
       disclaimer:
         'Scores are PaperStack practice estimates, not official IIIT Surat grades.',
       ...evaluation,
+      learningUpdate,
       items: evaluation.items.map((item) => {
         const generated = generatedById.get(String(item.questionId));
         return generated

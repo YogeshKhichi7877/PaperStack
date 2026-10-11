@@ -19,8 +19,8 @@ export async function getPersonalDashboard() {
   return response.data;
 }
 
-export async function updateProfile(displayName, semester) {
-  const response = await axios.patch(`${API_URL}/api/user/profile`, { displayName, semester }, { headers: authHeader() });
+export async function updateProfile({ displayName, semester, branch, currentSubjectCodes }) {
+  const response = await axios.patch(`${API_URL}/api/user/profile`, { displayName, semester, branch, currentSubjectCodes }, { headers: authHeader() });
   return response.data.user;
 }
 

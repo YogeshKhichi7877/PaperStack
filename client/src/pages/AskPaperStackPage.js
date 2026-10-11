@@ -399,6 +399,10 @@ export default function AskPaperStackPage({
             stats:
               data.stats ||
               {},
+
+            contextSources:
+              data.contextSources ||
+              [],
           },
         ]
       );
@@ -947,6 +951,22 @@ export default function AskPaperStackPage({
                           </MathAnswer>
                         </Suspense>
                       </section>
+
+                      {message.contextSources?.length > 0 && (
+                        <section className="aps-context-sources" aria-label="Sources used for this answer">
+                          <strong>Sources used</strong>
+                          <div>
+                            {message.contextSources.map((source, index) => (
+                              <span key={`${source.sourceType}-${source.resourceId}-${index}`}>
+                                <FileText size={14} />
+                                <b>{source.sourceType === 'PRIVATE_CLASS_MATERIAL' ? 'Your class material' : 'PaperStack resource'}</b>
+                                {source.title}
+                                {source.locatorNumber ? ` · ${source.locatorType === 'SLIDE' ? 'Slide' : 'Page'} ${source.locatorNumber}` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </section>
+                      )}
 
                       {/* ===================================
                           WARNINGS

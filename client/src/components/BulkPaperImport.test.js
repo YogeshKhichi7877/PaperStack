@@ -4,7 +4,7 @@ import BulkPaperImport from './BulkPaperImport';
 import { getBulkImportConfig, importPaperFiles } from '../services/bulkPaperImportApi';
 jest.mock('../services/bulkPaperImportApi', () => ({ getBulkImportConfig: jest.fn(), importPaperFiles: jest.fn() }));
 jest.mock('./BulkImportProgress', () => ({ __esModule: true, default: ({ batchId }) => <div>Progress for {batchId}</div> }));
-jest.mock('react-router-dom', () => ({ Link: ({ children, to }) => <a href={to}>{children}</a> }));
+jest.mock('react-router-dom', () => ({ Link: ({ children, to }) => <a href={to}>{children}</a> }), { virtual: true });
 beforeEach(() => { jest.clearAllMocks(); sessionStorage.clear(); getBulkImportConfig.mockResolvedValue({ maxFiles: 30, maxFileMb: 30, maxBatchMb: 150 }); });
 const file = (name = 'paper.pdf') => new File(['%PDF-1.4'], name, { type: 'application/pdf' });
 const show = () => render(<BulkPaperImport toast={jest.fn()} />);

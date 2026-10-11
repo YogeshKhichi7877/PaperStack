@@ -70,6 +70,8 @@ const pageLoaders = {
   '/mock-evaluation': () => import('./pages/MockEvaluationPage'),
   '/semester-survival': () => import('./pages/SemesterSurvivalPage'),
   '/dashboard': () => import('./pages/PersonalDashboardPage'),
+  '/learning-dashboard': () => import('./pages/LearningDashboardPage'),
+  '/settings': () => import('./pages/PersonalDashboardPage'),
   '/notifications': () => import('./pages/NotificationsPage'),
   '/streaks': () => import('./pages/StreaksBadgesPage'),
   '/branch-competition': () => import('./pages/BranchCompetitionPage'),
@@ -80,6 +82,10 @@ const pageLoaders = {
   '/admin/product-analytics': () => import('./pages/AdminProductAnalyticsPage'),
   '/admin/question-extraction': () => import('./pages/AdminQuestionExtractionPage'),
   '/admin/question-solutions': () => import('./pages/AdminQuestionSolutionsPage'),
+  '/learn': () => import('./pages/LearningTodayPage'),
+  '/practice': () => import('./pages/PracticePage'),
+  '/leaderboard': () => import('./pages/AcademicLeaderboardPage'),
+  '/profile': () => import('./pages/AcademicProfilePage'),
 };
 
 const TestimonialsPage = lazyPage(pageLoaders['/testimonials'], (module) => module.TestimonialsPage);
@@ -100,6 +106,7 @@ const MockExamGeneratorPage = lazyPage(pageLoaders['/mock-exams']);
 const MockEvaluationPage = lazyPage(pageLoaders['/mock-evaluation']);
 const SemesterSurvivalPage = lazyPage(pageLoaders['/semester-survival']);
 const PersonalDashboardPage = lazyPage(pageLoaders['/dashboard']);
+const LearningDashboardPage = lazyPage(pageLoaders['/learning-dashboard']);
 const NotificationsPage = lazyPage(pageLoaders['/notifications']);
 const StreaksBadgesPage = lazyPage(pageLoaders['/streaks']);
 const BranchCompetitionPage = lazyPage(pageLoaders['/branch-competition']);
@@ -110,6 +117,10 @@ const AdminModerationPage = lazyPage(pageLoaders['/admin/moderation']);
 const AdminProductAnalyticsPage = lazyPage(pageLoaders['/admin/product-analytics']);
 const AdminQuestionExtractionPage = lazyPage(pageLoaders['/admin/question-extraction']);
 const AdminQuestionSolutionsPage = lazyPage(pageLoaders['/admin/question-solutions']);
+const LearningTodayPage = lazyPage(pageLoaders['/learn']);
+const PracticePage = lazyPage(pageLoaders['/practice']);
+const AcademicLeaderboardPage = lazyPage(pageLoaders['/leaderboard']);
+const AcademicProfilePage = lazyPage(pageLoaders['/profile']);
 
 function preloadRoute(path) {
   const exact = pageLoaders[path];
@@ -207,6 +218,9 @@ function storeAuthSession(authPayload, setUser) {
     onboardingCompleted: user.onboardingCompleted,
     avatar: user.avatar || '',
     authProvider: user.authProvider || 'local',
+    branch: user.branch || '',
+    currentSubjectCodes: user.currentSubjectCodes || [],
+    academicProfilePublic: Boolean(user.academicProfilePublic),
   });
 }
 
@@ -374,31 +388,35 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const primaryItems = [
     { to: '/', label: 'Home' },
     { to: '/archive', label: 'Archive' },
-    { to: '/ask-paperstack', label: 'Ask PaperStack' },
     { to: '/questions', label: 'Questions' },
-    { to: '/semester-survival', label: 'Survival' },
-    { to: '/mock-exams', label: 'Mocks' },
-    { to: '/contribute', label: 'Contribute', featured: true },
+    { to: '/practice', label: 'Practice' },
+    { to: '/exam-war-room', label: 'Exams' },
+    { to: '/learn', label: 'Learn', featured: true },
   ];
 
   const menuSections = [
     {
       title: 'Study & AI',
       items: [
+        { to: '/learning-dashboard', label: 'Learning Intelligence' },
+        { to: '/leaderboard', label: 'Academic Leaderboard' },
         { to: '/exam-mode', label: 'ZIP download' },
         { to: '/pyq-intelligence', label: 'Repeated topics' },
         { to: '/important-topics', label: 'Top Exam Topics' },
         { to: '/revision-sheets', label: 'Revision Notes' },
         { to: '/exam-war-room', label: 'Exam Planner' },
+        { to: '/mock-exams', label: 'Mock Exams' },
+        { to: '/semester-survival', label: 'Semester Survival' },
         { to: '/ask-paperstack', label: 'Ask PaperStack' },
       ],
     },
     {
       title: 'Community',
       items: [
+        { to: '/contribute', label: 'Contribute a Paper' },
         { to: '/missing-papers', label: 'Missing Papers' },
         { to: '/contribute-resource', label: 'Upload Notes & Resources' },
-        { to: '/contributors', label: 'Leaderboard' },
+        { to: '/contributors', label: 'Community Reputation' },
         { to: '/verify-archive', label: 'Verify Papers' },
         { to: '/branch-competition', label: 'Branch Rankings' },
         { to: '/trending', label: 'Trending Papers' },
@@ -410,6 +428,8 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     {
       title: 'Archive',
       items: [
+        { to: '/archive', label: 'Papers & Subject Hubs' },
+        { to: '/questions', label: 'Question Library' },
         { to: '/search', label: 'Search All Content' },
         { to: '/archive-progress', label: 'Archive Progress' },
         { to: '/analytics', label: 'Archive Analytics' },
@@ -417,6 +437,8 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     },
     ...(user ? [{ title: 'Account', items: [
       { to: '/dashboard', label: 'Dashboard' },
+      { to: '/profile', label: 'Academic Profile' },
+      { to: '/settings', label: 'Account Settings' },
       { to: '/notifications', label: 'Notifications' },
     ] }] : []),
     ...(isAdmin
@@ -1055,7 +1077,7 @@ function ContributionPopup() {
 }
 
 function Home({ user, setUser, isAdmin, setIsAdmin, toast }) {
-  return <div className="app-container"><Helmet><title>PaperStack - IIIT Surat Past Papers</title><meta name="description" content="IIIT Surat past papers, solutions, and study tools, curated by students." /><link rel="canonical" href={`${FRONTEND_URL}/`} /></Helmet><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><PaperStackHomePage user={user} /><Footer /></div>;
+  return <div className="app-container"><Helmet><title>PaperStack - IIIT Surat Past Papers</title><meta name="description" content="IIIT Surat past papers, solutions, and study tools, curated by students." /><link rel="canonical" href={`${FRONTEND_URL}/`} /></Helmet><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><PaperStackHomePage user={user} toast={toast} /><Footer /></div>;
 }
 
 function getArchiveSubjectIcon(paper) {
@@ -3475,6 +3497,9 @@ export default function App() {
           onboardingCompleted: res.data.onboardingCompleted,
           avatar: res.data.avatar || '',
           authProvider: res.data.authProvider || 'local',
+          branch: res.data.branch || '',
+          currentSubjectCodes: res.data.currentSubjectCodes || [],
+          academicProfilePublic: Boolean(res.data.academicProfilePublic),
         });
         if (semester) localStorage.setItem('userSemester', semester);
       })
@@ -3503,6 +3528,11 @@ export default function App() {
       <React.Suspense fallback={<RouteLoadingFallback />}>
       <Routes>
         <Route path="/" element={<Home user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
+        <Route path="/learn" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><LearningTodayPage user={user} toast={toast} /><Footer /></div>} />
+        <Route path="/practice" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><PracticePage user={user} toast={toast} /><Footer /></div>} />
+        <Route path="/leaderboard" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><AcademicLeaderboardPage /><Footer /></div>} />
+        <Route path="/profile" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><AcademicProfilePage user={user} toast={toast} /><Footer /></div>} />
+        <Route path="/u/:username" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><AcademicProfilePage user={user} toast={toast} /><Footer /></div>} />
         <Route path="/archive" element={<ArchivePage user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />} />
         <Route path="/testimonials" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><TestimonialsPage user={user} isAdmin={isAdmin} /><Footer /></div>} />
         <Route path="/report" element={<div className="app-container"><Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} /><SiteReportPage user={user} /><Footer /></div>} />
@@ -3691,6 +3721,28 @@ export default function App() {
 
         <Route
           path="/dashboard"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <PersonalDashboardPage toast={toast} setUser={setUser} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/learning-dashboard"
+          element={
+            <div className="app-container">
+              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
+              <LearningDashboardPage user={user} toast={toast} />
+              <Footer />
+            </div>
+          }
+        />
+
+        <Route
+          path="/settings"
           element={
             <div className="app-container">
               <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />

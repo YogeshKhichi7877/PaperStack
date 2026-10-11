@@ -117,6 +117,11 @@ module.exports = function createAdminModerationRoutes({
             });
         }
 
+        const existing = await Question.findById(req.params.questionId)
+          .select('+answerKey paperId questionType options status needsReview')
+          .lean();
+        if (!existing) return res.status(404).json({ error: 'Question not found' });
+
         const edits = {};
         if (req.body?.questionText !== undefined) {
           const questionText = String(req.body.questionText).normalize('NFC').trim();
@@ -129,8 +134,32 @@ module.exports = function createAdminModerationRoutes({
           if (marks !== null && (!Number.isFinite(marks) || marks < 0 || marks > 200)) return res.status(400).json({ error: 'Check the question marks.' });
           edits.marks = marks;
         }
+        if (req.body?.questionType !== undefined) {
+          const questionType = String(req.body.questionType).trim().toLowerCase();
+          if (!['mcq', 'objective', 'numerical', 'conceptual', 'short_answer', 'scenario', 'unknown'].includes(questionType)) return res.status(400).json({ error: 'Choose a supported question type.' });
+          edits.questionType = questionType;
+        }
+        if (req.body?.options !== undefined) {
+          if (!Array.isArray(req.body.options) || req.body.options.length > 10) return res.status(400).json({ error: 'Question options must be a list of at most 10 values.' });
+          edits.options = req.body.options.map((item) => String(item).trim().slice(0, 1000)).filter(Boolean);
+        }
+        if (req.body?.answerKey !== undefined) edits.answerKey = String(req.body.answerKey).trim().slice(0, 2000);
+        if (req.body?.questionRating !== undefined) {
+          const questionRating = Number(req.body.questionRating);
+          if (!Number.isFinite(questionRating) || questionRating < 500 || questionRating > 2500) return res.status(400).json({ error: 'Question rating must be between 500 and 2500.' });
+          edits.questionRating = Math.round(questionRating);
+        }
+        if (req.body?.ratingEligible !== undefined) {
+          const effectiveType = edits.questionType || existing.questionType;
+          const effectiveAnswer = edits.answerKey !== undefined ? edits.answerKey : existing.answerKey;
+          const effectiveOptions = edits.options !== undefined ? edits.options : existing.options;
+          if (req.body.ratingEligible === true && !['mcq', 'objective', 'numerical'].includes(effectiveType)) return res.status(400).json({ error: 'Only objective questions can affect academic rating.' });
+          if (req.body.ratingEligible === true && !effectiveAnswer) return res.status(400).json({ error: 'A reviewed answer key is required before enabling rating.' });
+          if (req.body.ratingEligible === true && effectiveType === 'mcq' && !effectiveOptions.includes(effectiveAnswer)) return res.status(400).json({ error: 'The MCQ answer key must match one of its options.' });
+          edits.ratingEligible = req.body.ratingEligible === true;
+        }
+        if (status === 'rejected') edits.ratingEligible = false;
         if (status !== 'rejected') {
-          const existing = await Question.findById(req.params.questionId).select('paperId').lean();
           if (existing?.paperId) {
             const paper = await require('../models/Paper').findById(existing.paperId).select('importBatchId processing.metadata').lean();
             const metadata = paper?.processing?.metadata;
@@ -154,19 +183,8 @@ module.exports = function createAdminModerationRoutes({
             }
           ).lean();
 
-        if (
-          !question
-        ) {
-          return res
-            .status(404)
-            .json({
-              error:
-                'Question not found',
-            });
-        }
-
         if (Object.keys(edits).length) await require('../services/semanticAiAnswerService').invalidateQuestionAnswers([question._id]);
-        await require('../services/questionExtractionService').syncPaperQuestionReview(question.paperId);
+        if (question.paperId) await require('../services/questionExtractionService').syncPaperQuestionReview(question.paperId);
         return res.json({
           message:
             `Question marked ${status}.`,

@@ -1,0 +1,27 @@
+import axios from 'axios';
+import { API_URL } from '../config/appConfig';
+import { authHeader } from './authHeaders';
+
+export const getLearningDashboard = async () => (await axios.get(`${API_URL}/api/learning/dashboard`, { headers: authHeader() })).data;
+export const mapLearningTopics = async (body) => (await axios.post(`${API_URL}/api/learning/topic-map`, body, { headers: authHeader() })).data;
+export const saveLearningCheckin = async (body) => (await axios.post(`${API_URL}/api/learning/checkins`, body, { headers: authHeader() })).data;
+export const getSubjectTopics = async (subjectCode) => (await axios.get(`${API_URL}/api/learning/subjects/${encodeURIComponent(subjectCode)}/topics`, { headers: authHeader() })).data;
+export const createPracticeSession = async (body) => (await axios.post(`${API_URL}/api/learning/practice-sessions`, body, { headers: authHeader() })).data;
+export const getPracticeSession = async (id) => (await axios.get(`${API_URL}/api/learning/practice-sessions/${id}`, { headers: authHeader() })).data;
+export const submitPracticeAttempt = async (id, body) => (await axios.post(`${API_URL}/api/learning/practice-sessions/${id}/attempts`, body, { headers: authHeader() })).data;
+export const getPrivateNotes = async (params = {}) => (await axios.get(`${API_URL}/api/learning/notes`, { headers: authHeader(), params })).data;
+export const savePrivateNote = async (body) => (await axios.post(`${API_URL}/api/learning/notes`, body, { headers: authHeader() })).data;
+export const updateDoubtStatus = async (id, status) => (await axios.patch(`${API_URL}/api/learning/notes/${encodeURIComponent(id)}/status`, { status }, { headers: authHeader() })).data;
+export const setAcademicProfileVisibility = async (isPublic) => (await axios.patch(`${API_URL}/api/learning/profile-visibility`, { public: isPublic }, { headers: authHeader() })).data;
+export const getAcademicLeaderboard = async (params = {}) => (await axios.get(`${API_URL}/api/academic/leaderboard`, { params })).data;
+export const getAcademicProfile = async (username) => (await axios.get(`${API_URL}/api/academic/profile/${encodeURIComponent(username)}`)).data;
+export const getPrivateStudyResources = async (params = {}) => (await axios.get(`${API_URL}/api/learning/resources`, { headers: authHeader(), params })).data;
+export const uploadPrivateStudyResource = async (file, fields) => {
+  const form = new FormData();
+  form.append('file', file);
+  Object.entries(fields || {}).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') form.append(key, value); });
+  return (await axios.post(`${API_URL}/api/learning/resources`, form, { headers: authHeader(), timeout: 60_000 })).data;
+};
+export const retryPrivateStudyResource = async (id) => (await axios.post(`${API_URL}/api/learning/resources/${encodeURIComponent(id)}/retry`, {}, { headers: authHeader() })).data;
+export const deletePrivateStudyResource = async (id) => (await axios.delete(`${API_URL}/api/learning/resources/${encodeURIComponent(id)}`, { headers: authHeader() })).data;
+export const practicePrivateStudyResource = async (id, count = 5) => (await axios.post(`${API_URL}/api/learning/resources/${encodeURIComponent(id)}/practice`, { count }, { headers: authHeader() })).data;

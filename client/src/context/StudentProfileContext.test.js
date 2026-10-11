@@ -61,7 +61,7 @@ test('name and semester are both required and semester selection is announced', 
 test('Continue persists onboarding and updates profile context without a refresh', async () => {
   localStorage.setItem('token', 'test-token');
   axios.patch.mockResolvedValue({
-    data: { user: { displayName: 'Yogesh', semester: 5, onboardingCompleted: true } },
+    data: { user: { displayName: 'Yogesh', semester: 5, branch: 'CSE', currentSubjectCodes: [], onboardingCompleted: true } },
   });
   const profileChanged = jest.fn();
   window.addEventListener('paperstack:profile-changed', profileChanged);
@@ -79,7 +79,7 @@ test('Continue persists onboarding and updates profile context without a refresh
 
   await waitFor(() => expect(axios.patch).toHaveBeenCalledWith(
     'http://localhost:5000/api/user/profile',
-    { displayName: 'Yogesh', semester: 5, onboardingCompleted: true },
+    { displayName: 'Yogesh', semester: 5, branch: 'CSE', currentSubjectCodes: [], onboardingCompleted: true },
     { headers: { Authorization: 'Bearer test-token' } }
   ));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -91,6 +91,8 @@ test('Continue persists onboarding and updates profile context without a refresh
   expect(profileChanged.mock.calls[0][0].detail).toEqual({
     displayName: 'Yogesh',
     semester: 5,
+    branch: 'CSE',
+    currentSubjectCodes: [],
     onboardingCompleted: true,
   });
   expect(toast).toHaveBeenCalledWith('Academic preferences saved.', 'success');

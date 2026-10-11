@@ -12,6 +12,8 @@ import {
 } from '../services/resourceApi';
 import './SubjectPage.css';
 import './SubjectPageCompact.css';
+import './Update4.css';
+import { getLearningDashboard } from '../services/learningApi';
 import SaveButton from '../components/SaveButton';
 import { recordStudyProgress } from '../services/studyProgressApi';
 import '../components/StudentUtility.css';
@@ -153,6 +155,7 @@ export default function SubjectPage({ user, toast }) {
   const [yearFilter, setYearFilter] = useState('');
   const [examFilter, setExamFilter] = useState('');
   const [query, setQuery] = useState('');
+  const [learning, setLearning] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -182,6 +185,19 @@ export default function SubjectPage({ user, toast }) {
     loadSubject();
     return () => { mounted = false; };
   }, [subjectKey]);
+
+  useEffect(() => {
+    let active = true;
+    if (!user || !summary?.subjectCode) { setLearning(null); return undefined; }
+    getLearningDashboard().then((dashboard) => {
+      if (!active) return;
+      const mastery = (dashboard.mastery || []).filter((item) => item.subjectCode === summary.subjectCode);
+      const weak = (dashboard.weakTopics || []).filter((item) => item.subjectCode === summary.subjectCode);
+      const due = (dashboard.dueReviews || []).filter((item) => item.subjectCode === summary.subjectCode);
+      setLearning({ mastery, weak, due, rating: dashboard.rating?.subjectRatings?.find((item) => item.subjectCode === summary.subjectCode) || null });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [summary?.subjectCode, user]);
 
   const years = useMemo(() => cleanList(resources.map((resource) => resource.year)).sort((a, b) => b - a), [resources]);
   const examTypes = useMemo(() => cleanList(resources.map((resource) => resource.examType)), [resources]);
@@ -309,6 +325,14 @@ export default function SubjectPage({ user, toast }) {
         </div>
 
       </section>
+
+      {user && (
+        <section className="u4-subject-progress">
+          <div><span className="u4-eyebrow">My progress</span><h2>{learning?.mastery?.length ? `${Math.round(learning.mastery.reduce((sum, item) => sum + item.masteryScore, 0) / learning.mastery.length)}% subject mastery` : 'Start building subject mastery'}</h2><p>{learning?.due?.length || 0} reviews due · {learning?.weak?.length || 0} weak topics · Subject rating {learning?.rating?.rating || 1000}</p></div>
+          <div>{learning?.mastery?.slice(0, 4).map((item) => <span key={item.topicKey}><b>{item.topicName}</b><small>{item.masteryScore}% · {item.status}</small></span>)}</div>
+          <Link className="u4-button primary" to="/learn">Log today’s learning</Link>
+        </section>
+      )}
 
       <nav className="subject-hub-tools" aria-label="Study this subject">
         <Link to={`/questions${studyQuery}`}>Practice questions</Link>

@@ -509,3 +509,17 @@
     transition: none;
   }
 }
+.student-profile-select,
+.student-profile-subjects {
+  width: 100%;
+  min-height: 46px;
+  margin: 7px 0 15px;
+  padding: 0 13px;
+  border: 1px solid #cbd8d5;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+.student-profile-subjects:focus,
+.student-profile-select:focus { outline: 3px solid rgba(19, 123, 109, .14); border-color: #137b6d; }

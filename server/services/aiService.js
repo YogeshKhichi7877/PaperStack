@@ -23,6 +23,8 @@ const TASK_ROUTES = Object.freeze({
   IMPORTANT_TOPIC_EXPLANATION: ['groq', 'gemini'],
   STUDY_PLANNER: ['groq', 'gemini'],
   GENERAL_ACADEMIC: ['groq', 'gemini'],
+  TOPIC_MAPPING: ['groq', 'gemini'],
+  PRACTICE_QUESTION_GENERATION: ['groq', 'gemini'],
 });
 
 function scopedEnv(env, task) {

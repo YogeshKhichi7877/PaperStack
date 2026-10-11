@@ -84,6 +84,10 @@ const catalogRoutes = require('./routes/catalogRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const createSmartContributionRouter = require('./routes/smartContributionRoutes');
 const createFeedbackRoutes = require('./routes/feedbackRoutes');
+const { createLearningRoutes } = require('./routes/learningRoutes');
+const { createPrivateStudyResourceRoutes } = require('./routes/privateStudyResourceRoutes');
+const academicIdentityRoutes = require('./routes/academicIdentityRoutes');
+const { startPrivateStudyResourceRecovery } = require('./services/privateStudyResourceService');
 const { OFFICIAL_BRANCHES, normalizeBranch, normalizeBranchList } = require('./utils/branches');
 const { incrementResourceStatForPaper } = require('./services/resourceService');
 const { connectDatabase, requireDatabase } = require('./services/databaseConnection');
@@ -322,6 +326,8 @@ const studentAiPaths = [
   '/api/mock-exams/generate',
   '/api/mock-exams/regenerate-question',
   '/api/mock-evaluation/evaluate',
+  '/api/learning/topic-map',
+  '/api/learning/practice-sessions/:id/attempts',
 ];
 app.use(studentAiPaths, (req, res, next) => {
   if (req.method !== 'POST') return next();
@@ -368,6 +374,9 @@ app.use('/api/contributors', createContributorProfileRoutes({ authenticate }));
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/contributions', createSmartContributionRouter({ authenticate }));
+app.use('/api/learning/resources', createPrivateStudyResourceRoutes({ authenticate }));
+app.use('/api/learning', createLearningRoutes({ authenticate }));
+app.use('/api/academic', academicIdentityRoutes);
 app.use('/api', createFeedbackRoutes({ authenticate, authenticateAdmin }));
 
 if (!JWT_SECRET) {
@@ -437,6 +446,7 @@ mongoose.connection.on('disconnected', () => {
 
 mongoose.connection.on('connected', () => {
   startPaperProcessingRecovery();
+  startPrivateStudyResourceRecovery();
   databaseStatus = 'connected';
   if (mongoRetryTimer) clearTimeout(mongoRetryTimer);
   mongoRetryTimer = null;
@@ -511,6 +521,9 @@ function buildUserResponse(user) {
     bookmarks: user.bookmarks || [],
     avatar: user.avatar || '',
     authProvider: user.authProvider || 'local',
+    branch: user.branch || '',
+    currentSubjectCodes: user.currentSubjectCodes || [],
+    academicProfilePublic: Boolean(user.academicProfilePublic),
   };
 }
 
@@ -1211,7 +1224,7 @@ app.post('/api/auth/google/link', authenticate, async (req, res) => {
 
 app.get('/api/user/me', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('username displayName email semester currentSemester onboardingCompleted role bookmarks avatar authProvider').lean();
+    const user = await User.findById(req.user._id).select('username displayName email semester currentSemester onboardingCompleted role bookmarks avatar authProvider branch currentSubjectCodes academicProfilePublic').lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(buildUserResponse(user));
   } catch (err) {
@@ -1241,6 +1254,16 @@ app.patch('/api/user/profile', authenticate, async (req, res) => {
   try {
     const updates = { displayName };
     if (hasSemester) Object.assign(updates, { semester, currentSemester: semester, onboardingCompleted: true });
+    if (req.body?.branch !== undefined) {
+      const branch = normalizeBranch(req.body.branch);
+      if (!branch) return res.status(400).json({ error: 'Choose a valid branch.' });
+      updates.branch = branch;
+    }
+    if (Array.isArray(req.body?.currentSubjectCodes)) {
+      updates.currentSubjectCodes = [...new Set(req.body.currentSubjectCodes
+        .map((value) => String(value || '').trim().toUpperCase().slice(0, 30))
+        .filter((value) => /^[A-Z0-9&+._/-]+$/.test(value)))].slice(0, 16);
+    }
     const user = await User.findByIdAndUpdate(req.user._id, { $set: updates }, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ error: 'User not found' });
     return res.json({ user: buildUserResponse(user) });

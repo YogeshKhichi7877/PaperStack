@@ -20,9 +20,11 @@ test('primary navigation has no Dashboard, More, or theme toggle', () => {
   render(<Navbar user={null} setUser={() => {}} isAdmin={false} setIsAdmin={() => {}} toast={() => {}} />);
   const primary = screen.getByLabelText('Primary navigation');
   expect(within(primary).getByText('Archive')).toBeInTheDocument();
-  expect(within(primary).getByText('Ask PaperStack')).toBeInTheDocument();
+  expect(within(primary).getByText('Questions')).toBeInTheDocument();
+  expect(within(primary).getByText('Practice')).toBeInTheDocument();
+  expect(within(primary).getByText('Exams')).toBeInTheDocument();
+  expect(within(primary).getByText('Learn')).toBeInTheDocument();
   expect(within(primary).queryByText('Search')).not.toBeInTheDocument();
-  expect(within(primary).getByText('Contribute')).toBeInTheDocument();
   expect(within(primary).queryByText('Dashboard')).not.toBeInTheDocument();
   expect(within(primary).queryByText('More')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /toggle theme|dark mode|light mode/i })).not.toBeInTheDocument();
@@ -35,6 +37,8 @@ test('primary navigation has no Dashboard, More, or theme toggle', () => {
     'Top Exam Topics',
     'Revision Notes',
     'Exam Planner',
+    'Ask PaperStack',
+    'Question Library',
     'Upload Notes & Resources',
     'Verify Papers',
     'Branch Rankings',

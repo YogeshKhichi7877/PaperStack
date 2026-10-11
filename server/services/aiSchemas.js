@@ -53,6 +53,23 @@ const revisionSchema = z.object({
   formulas: z.array(z.object({ sourceId: shortText, sourceExpression: shortText, latex: shortText })).max(12).optional(),
 });
 const warRoomSchema = z.object({ briefing: shortText });
+const topicMappingSchema = z.object({
+  topics: z.array(z.object({
+    topicKey: z.string().min(1).max(180),
+    confidence: z.number().min(0).max(1),
+  })).max(8),
+});
+const practiceQuestionSchema = z.object({
+  questions: z.array(z.object({
+    questionText: z.string().trim().min(8).max(3000),
+    difficulty: z.enum(['easy', 'medium', 'hard']),
+    questionType: z.enum(['mcq', 'conceptual', 'short_answer', 'scenario', 'numerical']),
+    topicKey: z.string().min(1).max(180),
+    options: z.array(z.string().trim().min(1).max(500)).max(6).optional(),
+    answerKey: z.string().trim().min(1).max(5000),
+    marks: z.number().min(1).max(20),
+  })).min(1).max(30),
+});
 
 function parseAiJson(text, schema) {
   const cleaned = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
@@ -82,4 +99,6 @@ module.exports = {
   questionExtractionSchema,
   revisionSchema,
   warRoomSchema,
+  topicMappingSchema,
+  practiceQuestionSchema,
 };
