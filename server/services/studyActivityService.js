@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+const DailyLearningCheckin = require('../models/DailyLearningCheckin');
+const QuestionAttempt = require('../models/QuestionAttempt');
 const StudyActivity = require('../models/StudyActivity');
 
 const Contribution = require('../models/Contribution');
@@ -199,6 +202,21 @@ async function communityStats(
   };
 }
 
+// Read actual saved learning work, including historical records. Merely opening
+// a learning/practice page does not create an activity day here.
+async function learningActivities(userId, { Checkin = DailyLearningCheckin, Attempt = QuestionAttempt } = {}) {
+  const id = new mongoose.Types.ObjectId(String(userId));
+  const pipeline = [
+    { $match: { userId: id } },
+    { $group: { _id: { $dateToString: { date: '$createdAt', format: '%Y-%m-%d', timezone: 'Asia/Kolkata' } }, eventCount: { $sum: 1 } } },
+  ];
+  const [classes, attempts] = await Promise.all([Checkin.aggregate(pipeline), Attempt.aggregate(pipeline)]);
+  return [
+    ...classes.map((row) => ({ dayKey: row._id, categories: ['learn'], eventCount: row.eventCount })),
+    ...attempts.map((row) => ({ dayKey: row._id, categories: ['practice'], eventCount: row.eventCount })),
+  ];
+}
+
 async function getStudyStreak(
   userId,
   todayKey
@@ -206,6 +224,7 @@ async function getStudyStreak(
   const [
     activities,
     community,
+    learning,
   ] =
     await Promise.all([
       StudyActivity.find({
@@ -222,10 +241,11 @@ async function getStudyStreak(
       communityStats(
         userId
       ),
+      learningActivities(userId),
     ]);
 
   return buildStreakSnapshot({
-    activities,
+    activities: [...activities, ...learning],
     todayKey:
       validDayKey(
         todayKey
@@ -237,6 +257,7 @@ async function getStudyStreak(
 }
 
 module.exports = {
+  learningActivities,
   acceptableClientDay,
   communityStats,
   getStudyStreak,

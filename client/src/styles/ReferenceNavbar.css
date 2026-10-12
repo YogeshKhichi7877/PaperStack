@@ -16,3 +16,6 @@
 .ps-navbar-v3 .psnav-main-menu:focus-visible,.ps-navbar-v3 .psnav-profile summary:focus-visible{outline:3px solid #66c7ce;outline-offset:3px}
 @media(max-width:520px){.ps-navbar-v3 .psnav-mobile-panel{left:0;width:100%}.ps-navbar-v3 .psnav-group-links{grid-template-columns:1fr}}
 @media(min-width:1251px){.ps-navbar-v3 .psnav-mobile-primary{display:none}}
+
+/* Search has one home in the top bar, including narrow screens. */
+@media(max-width:850px){.ps-navbar-v3 .psnav-search{display:flex;width:clamp(90px,22vw,160px);padding-inline:8px;gap:4px}.ps-navbar-v3 .psnav-search input{min-width:0;font-size:12px}.ps-navbar-v3 .psnav-search>svg{display:none}.ps-navbar-v3 .psnav-actions{gap:4px}}

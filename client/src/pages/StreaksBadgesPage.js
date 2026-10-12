@@ -47,6 +47,8 @@ import './StreaksBadgesPage.css';
 ========================================================= */
 
 const CATEGORY_META = {
+  learn: { label: 'Saved classes', short: 'Learn', path: '/learn', icon: BookOpen },
+  practice: { label: 'Practice answers', short: 'Practice', path: '/practice', icon: Target },
   archive: {
     label: 'Archive',
     short: 'PYQs',
@@ -188,7 +190,11 @@ function badgeProgress(
 
 export default function StreaksBadgesPage({
   toast,
+  embedded = false,
 }) {
+  const Page = embedded ? 'section' : 'main';
+  const Heading = embedded ? 'h3' : 'h1';
+  const [loadError, setLoadError] = useState('');
   const [
     data,
     setData,
@@ -238,6 +244,7 @@ export default function StreaksBadgesPage({
   const load =
     useCallback(
       async () => {
+        setLoadError('');
         setLoading(
           true
         );
@@ -256,6 +263,7 @@ export default function StreaksBadgesPage({
         } catch (
           error
         ) {
+          setLoadError('Study activity could not be loaded. Your saved progress has not changed.');
           if (
             error.response
               ?.status ===
@@ -442,15 +450,17 @@ export default function StreaksBadgesPage({
      AUTH
   ========================================================= */
 
+  if (loadError && !authError) return <Page className={`sb-page${embedded ? ' sb-embedded' : ''}`}><p role="alert">{loadError}</p><button type="button" onClick={load}>Retry progress</button></Page>;
+
   if (authError) {
     return (
-      <main className="sb-page">
-        <Helmet>
+      <Page className={`sb-page${embedded ? ' sb-embedded' : ''}`}>
+        {!embedded && <Helmet>
           <title>
             My Progress -
             PaperStack
           </title>
-        </Helmet>
+        </Helmet>}
 
         <div className="sb-shell">
           <section className="sb-signin">
@@ -464,10 +474,10 @@ export default function StreaksBadgesPage({
               My Progress
             </span>
 
-            <h1>
+            <Heading>
               Your study rhythm
               starts after sign in.
-            </h1>
+            </Heading>
 
             <p>
               PaperStack connects
@@ -486,7 +496,7 @@ export default function StreaksBadgesPage({
             </Link>
           </section>
         </div>
-      </main>
+      </Page>
     );
   }
 
@@ -495,8 +505,8 @@ export default function StreaksBadgesPage({
   ========================================================= */
 
   return (
-    <main className="sb-page">
-      <Helmet>
+    <Page className={`sb-page${embedded ? ' sb-embedded' : ''}`}>
+      {!embedded && <Helmet>
         <title>
           Study Streaks &
           Badges - PaperStack
@@ -506,7 +516,7 @@ export default function StreaksBadgesPage({
           name="description"
           content="Track your PaperStack study consistency, study-tool activity and earned achievements."
         />
-      </Helmet>
+      </Helmet>}
 
       <div className="sb-shell">
         {/* =================================================
@@ -523,23 +533,17 @@ export default function StreaksBadgesPage({
               Study Garden
             </span>
 
-            <h1>
+            <Heading>
               Grow a habit
               <br />
 
               <span>
                 that survives exams.
               </span>
-            </h1>
+            </Heading>
 
             <p>
-              Your streak grows when
-              you actually use
-              PaperStack study tools.
-              The goal is not opening
-              the website every day —
-              it is building a useful
-              study rhythm.
+              Your calendar brings together saved classes, submitted practice answers and recorded study-tool activity. Activity shows consistency; mastery comes from your practice results.
             </p>
 
             <div className="sb-header-actions">
@@ -1664,6 +1668,6 @@ export default function StreaksBadgesPage({
           </>
         )}
       </div>
-    </main>
+    </Page>
   );
 }

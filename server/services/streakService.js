@@ -1,4 +1,6 @@
 const STUDY_CATEGORIES = [
+  'learn',
+  'practice',
   'archive',
   'questions',
   'revision',

@@ -33,7 +33,7 @@ Implemented 12 October 2026. This report covers the direct UI/download request a
 19. **Multiple instances:** shared Redis data, atomic Lua updates/pruning, Redis NX snapshot bucket lock, Mongo unique bucket/upsert. All instances must share Redis, JWT secret and Mongo. The simple process scheduler follows the current server lifecycle; sleeping/restarting hosts can leave historical gaps. Endpoint rate limits are per process, like the existing application limits.
 20. **Admin UI:** compact Live Usage panel inside the existing /admin/product-analytics page. Unique users, signed-in users, guests, sessions, sampled peak, page counts and one 24-hour chart. Polls every 30 seconds while visible, with loading and independent live/history failure states. No public live count.
 21. **Tests added:** identity/tab deduplication, login merge, expiry, route/subject normalization, admin exclusion, Redis outage, single aggregate snapshot across service instances, IST peak calculation, endpoint 401/403/200 and forged userId rejection; browser heartbeat idle/hidden/resume/cleanup/auth transitions; duplicate subject options/facets; ZIP integrity, duplicate filenames, solutions, partial failure, total failure and validation. Navigation test updated to require removed links to stay absent.
-22. **Tests passing:** 456 backend tests and 76 frontend tests across 22 frontend suites. ZIP test makes an HTTP request and opens the returned archive using JSZip. Redis service unit tests use an explicit fake Redis contract; they are not claimed as a real Redis integration test.
+22. **Tests passing:** 457 backend tests and 77 frontend tests across 23 frontend suites. ZIP test makes an HTTP request and opens the returned archive using JSZip. Redis service unit tests use an explicit fake Redis contract; they are not claimed as a real Redis integration test.
 23. **Production build:** compiled successfully. Desktop 1440px and mobile 390px Playwright checks use isolated API fixtures, not production data. They verify help dismissal, menu removal, dashboard values/resume target, duplicate picker entries, admin gating, unavailable state and no horizontal overflow. Screenshots and assertions are under .cache/presence-qa/ (local, ignored).
 24. **Remaining limitations:** the local REDIS_URL exists but is not a valid redis:// or rediss:// URL, so the real Redis smoke test could not run. Configure a valid shared Redis URL on the backend and restart, then verify the live deployment; credentials were not modified. Mongo snapshot persistence/TTL and actual production storage PDF availability were not exercised against production. ZIP content/HTTP behavior was tested with fixture PDFs, without incrementing production download counters. Large packs are still sequential streamed ZIPs, not queued exports; proxy timeouts remain possible. Presence is approximate, page totals can exceed unique users across multiple tabs, and a page refresh can temporarily inflate session count until the old document expires. Browser fixtures are QA-only and never used as application fallback data.
 25. **Every changed file:** listed below (excluding ignored QA logs/artifacts and the pre-existing untracked .jest-cache directory).
@@ -70,3 +70,28 @@ Implemented 12 October 2026. This report covers the direct UI/download request a
 - `server/services/subjectService.test.js`
 - `server/utils/paperQuery.js`
 - `server/utils/paperQuery.test.js`
+
+## Follow-up: navigation and complete dashboard progress
+
+- Main navigation: Home, Archive, Mock Exams, Practice, Exams, Learn. Questions remains in the secondary menu. Mock Exams, Archive and Exam Planner have no second copy in the secondary feature groups. Small screens retain the responsive primary-navigation group so those destinations remain reachable.
+- Search now has exactly one form in the top navbar, including mobile. Removed Search All Content and the duplicate search form from the side menu. Account destinations live in the profile dropdown; My Dashboard is labelled explicitly. Live Usage & Analytics appears in the admin-only menu.
+- My progress is near the top of My Dashboard, immediately after its identity header. The complete existing activity calendar, streaks and badges render inside the dashboard by default. Mastery & reviews switches to the complete newer learning progress without navigating away. Original /streaks and /learning-dashboard URLs still work.
+- Saved DailyLearningCheckin records and submitted QuestionAttempt records now contribute historical learning/practice activity to the existing calendar and streak calculation. These are authenticated-user-scoped Mongo aggregations grouped by Asia/Kolkata date, merged with legacy study activity. A day with several classes/attempts is one active day. This does not change PSR or mastery scoring. Activity-read failures show an error/retry instead of manufactured zeros.
+- Removed misleading percentage labels from the generic saved-study list; merely visiting a resource is shown as saved activity rather than a measured completion percentage.
+- Reconnected ZIP and presence routes after a concurrent edit restored the old server handler. Preserved the unrelated CORS-origin removal and deletion of design-qa.md as unstaged user changes.
+- Redis setup question remains pending: a real shared Redis endpoint is necessary for live online counts. No public counts or fake fallback totals were added.
+
+Additional files changed in the follow-up:
+
+- `client/src/components/DashboardProgress.js`
+- `client/src/components/DashboardProgress.css`
+- `client/src/components/DashboardProgress.test.js`
+- `client/src/pages/LearningDashboardPage.js`
+- `client/src/pages/StreaksBadgesPage.js`
+- `client/src/styles/ReferenceNavbar.css`
+- `server/models/StudyActivity.js`
+- `server/services/streakService.js`
+- `server/services/studyActivityService.js`
+- `server/services/studyLearningActivity.test.js`
+
+App.js, Navbar.test.js, PersonalDashboardPage.js and this report were updated again. No new packages were added.

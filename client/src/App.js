@@ -392,7 +392,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const primaryItems = [
     { to: '/', label: 'Home' },
     { to: '/archive', label: 'Archive' },
-    { to: '/questions', label: 'Questions' },
+    { to: '/mock-exams', label: 'Mock Exams' },
     { to: '/practice', label: 'Practice' },
     { to: '/exam-war-room', label: 'Exams' },
     { to: '/learn', label: 'Learn', featured: true },
@@ -407,8 +407,6 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
         { to: '/pyq-intelligence', label: 'Repeated topics' },
         { to: '/important-topics', label: 'Top Exam Topics' },
         { to: '/revision-sheets', label: 'Revision Notes' },
-        { to: '/exam-war-room', label: 'Exam Planner' },
-        { to: '/mock-exams', label: 'Mock Exams' },
         { to: '/semester-survival', label: 'Semester Survival' },
         { to: '/ask-paperstack', label: 'Ask PaperStack' },
       ],
@@ -429,26 +427,18 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     {
       title: 'Archive',
       items: [
-        { to: '/archive', label: 'Papers & Subject Hubs' },
         { to: '/questions', label: 'Question Library' },
-        { to: '/search', label: 'Search All Content' },
         { to: '/archive-progress', label: 'Archive Progress' },
         { to: '/analytics', label: 'Archive Analytics' },
       ],
     },
-    ...(user ? [{ title: 'Account', items: [
-      { to: '/dashboard', label: 'Dashboard' },
-      { to: '/profile', label: 'Academic Profile' },
-      { to: '/settings', label: 'Account Settings' },
-      { to: '/notifications', label: 'Notifications' },
-    ] }] : []),
     ...(isAdmin
       ? [
           {
             title: 'Admin',
             items: [
               { to: '/admin/moderation', label: 'Moderation Center' },
-              { to: '/admin/product-analytics', label: 'Product Analytics' },
+              { to: '/admin/product-analytics', label: 'Live Usage & Analytics' },
               { to: '/admin/upload', label: 'Upload Center' },
               { to: '/admin/contributions', label: 'Contributions' },
               { to: '/admin/reports', label: 'Reports' },
@@ -581,7 +571,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
         {user && <NotificationNavButton />}
 
         {user ? (
-          <details className="psnav-profile"><summary title={userLabel}><span className="psnav-avatar">{userLabel.slice(0, 2).toUpperCase()}</span><span className="psnav-profile-label">{userLabel}</span><ChevronDown size={16} /></summary><div><Link to="/dashboard">Dashboard</Link><Link to="/contributors/me">Contributor Profile</Link><Link to="/notifications">Notifications</Link>{!isAdmin && <Link to="/admin">Admin</Link>}{isAdmin && <button type="button" onClick={exitAdmin}>Exit admin</button>}<button type="button" onClick={logout}>Logout</button></div></details>
+          <details className="psnav-profile"><summary title={userLabel}><span className="psnav-avatar">{userLabel.slice(0, 2).toUpperCase()}</span><span className="psnav-profile-label">{userLabel}</span><ChevronDown size={16} /></summary><div><Link to="/dashboard">My Dashboard</Link><Link to="/profile">Academic Profile</Link><Link to="/settings">Account Settings</Link><Link to="/contributors/me">Contributor Profile</Link>{!isAdmin && <Link to="/admin">Admin</Link>}{isAdmin && <button type="button" onClick={exitAdmin}>Exit admin</button>}<button type="button" onClick={logout}>Logout</button></div></details>
         ) : (
           <Link
             to="/login"
@@ -594,17 +584,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
       </div>
 
       <div id="psnav-feature-menu" className={`psnav-mobile-panel ${menuOpen ? 'open' : ''}`}>
-        <form className="psnav-mobile-search" role="search" onSubmit={submitNavSearch}>
-          <Search size={17} aria-hidden="true" />
-          <input
-            type="search"
-            value={navSearch}
-            onChange={(event) => setNavSearch(event.target.value)}
-            aria-label="Search PaperStack"
-            placeholder="Search papers, subjects…"
-          />
-          <button type="submit" aria-label="Submit search"><ArrowRight size={16} /></button>
-        </form>
+
 
         <div className="psnav-mobile-primary">
           {user && <span className="psnav-mobile-user" title={userLabel}>{userLabel}</span>}
@@ -616,43 +596,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
         </div>
 
         <div className="psnav-mobile-actions">
-          {!isAdmin && (
-            <Link
-              to="/admin"
-              onClick={closeMenu}
-              className="psnav-admin-btn"
-            >
-              Admin
-            </Link>
-          )}
-
-          {isAdmin && (
-            <button
-              type="button"
-              className="psnav-exit-admin"
-              onClick={exitAdmin}
-            >
-              Exit Admin
-            </button>
-          )}
-
-          {user ? (
-            <button
-              type="button"
-              className="psnav-logout-btn"
-              onClick={logout}
-            >
-              Logout
-            </button>
-          ) : (
-            <Link
-              to="/login"
-              onClick={closeMenu}
-              className="psnav-login-btn"
-            >
-              Login
-            </Link>
-          )}
+          {!isAdmin && !user && <Link to="/admin" onClick={closeMenu} className="psnav-admin-btn">Admin</Link>}
         </div>
       </div>
     </nav>

@@ -6,7 +6,9 @@ import { MasteryBar } from './LearningTodayPage';
 import LearningNav from '../components/LearningNav';
 import './Update4.css';
 
-export default function LearningDashboardPage({ user, toast }) {
+export default function LearningDashboardPage({ user, toast, embedded = false }) {
+  const Page = embedded ? 'section' : 'main';
+  const pageClass = `u4-page${embedded ? ' u4-progress-embedded' : ''}`;
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
@@ -22,11 +24,11 @@ export default function LearningDashboardPage({ user, toast }) {
   }, [toast, user, retry]);
 
   if (!user) {
-    return <main className="u4-page"><div className="u4-empty"><Gauge /><div><b>Your learning intelligence is private.</b><Link to="/login">Sign in to continue</Link></div></div></main>;
+    return <Page className={pageClass}><div className="u4-empty"><Gauge /><div><b>Your learning intelligence is private.</b><Link to="/login">Sign in to continue</Link></div></div></Page>;
   }
-  if (error) return <main className="u4-page"><LearningNav active="progress" /><section className="u4-empty" role="alert"><div><b>{error}</b><button className="u4-button secondary" onClick={() => setRetry((value) => value + 1)}>Try again</button></div></section></main>;
+  if (error) return <Page className={pageClass}>{!embedded && <LearningNav active="progress" />}<section className="u4-empty" role="alert"><div><b>{error}</b><button className="u4-button secondary" onClick={() => setRetry((value) => value + 1)}>Try again</button></div></section></Page>;
   if (!data) {
-    return <main className="u4-page"><div className="u4-loading"><Loader2 className="spin" /> Calculating learning intelligence…</div></main>;
+    return <Page className={pageClass}><div className="u4-loading"><Loader2 className="spin" /> Calculating learning intelligence…</div></Page>;
   }
 
   const resolveDoubt = async (id) => {
@@ -42,11 +44,11 @@ export default function LearningDashboardPage({ user, toast }) {
   };
 
   return (
-    <main className="u4-page">
-      <LearningNav active="progress" />
-      <header className="u4-simple-hero">
+    <Page className={pageClass}>
+      {!embedded && <LearningNav active="progress" />}
+      {!embedded && <header className="u4-simple-hero">
         <div><span className="u4-eyebrow">My progress</span><h1>The work is adding up.</h1><p>See what’s sticking, what needs another look, and how far you’ve come.</p></div>
-      </header>
+      </header>}
 
       <section className="u4-dashboard-metrics">
         <article><Gauge /><span>Overall mastery</span><strong>{data.overallMastery == null ? '—' : `${data.overallMastery}%`}</strong></article>
@@ -96,6 +98,6 @@ export default function LearningDashboardPage({ user, toast }) {
           </div>) : <p className="u4-muted">No open doubts. Record one with today’s learning.</p>}
         </article>
       </section>
-    </main>
+    </Page>
   );
 }

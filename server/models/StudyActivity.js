@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 
 const STUDY_CATEGORIES = [
+  'learn',
+  'practice',
   'archive',
   'questions',
   'revision',

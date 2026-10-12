@@ -1,3 +1,4 @@
+import DashboardProgress from '../components/DashboardProgress';
 import { OFFICIAL_BRANCHES as OFFICIAL_BRANCHES_CONFIG } from '../config/branches';
 import React, {
   useEffect,
@@ -1193,6 +1194,8 @@ export default function PersonalDashboardPage({
               />
             </header>
 
+
+
             <div className="pd-rank-main">
               <div>
                 <span>
@@ -1235,6 +1238,25 @@ export default function PersonalDashboardPage({
             </div>
           </div>
         </header>
+
+        <section id="my-progress" className="pd-learning-intelligence" aria-labelledby="pd-learning-title">
+          <div>
+            <span>My learning</span>
+            <h2 id="pd-learning-title">My progress</h2>
+            <p>Your saved classes and practice results, together. Logging a class records what you covered; answering questions builds mastery.</p>
+          </div>
+          {learningError && <p role="status">Learning progress could not be loaded. Open Mastery & reviews to retry; no estimated data is shown.</p>}
+          <dl>
+            <div><dt>Overall mastery</dt><dd>{learningSummary?.overallMastery == null ? '—' : `${learningSummary.overallMastery}%`}</dd></div>
+            <div><dt>Reviews due</dt><dd>{learningSummary?.dueReviews?.length ?? '—'}</dd></div>
+            <div><dt>Weak topics</dt><dd>{learningSummary?.weakTopics?.length ?? '—'}</dd></div>
+            <div><dt>Questions practiced this week</dt><dd>{learningSummary?.weeklyReview?.questionsPracticed ?? '—'}</dd></div>
+          </dl>
+          <div className="pd-learning-actions">
+            <Link to={learningSummary?.incompleteSession ? `/practice?sessionId=${learningSummary.incompleteSession._id}` : learningSummary?.recentCheckins?.[0] ? `/learn?class=${learningSummary.recentCheckins[0]._id}` : '/learn'}>{learningSummary?.incompleteSession ? 'Resume practice' : learningSummary?.recentCheckins?.length ? 'Continue learning' : 'Log today’s learning'}</Link>
+          </div>
+        </section>
+        <DashboardProgress user={dashboard?.user} toast={toast} />
 
         {/* =================================================
             PROFILE EDIT DRAWER
@@ -1630,24 +1652,7 @@ export default function PersonalDashboardPage({
           </Link>
         </section>
 
-        <section className="pd-learning-intelligence" aria-labelledby="pd-learning-title">
-          <div>
-            <span>My learning</span>
-            <h2 id="pd-learning-title">My progress</h2>
-            <p>Your saved classes and practice results, together. Logging a class records what you covered; answering questions builds mastery.</p>
-          </div>
-          {learningError && <p role="status">Learning progress could not be loaded. Open topic progress to retry; no estimated data is shown.</p>}
-          <dl>
-            <div><dt>Overall mastery</dt><dd>{learningSummary?.overallMastery == null ? '—' : `${learningSummary.overallMastery}%`}</dd></div>
-            <div><dt>Reviews due</dt><dd>{learningSummary?.dueReviews?.length ?? '—'}</dd></div>
-            <div><dt>Weak topics</dt><dd>{learningSummary?.weakTopics?.length ?? '—'}</dd></div>
-            <div><dt>Questions practiced this week</dt><dd>{learningSummary?.weeklyReview?.questionsPracticed ?? '—'}</dd></div>
-          </dl>
-          <div className="pd-learning-actions">
-            <Link to={learningSummary?.incompleteSession ? `/practice?sessionId=${learningSummary.incompleteSession._id}` : learningSummary?.recentCheckins?.[0] ? `/learn?class=${learningSummary.recentCheckins[0]._id}` : '/learn'}>{learningSummary?.incompleteSession ? 'Resume practice' : learningSummary?.recentCheckins?.length ? 'Continue learning' : 'Log today’s learning'}</Link>
-            <Link to="/learning-dashboard">View topic progress</Link><Link to="/streaks">Study activity</Link>
-          </div>
-        </section>
+
 
         {/* =================================================
             PERSONAL LEDGER
@@ -1789,7 +1794,7 @@ export default function PersonalDashboardPage({
               {(dashboard?.continueStudying || []).slice(0, 4).map((item, index) => (
                 <Link key={item._id} to={item.route} onClick={() => import('../services/productAnalyticsApi').then(({ trackProductEvent }) => trackProductEvent('study_resume', { routeKey: 'dashboard', type: item.entityType }).catch(() => {}))}>
                   <span className="pd-study-number">{String(index + 1).padStart(2, '0')}</span>
-                  <div><span>{String(item.entityType || 'study').replace(/_/g, ' ')}</span><strong>{item.title}</strong><small>{item.subjectCode ? `${item.subjectCode} · ` : ''}{item.progress || 0}% progress</small></div>
+                  <div><span>{String(item.entityType || 'study').replace(/_/g, ' ')}</span><strong>{item.title}</strong><small>{item.subjectCode ? `${item.subjectCode} · ` : ''}{item.status === 'completed' ? 'Completed' : 'Saved study activity'}</small></div>
                   <ArrowRight size={13} />
                 </Link>
               ))}
