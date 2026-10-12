@@ -14,3 +14,15 @@ test('searches one canonical subject list by normalized code and alias', () => {
   fireEvent.click(screen.getByRole('option', { name: /CS504/i }));
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ subjectCode: 'CS504', subjectName: 'Cloud Computing & Big Data Infrastructure' }));
 });
+
+
+test('duplicate code spellings appear once and retain searchable aliases', () => {
+  render(<SearchableSubjectSelector value="" onChange={() => {}} options={[
+    { subjectCode: 'CS-302', subject: 'Database Management Systems' },
+    { subjectCode: 'CS302', subject: 'DBMS' },
+  ]} />);
+  fireEvent.click(screen.getByRole('button', { name: /choose a subject/i }));
+  expect(screen.getAllByRole('option')).toHaveLength(1);
+  fireEvent.change(screen.getByPlaceholderText(/search code/i), { target: { value: 'DBMS' } });
+  expect(screen.getAllByRole('option')).toHaveLength(1);
+});

@@ -44,3 +44,17 @@ test('creates stable custom key for unknown subject', () => {
 test('normalizes common branch values', () => {
   assert.deepEqual(normalizeBranchList('CSE & ECE'), ['CSE', 'ECE']);
 });
+
+
+test('subject facets merge legacy labels and semester rows while preserving real counts', () => {
+  const { mergeSubjectOptions } = require('./subjectService');
+  const rows = mergeSubjectOptions([
+    { subjectCode: 'CS302', subject: 'DBMS', semester: 3, totalQuestions: 3, years: [2024], examTypes: ['Mid-Sem'] },
+    { subjectCode: 'CS302', subject: 'Database Management Systems', semester: 4, totalQuestions: 4, years: [2024, 2025], examTypes: ['End-Sem'] },
+  ]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].subjectCode, 'CS302');
+  assert.equal(rows[0].totalQuestions, 7);
+  assert.equal(rows[0].yearsCovered, 2);
+  assert.deepEqual(rows[0].semesters, [3, 4]);
+});

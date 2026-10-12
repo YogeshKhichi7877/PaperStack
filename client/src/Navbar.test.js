@@ -31,6 +31,8 @@ test('primary navigation has no Dashboard, More, or theme toggle', () => {
   expect(screen.getAllByRole('searchbox', { name: 'Search PaperStack' })).toHaveLength(2);
   expect(screen.getByRole('button', { name: 'Open site menu' })).toHaveAttribute('aria-controls', 'psnav-feature-menu');
 
+  expect(screen.queryByText('My Progress')).not.toBeInTheDocument();
+  expect(screen.queryByText('Report Issue')).not.toBeInTheDocument();
   for (const label of [
     'ZIP download',
     'Repeated topics',
@@ -43,9 +45,7 @@ test('primary navigation has no Dashboard, More, or theme toggle', () => {
     'Verify Papers',
     'Branch Rankings',
     'Trending Papers',
-    'My Progress',
     'Student Stories',
-    'Report Issue',
   ]) {
     expect(screen.getByText(label)).toBeInTheDocument();
   }

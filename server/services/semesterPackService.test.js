@@ -1,0 +1,23 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const express = require('express');
+const JSZip = require('jszip');
+const { createSemesterPackHandler } = require('./semesterPackService');
+test('ZIP contains unique PDFs, solutions and partial-failure notes; total failure returns JSON', async (t) => {
+  const papers = [{ _id: 'a', subject: 'SQL', year: 2025, filePath: 'paper-a', solutionPath: 'solution-a' }, { _id: 'b', subject: 'SQL', year: 2025, filePath: 'paper-b' }, { _id: 'c', filePath: 'offline' }];
+  const counted = []; let failAll = false;
+  const Paper = { find: () => ({ sort() { return this; }, lean: async () => papers }), findByIdAndUpdate: async (id) => { counted.push(id); } };
+  const app = express();
+  app.get('/pack', createSemesterPackHandler({ Paper, download: async (url) => { if (failAll || url === 'offline') throw new Error('offline'); return Buffer.from('%PDF-1.4 fixture ' + url); } }));
+  const server = app.listen(0, '127.0.0.1'); await new Promise((resolve) => server.once('listening', resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const url = `http://127.0.0.1:${server.address().port}/pack?branch=CSE&semester=5&examType=Mid-Sem`;
+  const response = await fetch(url);
+  assert.equal(response.status, 200); assert.match(response.headers.get('content-disposition'), /PaperStack_CSE_Sem5_Mid_Sem_Pack.zip/);
+  const zip = await JSZip.loadAsync(await response.arrayBuffer());
+  assert.equal(Object.keys(zip.files).filter((name) => name.endsWith('.pdf')).length, 3);
+  assert.match(await zip.file('DOWNLOAD_NOTES.txt').async('string'), /Some files/);
+  assert.deepEqual(counted, ['a', 'b']);
+  failAll = true; assert.equal((await fetch(url)).status, 502);
+  assert.equal((await fetch(url.replace('semester=5', 'semester=99'))).status, 400);
+});

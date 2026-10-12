@@ -13,6 +13,7 @@ test('semester pack query uses the branch field and legacy title fallback', () =
   assert.equal(query.examType, 'Mid-Sem');
   assert.equal(query.$or.length, 2);
   assert.ok(query.$or[0].branch instanceof RegExp);
-  assert.ok(query.$or[1].title instanceof RegExp);
+  assert.ok(query.$or[1].$and[1].title instanceof RegExp);
   assert.equal(query.$or[0].branch.test('CSE & ECE'), true);
+  assert.equal(query.$or[0].branch.test('CSE (AI-ML)'), false);
 });

@@ -1,3 +1,4 @@
+import PresenceTracker from './components/PresenceTracker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -401,7 +402,6 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     {
       title: 'Study & AI',
       items: [
-        { to: '/learning-dashboard', label: 'Learning Intelligence' },
         { to: '/leaderboard', label: 'Academic Leaderboard' },
         { to: '/exam-mode', label: 'ZIP download' },
         { to: '/pyq-intelligence', label: 'Repeated topics' },
@@ -423,9 +423,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
         { to: '/verify-archive', label: 'Verify Papers' },
         { to: '/branch-competition', label: 'Branch Rankings' },
         { to: '/trending', label: 'Trending Papers' },
-        { to: '/streaks', label: 'My Progress' },
         { to: '/testimonials', label: 'Student Stories' },
-        { to: '/report', label: 'Report Issue' },
       ],
     },
     {
@@ -3520,6 +3518,7 @@ export default function App() {
 
   const appRoutes = (
     <Router>
+      <PresenceTracker user={user} isAdmin={isAdmin} />
       <ToastStack toasts={toasts} dismissToast={dismissToast} />
       {databaseOffline && <div className="database-offline-banner" role="status">
         <strong>PaperStack data is temporarily unavailable.</strong>

@@ -1,3 +1,4 @@
+const { mergeSubjectOptions } = require('../services/subjectService');
 const express = require('express');
 
 const Question = require('../models/Question');
@@ -119,7 +120,7 @@ router.get('/subjects', async (req, res) => {
 
     res.json({
       subjects:
-        rows.map((row) => ({
+        mergeSubjectOptions(rows.map((row) => ({
           subjectCode:
             row._id.subjectCode ||
             '',
@@ -150,7 +151,7 @@ router.get('/subjects', async (req, res) => {
             row.examTypes
               .filter(Boolean)
               .sort(),
-        })),
+        }))),
     });
   } catch (error) {
     console.error(

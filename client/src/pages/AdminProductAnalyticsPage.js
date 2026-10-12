@@ -1,3 +1,4 @@
+import LiveUsagePanel from '../components/LiveUsagePanel';
 import React, {
   useEffect,
   useMemo,
@@ -267,6 +268,7 @@ export default function AdminProductAnalyticsPage({
       </Helmet>
 
       <div className="pa-shell">
+        <LiveUsagePanel />
         <section className="pa-hero">
           <div>
             <span>

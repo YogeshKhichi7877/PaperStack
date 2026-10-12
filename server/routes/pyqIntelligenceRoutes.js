@@ -1,3 +1,4 @@
+const { mergeSubjectOptions } = require('../services/subjectService');
 const express = require('express');
 
 const Question = require('../models/Question');
@@ -66,16 +67,16 @@ router.get('/subjects', async (req, res) => {
     ]);
 
     res.json({
-      subjects: rows.map((row) => ({
+      subjects: mergeSubjectOptions(rows.map((row) => ({
         subjectCode: row._id.subjectCode || '',
         subject: row._id.subject || '',
         subjectKey: row._id.subjectKey || '',
         shortCode: row._id.shortCode || '',
         semester: row._id.semester ?? null,
         totalQuestions: row.totalQuestions,
-        yearsCovered: row.years.filter(Boolean).length,
-        examTypesCovered: row.examTypes.filter(Boolean).length,
-      })),
+        years: row.years.filter(Boolean),
+        examTypes: row.examTypes.filter(Boolean),
+      }))),
     });
   } catch (error) {
     console.error('PYQ intelligence subjects failed:', error);

@@ -15,7 +15,8 @@ function memoryLimit(env = process.env) {
 }
 
 function getRedis(env = process.env) {
-  if (!enabled(env) || redisUnavailable || !String(env.REDIS_URL || '').trim()) return null;
+  if (redisUnavailable || !String(env.REDIS_URL || '').trim()) return null;
+  if (redisClient?.status === 'end') redisClient = null;
   if (redisClient) return redisClient;
   try {
     // Redis is optional. Requiring it lazily keeps local and existing Render deployments working.
@@ -111,6 +112,7 @@ function clearMemory() {
 }
 
 module.exports = {
+  getRedis,
   buildAiCacheKey,
   clearMemory,
   enabled,

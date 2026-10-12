@@ -14,7 +14,6 @@ const pdfParse = require('pdf-parse');
 const { OAuth2Client } = require('google-auth-library');
 const { applyVerifiedGoogleIdentity } = require('./utils/googleAccount');
 const nodemailer = require('nodemailer');
-const archiver = require('archiver');
 const axios = require('axios');
 require('dotenv').config();
 const { initialProcessingFields, startSavedPaperProcessing, startPaperProcessingRecovery } = require('./services/paperProcessingQueue');
@@ -79,7 +78,6 @@ const { createAuthMiddleware } = require('./middleware/auth');
 const { createRateLimiters } = require('./middleware/aiRateLimiters');
 const { PHOTO_TYPES, normalizeDisplayName, validDisplayName, validPhoto } = require('./services/profileValidation');
 const { findHardestSubject } = require('./utils/analytics');
-const { buildSemesterPackQuery } = require('./utils/paperQuery');
 const catalogRoutes = require('./routes/catalogRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const createSmartContributionRouter = require('./routes/smartContributionRoutes');
@@ -307,7 +305,7 @@ app.use(cors({
     'https://paperstack-backend-7oeo.onrender.com',
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Authorization', 'X-Presence-Admin'],
   credentials: true,
   exposedHeaders: ['Content-Disposition', 'Retry-After', 'RateLimit', 'RateLimit-Policy'],
 }));
@@ -319,6 +317,13 @@ app.use(
     },
   })
 );
+const { createPresenceService } = require('./services/presenceService');
+const { createPresenceRouter } = require('./routes/presenceRoutes');
+const PresenceSnapshot = require('./models/PresenceSnapshot');
+const presenceService = createPresenceService({ secret: JWT_SECRET, Snapshot: PresenceSnapshot, databaseReady: () => mongoose.connection.readyState === 1 });
+// Heartbeats use their own limiter and Redis; a database outage must not queue Mongo work.
+app.use('/api', createPresenceRouter({ authenticate, authenticateAdmin, service: presenceService }));
+presenceService.startSnapshots();
 app.use('/api/', generalApiLimiter);
 const studentAiPaths = [
   '/api/ask-paperstack/query',
@@ -2302,72 +2307,8 @@ app.patch('/api/admin/paper-requests/:id/status', authenticateAdmin, async (req,
   }
 });
 
-async function streamSemesterPack(req, res) {
-  const { branch, semester } = req.query;
-  const examType = String(req.query.examType || '').trim();
-
-  if (!branch || !semester || !examType) {
-    return res.status(400).json({
-      success: false,
-      message: 'branch, semester, and examType are required'
-    });
-  }
-
-  const query = buildSemesterPackQuery({ branch, semester, examType });
-
-  const papers = await Paper.find({ ...query, reviewStatus: { $nin: ['processing', 'needs_review', 'failed'] } }).sort({ subject: 1, year: -1, examType: 1 }).lean();
-
-  if (!papers.length) {
-    return res.status(404).json({
-      success: false,
-      message: 'No papers found for this semester pack'
-    });
-  }
-
-  const safeBranch = branchValue.replace(/[^a-z0-9]/gi, '_');
-  const safeExamType = examType.replace(/[^a-z0-9]/gi, '_');
-  const zipName = `PaperStack_${safeBranch}_Sem${semester}_${safeExamType}_Pack.zip`;
-
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
-
-  const archive = archiver('zip', { zlib: { level: 9 } });
-  archive.on('error', (archiveErr) => {
-    console.error('Semester pack archive error:', archiveErr);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, message: 'Failed to create zip' });
-    } else {
-      res.end();
-    }
-  });
-  archive.pipe(res);
-
-  for (const paper of papers) {
-    try {
-      if (!paper.filePath) continue;
-      const response = await axios.get(paper.filePath, { responseType: 'arraybuffer' });
-      const subject = String(paper.subject || 'Subject').replace(/[^a-z0-9]/gi, '_');
-      const year = paper.year || 'Year';
-      const type = String(paper.examType || examType).replace(/[^a-z0-9]/gi, '_');
-      archive.append(Buffer.from(response.data), { name: `${subject}_${year}_${type}.pdf` });
-
-      if (paper.solutionPath) {
-        try {
-          const solutionResponse = await axios.get(paper.solutionPath, { responseType: 'arraybuffer' });
-          archive.append(Buffer.from(solutionResponse.data), { name: `${subject}_${year}_${type}_Solution.pdf` });
-        } catch (solutionErr) {
-          console.warn('Failed to fetch solution:', paper.solutionPath, solutionErr.message);
-        }
-      }
-
-      await Paper.findByIdAndUpdate(paper._id, { $inc: { downloads: 1 } });
-    } catch (downloadErr) {
-      console.error(`Failed to fetch PDF for ${paper.title}:`, downloadErr.message);
-    }
-  }
-
-  await archive.finalize();
-}
+const { createSemesterPackHandler } = require('./services/semesterPackService');
+const streamSemesterPack = createSemesterPackHandler({ Paper });
 
 // V2 Route: GET Download Semester Pack ZIP
 app.get('/api/papers/semester-pack', authenticate, async (req, res) => {

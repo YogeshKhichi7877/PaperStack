@@ -1,3 +1,4 @@
+const { mergeSubjectOptions } = require('../services/subjectService');
 const express = require('express');
 
 const Question = require('../models/Question');
@@ -108,13 +109,13 @@ async function buildFacets() {
 
   return {
     totalQuestions,
-    subjects: subjects.map((item) => ({
+    subjects: mergeSubjectOptions(subjects.map((item) => ({
       subjectKey: item._id.subjectKey || '',
       subject: item._id.subject || '',
       subjectCode: item._id.subjectCode || '',
       shortCode: item._id.shortCode || '',
       count: item.count,
-    })),
+    }))),
     branches: OFFICIAL_BRANCHES.map((value) => ({
       value,
       count: branches.reduce((total, item) => total + (normalizeBranchList(item._id).includes(value) ? item.count : 0), 0),

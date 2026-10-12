@@ -3,6 +3,21 @@ import { Search } from 'lucide-react';
 import { getCanonicalSubjects } from '../services/learningApi';
 import './SearchableSubjectSelector.css';
 
+export function uniqueSubjects(items) {
+  const byCode = new Map();
+  for (const item of items) {
+    const code = String(item.code || item.subjectCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const name = item.name || item.subject || item.subjectName || '';
+    const key = code || name.toLowerCase().trim();
+    if (!key) continue;
+    const previous = byCode.get(key);
+    byCode.set(key, { ...item, code, name: previous?.name || name,
+      current: Boolean(previous?.current || item.current),
+      aliases: [...new Set([...(previous?.aliases || []), ...(item.aliases || []), name])] });
+  }
+  return [...byCode.values()].sort((a, b) => Number(b.current) - Number(a.current));
+}
+
 export default function SearchableSubjectSelector({ value, onChange, semester, branch, options, allowAuto = false, label = 'Subject', disabled = false, emptyLabel, emptyOptionLabel }) {
   const [subjects, setSubjects] = useState([]);
   const [open, setOpen] = useState(false);
@@ -16,11 +31,11 @@ export default function SearchableSubjectSelector({ value, onChange, semester, b
   useEffect(() => {
     let active = true;
     if (options) {
-      setSubjects(options.map((item) => ({ ...item, code: item.code || item.subjectCode, name: item.name || item.subject || item.subjectName, shortCode: item.shortCode || '', aliases: item.aliases || [], current: item.current ?? (!semester || Number(item.semester) === Number(semester)) })));
+      setSubjects(uniqueSubjects(options.map((item) => ({ ...item, code: item.code || item.subjectCode, name: item.name || item.subject || item.subjectName, shortCode: item.shortCode || '', aliases: item.aliases || [], current: item.current ?? (!semester || (Number(item.semester) === Number(semester) || item.semesters?.map(Number).includes(Number(semester)))) }))));
       return () => { active = false; };
     }
     setError('');
-    getCanonicalSubjects({ semester, branch }).then((data) => { if (active) setSubjects(data.subjects || []); }).catch(() => { if (active) setError('Subjects could not be loaded.'); });
+    getCanonicalSubjects({ semester, branch }).then((data) => { if (active) setSubjects(uniqueSubjects(data.subjects || [])); }).catch(() => { if (active) setError('Subjects could not be loaded.'); });
     return () => { active = false; };
   }, [branch, options, semester, retry]);
   useEffect(() => {

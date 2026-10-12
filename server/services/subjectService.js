@@ -156,7 +156,33 @@ function normalizeSubjectKey(value) {
   return raw.toUpperCase();
 }
 
+// Facet rows can differ by legacy spelling, branch or semester. A picker needs
+// one entry per catalog identity, with counts and coverage combined.
+function mergeSubjectOptions(rows = []) {
+  const groups = new Map();
+  for (const row of rows) {
+    const resolved = resolveSubject(row);
+    const key = resolved.key;
+    const previous = groups.get(key);
+    const union = (field, extra = []) => [...new Set([...(previous?.[field] || []), ...(row[field] || []), ...extra].filter(Boolean))];
+    const item = { ...row, subjectCode: resolved.code, subjectKey: key, subject: resolved.name, shortCode: resolved.shortCode,
+      semesters: union('semesters', [row.semester]), branches: union('branches', [row.branch]),
+      years: union('years'), examTypes: union('examTypes'),
+      count: (previous?.count || 0) + (row.count || 0),
+      totalQuestions: (previous?.totalQuestions || 0) + (row.totalQuestions || 0),
+      topicTaggedQuestions: (previous?.topicTaggedQuestions || 0) + (row.topicTaggedQuestions || 0),
+    };
+    item.semester = item.semesters.length === 1 ? item.semesters[0] : null;
+    item.branch = item.branches.length === 1 ? item.branches[0] : '';
+    item.yearsCovered = item.years.length;
+    item.examTypesCovered = item.examTypes.length;
+    groups.set(key, item);
+  }
+  return [...groups.values()].sort((a, b) => a.subject.localeCompare(b.subject));
+}
+
 module.exports = {
+  mergeSubjectOptions,
   FLAT_SUBJECT_CATALOG,
   flattenSubjectCatalog,
   normalizeSubjectText,

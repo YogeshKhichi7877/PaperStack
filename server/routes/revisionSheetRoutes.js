@@ -1,3 +1,4 @@
+const { mergeSubjectOptions } = require('../services/subjectService');
 const express = require('express');
 
 const Question = require('../models/Question');
@@ -74,7 +75,7 @@ router.get('/subjects', async (req, res) => {
     ]);
 
     res.json({
-      subjects: rows.map((row) => ({
+      subjects: mergeSubjectOptions(rows.map((row) => ({
         subjectCode: row._id.subjectCode || '',
         subject: row._id.subject || '',
         subjectKey: row._id.subjectKey || '',
@@ -84,7 +85,7 @@ router.get('/subjects', async (req, res) => {
         totalQuestions: row.totalQuestions,
         years: row.years.filter(Boolean).sort((a, b) => b - a),
         examTypes: row.examTypes.filter(Boolean).sort(),
-      })),
+      }))),
     });
   } catch (error) {
     console.error('Revision sheet subjects failed:', error);

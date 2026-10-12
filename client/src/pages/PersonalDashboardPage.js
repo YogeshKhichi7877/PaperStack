@@ -449,6 +449,7 @@ export default function PersonalDashboardPage({
 
   const [currentSubjects, setCurrentSubjects] = useState('');
   const [learningSummary, setLearningSummary] = useState(null);
+  const [learningError, setLearningError] = useState(false);
 
   /* =========================================================
      PHOTO PREVIEW
@@ -586,10 +587,12 @@ export default function PersonalDashboardPage({
 
   useEffect(() => {
     let mounted = true;
-    getLearningDashboard()
-      .then((result) => { if (mounted) setLearningSummary(result); })
-      .catch(() => { if (mounted) setLearningSummary(null); });
-    return () => { mounted = false; };
+    const refreshLearning = () => getLearningDashboard()
+      .then((result) => { if (mounted) { setLearningSummary(result); setLearningError(false); } })
+      .catch(() => { if (mounted) { setLearningSummary(null); setLearningError(true); } });
+    refreshLearning();
+    window.addEventListener('focus', refreshLearning);
+    return () => { mounted = false; window.removeEventListener('focus', refreshLearning); };
   }, []);
 
   /* =========================================================
@@ -1630,18 +1633,19 @@ export default function PersonalDashboardPage({
         <section className="pd-learning-intelligence" aria-labelledby="pd-learning-title">
           <div>
             <span>My learning</span>
-            <h2 id="pd-learning-title">Learning intelligence</h2>
-            <p>Mastery changes only from validated practice evidence. Lecture logs record coverage separately.</p>
+            <h2 id="pd-learning-title">My progress</h2>
+            <p>Your saved classes and practice results, together. Logging a class records what you covered; answering questions builds mastery.</p>
           </div>
+          {learningError && <p role="status">Learning progress could not be loaded. Open topic progress to retry; no estimated data is shown.</p>}
           <dl>
             <div><dt>Overall mastery</dt><dd>{learningSummary?.overallMastery == null ? '—' : `${learningSummary.overallMastery}%`}</dd></div>
             <div><dt>Reviews due</dt><dd>{learningSummary?.dueReviews?.length ?? '—'}</dd></div>
             <div><dt>Weak topics</dt><dd>{learningSummary?.weakTopics?.length ?? '—'}</dd></div>
-            <div><dt>PSR</dt><dd>{learningSummary?.rating?.globalRating ?? '—'}</dd></div>
+            <div><dt>Questions practiced this week</dt><dd>{learningSummary?.weeklyReview?.questionsPracticed ?? '—'}</dd></div>
           </dl>
           <div className="pd-learning-actions">
-            <Link to="/learn">Log today’s learning</Link>
-            <Link to="/learning-dashboard">View topic progress</Link>
+            <Link to={learningSummary?.incompleteSession ? `/practice?sessionId=${learningSummary.incompleteSession._id}` : learningSummary?.recentCheckins?.[0] ? `/learn?class=${learningSummary.recentCheckins[0]._id}` : '/learn'}>{learningSummary?.incompleteSession ? 'Resume practice' : learningSummary?.recentCheckins?.length ? 'Continue learning' : 'Log today’s learning'}</Link>
+            <Link to="/learning-dashboard">View topic progress</Link><Link to="/streaks">Study activity</Link>
           </div>
         </section>
 

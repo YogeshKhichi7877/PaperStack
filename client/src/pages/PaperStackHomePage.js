@@ -156,6 +156,7 @@ import aiArt from '../assets/paperstack-ai-owl.png';
 import owlArt from '../assets/Paperstack_auth_owl.png';
 import instituteEmblem from '../assets/iiit_surat.png';
 
+import LearningHelp from '../components/LearningHelp';
 import './PaperStackHomePage.css';
 
 const formatCount = (value) =>
@@ -492,7 +493,7 @@ export default function PaperStackHomePage({ user }) {
           <span className="landing-eyebrow">Learn → understand → practice → improve</span>
           <h2 id="home-learning-journey-title">Understand what you learn. Practice it. Remember it when exams arrive.</h2>
           <p>Tell PaperStack what your class covered today. Learn the concept with AI, practice when you’re ready, and let PaperStack build your mastery over the semester.</p>
-          <div className="home-learning-journey-actions"><Link to="/learn" className="landing-button landing-button-primary">Start learning <ArrowRight size={18} /></Link><a href="#learning-journey-steps" className="landing-button landing-button-secondary">See how it works</a></div>
+          <div className="home-learning-journey-actions"><Link to="/learn" className="landing-button landing-button-primary">Start learning <ArrowRight size={18} /></Link><LearningHelp /></div>
           <ol id="learning-journey-steps"><li><b>1</b> Log class</li><li><b>2</b> Understand</li><li><b>3</b> Practice</li><li><b>4</b> Review</li></ol>
         </div>
         <img src="/paperstack-learning-journey.png" alt="PaperStack owl moving through learn, learning log, practice, mastery and review" loading="lazy" width="1450" height="1079" />
