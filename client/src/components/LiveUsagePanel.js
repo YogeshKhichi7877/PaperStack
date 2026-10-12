@@ -5,6 +5,15 @@ import { adminHeader } from '../services/authHeaders';
 import './LiveUsagePanel.css';
 
 const time = (value) => new Date(value).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+function liveFailure(error) {
+  const status = error?.response?.status;
+  if (status === 401 || status === 403) return 'Your admin session has expired. Sign in to Admin again to see live usage.';
+  if (status === 404) return 'Live usage is not available on the deployed backend yet.';
+  if (status === 429) return 'Too many requests. Live usage will refresh shortly.';
+  if (status === 503) return 'Live usage is unavailable on the backend. Check its Redis connection and Render logs.';
+  if (!error?.response) return 'Could not reach the backend. Check your connection and try again.';
+  return 'Could not load live usage. Please try again shortly.';
+}
 export default function LiveUsagePanel() {
   const [live, setLive] = useState(null);
   const [history, setHistory] = useState(null);
@@ -24,7 +33,7 @@ export default function LiveUsagePanel() {
       pending = false;
       if (!active) return;
       setLive(current.status === 'fulfilled' ? current.value.data : null);
-      setError(current.status === 'fulfilled' ? '' : 'Live usage is temporarily unavailable. Redis may be offline or not configured.');
+      setError(current.status === 'fulfilled' ? '' : liveFailure(current.reason));
       setHistory(past.status === 'fulfilled' ? past.value.data : null);
       setHistoryError(past.status !== 'fulfilled');
     };

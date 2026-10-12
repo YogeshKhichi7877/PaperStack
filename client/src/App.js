@@ -1,6 +1,6 @@
 import PresenceTracker from './components/PresenceTracker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import { Helmet } from 'react-helmet-async';
@@ -571,7 +571,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
         {user && <NotificationNavButton />}
 
         {user ? (
-          <details className="psnav-profile"><summary title={userLabel}><span className="psnav-avatar">{userLabel.slice(0, 2).toUpperCase()}</span><span className="psnav-profile-label">{userLabel}</span><ChevronDown size={16} /></summary><div><Link to="/dashboard">My Dashboard</Link><Link to="/profile">Academic Profile</Link><Link to="/settings">Account Settings</Link><Link to="/contributors/me">Contributor Profile</Link>{!isAdmin && <Link to="/admin">Admin</Link>}{isAdmin && <button type="button" onClick={exitAdmin}>Exit admin</button>}<button type="button" onClick={logout}>Logout</button></div></details>
+          <details className="psnav-profile"><summary title={userLabel}><span className="psnav-avatar">{userLabel.slice(0, 2).toUpperCase()}</span><span className="psnav-profile-label">{userLabel}</span><ChevronDown size={16} /></summary><div><Link to="/dashboard">My Dashboard</Link><Link to="/profile">Academic Profile</Link><Link to="/contributors/me">Contributor Profile</Link>{!isAdmin && <Link to="/admin">Admin</Link>}{isAdmin && <button type="button" onClick={exitAdmin}>Exit admin</button>}<button type="button" onClick={logout}>Logout</button></div></details>
         ) : (
           <Link
             to="/login"
@@ -3690,13 +3690,7 @@ export default function App() {
 
         <Route
           path="/settings"
-          element={
-            <div className="app-container">
-              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
-              <PersonalDashboardPage toast={toast} setUser={setUser} />
-              <Footer />
-            </div>
-          }
+          element={<Navigate to="/dashboard" replace />}
         />
 
         <Route

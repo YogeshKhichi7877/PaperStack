@@ -14,18 +14,35 @@ function memoryLimit(env = process.env) {
   return Math.max(20, Math.min(5000, Number.isFinite(value) ? value : 500));
 }
 
+function redisConnectionUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (!['redis:', 'rediss:'].includes(url.protocol) || !url.hostname) return null;
+    // Upstash Redis requires TLS. Its CLI examples may still contain redis://
+    // because redis-cli receives --tls separately; ioredis needs rediss://.
+    if (url.protocol === 'redis:' && (url.hostname.endsWith('.upstash.io') || url.hostname.endsWith('.upstash.com'))) {
+      url.protocol = 'rediss:';
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 function getRedis(env = process.env) {
   if (redisUnavailable || !String(env.REDIS_URL || '').trim()) return null;
   if (redisClient?.status === 'end') redisClient = null;
   if (redisClient) return redisClient;
   try {
+    const connectionUrl = redisConnectionUrl(env.REDIS_URL);
+    if (!connectionUrl) return null;
     // Redis is optional. Requiring it lazily keeps local and existing Render deployments working.
     const Redis = require('ioredis');
-    redisClient = new Redis(env.REDIS_URL, {
+    redisClient = new Redis(connectionUrl, {
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
-      connectTimeout: 1500,
+      connectTimeout: 5000,
       retryStrategy: () => null,
     });
     redisClient.on('error', () => {});
@@ -113,6 +130,7 @@ function clearMemory() {
 
 module.exports = {
   getRedis,
+  redisConnectionUrl,
   buildAiCacheKey,
   clearMemory,
   enabled,
