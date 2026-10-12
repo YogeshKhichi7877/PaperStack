@@ -9,7 +9,7 @@ const { listCanonicalTopics } = require('../services/topicCatalogService');
 const { getLearningDashboard, indiaDayKey } = require('../services/learningDashboardService');
 const { createPracticeSession, getSession, submitAttempt } = require('../services/practiceService');
 const LearningTutorSession = require('../models/LearningTutorSession');
-const { completeTutorSession, tutorReply } = require('../services/learningTutorService');
+const { completeTutorSession, resumeTutor, tutorReply } = require('../services/learningTutorService');
 const { resolveSubject } = require('../services/subjectService');
 
 function clean(value, max) { return String(value || '').trim().slice(0, max); }
@@ -41,6 +41,14 @@ function createLearningRoutes({ authenticate }) {
     } catch (error) { return res.status(error.statusCode || 500).json({ error: error.statusCode ? error.message : 'Topic mapping is temporarily unavailable. Choose topics manually.' }); }
   });
 
+  router.get('/checkins/:id', async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid class id.' });
+    try {
+      const checkin = await DailyLearningCheckin.findOne({ _id: req.params.id, userId: req.user._id }).lean();
+      return checkin ? res.json({ checkin }) : res.status(404).json({ error: 'Saved class not found.' });
+    } catch { return res.status(503).json({ error: 'Your saved class could not be loaded. Please retry.' }); }
+  });
+
   router.post('/checkins', async (req, res) => {
     try {
       const originalText = clean(req.body?.originalText, 3000);
@@ -69,6 +77,7 @@ function createLearningRoutes({ authenticate }) {
   });
 
   router.post('/tutor', async (req, res) => {
+    if (req.body?.checkinId && !mongoose.Types.ObjectId.isValid(req.body.checkinId)) return res.status(400).json({ error: 'Invalid class id.' });
     try {
       const result = await tutorReply(req.user._id, req.body || {});
       return res.status(result.available ? 201 : 503).json(result);
@@ -76,6 +85,12 @@ function createLearningRoutes({ authenticate }) {
       console.error('Learning tutor failed:', error);
       return res.status(error.statusCode || 502).json({ error: error.statusCode ? error.message : 'PaperStack AI could not prepare this explanation. Please try again.' });
     }
+  });
+
+  router.get('/tutor/resume', async (req, res) => {
+    if (req.query.checkinId && !mongoose.Types.ObjectId.isValid(req.query.checkinId)) return res.status(400).json({ error: 'Invalid class id.' });
+    try { return res.json(await resumeTutor(req.user._id, req.query) || { session: null }); }
+    catch (error) { return res.status(error.statusCode || 503).json({ error: error.statusCode ? error.message : 'Your saved explanation could not be loaded. Please retry.' }); }
   });
 
   router.get('/tutor/:id', async (req, res) => {
@@ -122,9 +137,9 @@ function createLearningRoutes({ authenticate }) {
   });
 
   router.post('/practice-sessions', async (req, res) => {
+    if (req.body?.checkinId && !mongoose.Types.ObjectId.isValid(req.body.checkinId)) return res.status(400).json({ error: 'Invalid class id.' });
     try {
       const result = await createPracticeSession(req.user._id, req.body || {});
-      if (req.body?.checkinId && mongoose.Types.ObjectId.isValid(req.body.checkinId)) await DailyLearningCheckin.updateOne({ _id: req.body.checkinId, userId: req.user._id }, { $set: { practiceSessionId: result.session._id } });
       return res.status(201).json(result);
     } catch (error) { return res.status(error.statusCode || 500).json({ error: error.statusCode ? error.message : 'Could not prepare practice.' }); }
   });

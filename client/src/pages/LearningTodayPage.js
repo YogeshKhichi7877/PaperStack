@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, Brain, CalendarClock, Check, ChevronRight, FileText, Gauge, Info, Loader2, Paperclip, RefreshCw, Trash2 } from 'lucide-react';
 import { createPracticeSession, deletePrivateStudyResource, getLearningDashboard, getPrivateStudyResources, mapLearningTopics, practicePrivateStudyResource, retryPrivateStudyResource, saveLearningCheckin, uploadPrivateStudyResource } from '../services/learningApi';
 import SearchableSubjectSelector from '../components/SearchableSubjectSelector';
 import LearningNav from '../components/LearningNav';
+import LearningClassPage from './LearningClassPage';
 import './Update4.css';
 
 function MasteryBar({ value = 0 }) {
@@ -36,6 +37,8 @@ function LoginPrompt() {
 
 export default function LearningTodayPage({ user, toast }) {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const classId = params.get('class');
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(Boolean(user));
   const [text, setText] = useState('');
@@ -49,12 +52,25 @@ export default function LearningTodayPage({ user, toast }) {
   const [busy, setBusy] = useState('');
   const [materialFile, setMaterialFile] = useState(null);
   const [resources, setResources] = useState([]);
-  const [savedCheckin, setSavedCheckin] = useState(null);
   const [showLearnInfo, setShowLearnInfo] = useState(false);
   const [showPsrInfo, setShowPsrInfo] = useState(false);
+  const draftKey = user ? `paperstack-class-draft:${user._id || user.username}` : '';
+  const [loadedDraftKey, setLoadedDraftKey] = useState('');
+  useEffect(() => {
+    if (!draftKey) return;
+    let draft = {};
+    try { draft = JSON.parse(sessionStorage.getItem(draftKey) || '{}'); } catch { /* Storage may be unavailable. */ }
+    setText(draft.text || ''); setNote(draft.note || ''); setDoubt(draft.doubt || '');
+    setSubjectCode(draft.subjectCode || ''); setSubjectName(draft.subjectName || '');
+    setNoteType(draft.noteType || 'CLASS_NOTE'); setLoadedDraftKey(draftKey);
+  }, [draftKey]);
+  useEffect(() => {
+    if (!draftKey || loadedDraftKey !== draftKey) return;
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ text, note, doubt, subjectCode, subjectName, noteType })); } catch { /* Saving a class to the server still works. */ }
+  }, [draftKey, loadedDraftKey, text, note, doubt, subjectCode, subjectName, noteType]);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user || classId) return;
     setLoading(true);
     const [dashboardResult, resourceResult] = await Promise.allSettled([
       getLearningDashboard(),
@@ -64,7 +80,7 @@ export default function LearningTodayPage({ user, toast }) {
     else toast?.('Could not load your academic home.', 'error');
     if (resourceResult.status === 'fulfilled') setResources(resourceResult.value.resources || []);
     setLoading(false);
-  }, [toast, user]);
+  }, [toast, user, classId]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -74,6 +90,7 @@ export default function LearningTodayPage({ user, toast }) {
     }, 5000);
     return () => window.clearInterval(timer);
   }, [resources]);
+  if (classId) return <LearningClassPage key={classId} checkinId={classId} user={user} />;
   if (!user) return <LoginPrompt />;
   if (loading && !dashboard) return <main className="u4-page"><div className="u4-loading"><Loader2 className="spin" /> Building today’s focus…</div></main>;
 
@@ -110,26 +127,12 @@ export default function LearningTodayPage({ user, toast }) {
           toast?.(uploadError.response?.data?.error || 'Today’s learning was saved, but the class material could not be uploaded.', 'error');
         }
       }
-      setSavedCheckin({ ...saved.checkin, selectedTopics: topics });
       setDashboard((current) => ({ ...current, recentCheckins: [saved.checkin, ...(current?.recentCheckins || []).filter((item) => item._id !== saved.checkin._id)] }));
       toast?.('Today’s learning is saved. Choose how you want to continue.', 'success');
+      setMapping(null); setText(''); setNote(''); setDoubt(''); setMaterialFile(null);
+      navigate(`/learn?class=${encodeURIComponent(saved.checkin._id)}`);
     } catch (error) { toast?.(error.response?.data?.error || 'Could not save today’s learning.', 'error'); }
     finally { setBusy(''); }
-  };
-
-  const practiceSavedLearning = async () => {
-    if (!savedCheckin) return;
-    setBusy('practice');
-    try {
-      const practice = await createPracticeSession({ checkinId: savedCheckin._id, subjectCode: mapping.subject.code, subjectName: mapping.subject.name, topics: savedCheckin.selectedTopics, mode: 'DAILY', count: 5 });
-      navigate(`/practice?sessionId=${practice.session._id}`);
-    } catch (error) { toast?.(error.response?.data?.error || 'Could not prepare practice.', 'error'); }
-    finally { setBusy(''); }
-  };
-
-  const understandTopic = (topic) => {
-    const query = new URLSearchParams({ subjectCode: mapping.subject.code, subjectName: mapping.subject.name, topicName: topic.name, checkinId: savedCheckin._id });
-    navigate(`/learn/topic/${encodeURIComponent(topic.topicKey)}?${query}`);
   };
 
   const practiceResource = async (resource) => {
@@ -186,12 +189,14 @@ export default function LearningTodayPage({ user, toast }) {
               <input type="file" accept=".pdf,.ppt,.pptx,.txt,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain" onChange={(event) => setMaterialFile(event.target.files?.[0] || null)} />
             </label></div></details>
             <div className="u4-form-row"><SearchableSubjectSelector value={subjectCode} semester={user.semester} branch={user.branch} allowAuto onChange={(item) => { setSubjectCode(item.subjectCode); setSubjectName(item.subjectName); }} /><button className="u4-button primary" disabled={Boolean(busy)}>{busy === 'mapping' ? <><Loader2 className="spin" /> Mapping topics…</> : 'Continue'}</button></div>
-          </form> : !savedCheckin ? <div className="u4-confirm"><p>Confirm what you studied:</p><div className="u4-topic-choices">{mapping.availableTopics.map((topic) => <label key={topic.topicKey} className={selected.includes(topic.topicKey) ? 'selected' : ''}><input type="checkbox" checked={selected.includes(topic.topicKey)} onChange={() => setSelected((items) => items.includes(topic.topicKey) ? items.filter((key) => key !== topic.topicKey) : [...items, topic.topicKey])} /><Check /> <span>{topic.name}<small>{topic.questionCount} bank questions</small></span></label>)}</div><div className="u4-actions"><button className="u4-button secondary" onClick={() => setMapping(null)}>Edit learning</button><button className="u4-button primary" onClick={confirmLearning} disabled={!selected.length || Boolean(busy)}>{busy === 'saving' ? 'Saving…' : 'Confirm topics'}</button></div></div> : <div className="u4-next-choice"><span className="u4-eyebrow">Learning saved</span><h3>What would help next?</h3><p>Understanding is optional. Practice builds mastery; eligible verified answers can also change PSR.</p><div className="u4-understand-topics">{savedCheckin.selectedTopics.map((topic) => <button type="button" key={topic.topicKey} onClick={() => understandTopic(topic)}><Brain /><span><b>Understand with AI</b><small>{topic.name}</small></span><ChevronRight /></button>)}</div><button type="button" className="u4-button primary" onClick={practiceSavedLearning} disabled={Boolean(busy)}>{busy === 'practice' ? 'Preparing practice…' : 'Practice 5 questions'}</button><button type="button" className="u4-text-button" onClick={() => { setMapping(null); setSavedCheckin(null); setText(''); setNote(''); setDoubt(''); setMaterialFile(null); }}>Done for now</button></div>}
+          </form> : <div className="u4-confirm"><p>Confirm what you studied:</p><div className="u4-topic-choices">{mapping.availableTopics.map((topic) => <label key={topic.topicKey} className={selected.includes(topic.topicKey) ? 'selected' : ''}><input type="checkbox" checked={selected.includes(topic.topicKey)} onChange={() => setSelected((items) => items.includes(topic.topicKey) ? items.filter((key) => key !== topic.topicKey) : [...items, topic.topicKey])} /><Check /> <span>{topic.name}<small>{topic.questionCount} bank questions</small></span></label>)}</div><div className="u4-actions"><button className="u4-button secondary" onClick={() => setMapping(null)}>Edit learning</button><button className="u4-button primary" onClick={confirmLearning} disabled={!selected.length || Boolean(busy)}>{busy === 'saving' ? 'Saving…' : 'Confirm topics'}</button></div></div>}
+
         </article>
         <aside className="u4-desk-note"><span className="u4-eyebrow">One class at a time</span><h2>A small habit.<br />A stronger semester.</h2><ol><li><b>Log what you learned</b><span>A few lines from today’s class are enough.</span></li><li><b>Make sense of it</b><span>Use your notes and the topic tutor to clear a doubt.</span></li><li><b>Try it for yourself</b><span>Practice when you’re ready. Revisit what needs work.</span></li></ol><Link to="/learning-dashboard">See your progress <ChevronRight size={16} /></Link></aside>
       </section>
 
-      {dashboard?.recentCheckins?.length > 0 && <section className="u4-section u4-learning-timeline"><div className="u4-section-title"><div><span className="u4-eyebrow">Your learning timeline</span><h2>Recent classes</h2></div><Link to="/learning-dashboard">Full progress</Link></div><div>{dashboard.recentCheckins.slice(0, 4).map((checkin) => <article key={checkin._id}><div><b>{checkin.subjectName}</b><small>{new Date(checkin.createdAt).toLocaleDateString('en-IN')} · {(checkin.topics || []).map((topic) => topic.name).join(', ')}</small><small>{checkin.understoodTopicKeys?.length ? 'AI study completed' : 'Ready to understand'} · {checkin.completedPractice ? 'practice completed' : 'practice pending'}</small></div>{checkin.topics?.[0] && <div className="u4-actions"><button type="button" onClick={() => { const topic = checkin.topics[0]; const query = new URLSearchParams({ subjectCode: checkin.subjectCode, subjectName: checkin.subjectName, topicName: topic.name, checkinId: checkin._id }); navigate(`/learn/topic/${encodeURIComponent(topic.topicKey)}?${query}`); }}>Understand again</button><button type="button" onClick={() => startFocusedPractice({ subjectCode: checkin.subjectCode, subjectName: checkin.subjectName, topicKey: checkin.topics[0].topicKey, topicName: checkin.topics[0].name }, 'REVIEW')}>Practice</button></div>}</article>)}</div></section>}
+      {dashboard?.incompleteSession && <section className="u4-resume-strip"><div><b>Pick up your practice</b><span>{dashboard.incompleteSession.subjectName || dashboard.incompleteSession.subjectCode} · Your answers are saved</span></div><Link className="u4-button primary" to={'/practice?sessionId=' + dashboard.incompleteSession._id}>Resume practice <ChevronRight size={18} /></Link></section>}
+      {dashboard?.recentCheckins?.length > 0 && <section className="u4-section u4-learning-timeline"><div className="u4-section-title"><div><span className="u4-eyebrow">Come back anytime</span><h2>My saved classes</h2></div></div><div>{dashboard.recentCheckins.map((checkin) => <article key={checkin._id}><div><b>{checkin.subjectName}</b><small>{new Date(checkin.createdAt).toLocaleDateString('en-IN')} · {(checkin.topics || []).map((topic) => topic.name).join(', ')}</small><small>{checkin.completedPractice ? 'Practice completed — ready to review' : checkin.practiceSessionId ? 'Practice in progress' : 'Saved and ready to continue'}</small></div><Link className="u4-button secondary" to={'/learn?class=' + encodeURIComponent(checkin._id)}>Continue learning <ChevronRight size={17} /></Link></article>)}</div></section>}
 
       <section className="u4-section u4-resources" aria-labelledby="private-material-heading">
         <div className="u4-section-title"><div><span className="u4-eyebrow">Visible only to you</span><h2 id="private-material-heading">Private class material</h2></div></div>

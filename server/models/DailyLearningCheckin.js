@@ -22,6 +22,7 @@ const schema = new mongoose.Schema({
   completedPractice: { type: Boolean, default: false },
   understoodTopicKeys: { type: [String], default: [] },
   lastUnderstoodAt: { type: Date, default: null },
+  lastTopicKey: { type: String, default: '' },
 }, { timestamps: true });
 
 schema.index({ userId: 1, dayKey: -1 });

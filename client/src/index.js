@@ -38,6 +38,16 @@ root.render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    if (process.env.NODE_ENV !== 'production') {
+      // Old offline workers can intercept localhost navigation after a dev restart.
+      navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(
+        registrations.filter((registration) => [registration.active, registration.waiting, registration.installing]
+          .some((worker) => worker?.scriptURL === `${window.location.origin}/service-worker.js`))
+          .map((registration) => registration.unregister())
+      )).catch(() => {});
+      if ('caches' in window) caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('paperstack-pwa-')).map((key) => caches.delete(key)))).catch(() => {});
+      return;
+    }
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
@@ -49,7 +59,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-inject();
+if (process.env.NODE_ENV === 'production') inject();
 
 
 // If you want to start measuring performance in your app, pass a function

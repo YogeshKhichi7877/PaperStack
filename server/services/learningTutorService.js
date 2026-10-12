@@ -69,6 +69,23 @@ function buildPrompt({ subjectName, subjectCode, topicName, mode, question, stud
   ].filter(Boolean).join('\n\n');
 }
 
+async function resumeTutor(userId, input, dependencies = {}) {
+  const subjectCode = clean(resolveSubject({ subjectCode: input.subjectCode }).code, 30).toUpperCase();
+  const topicKey = clean(input.topicKey, 180);
+  if (!subjectCode || !topicKey) throw Object.assign(new Error('Subject and topic are required.'), { statusCode: 400 });
+  if (input.checkinId) {
+    const checkin = await (dependencies.CheckinModel || DailyLearningCheckin).findOne({ _id: input.checkinId, userId }).lean();
+    if (!checkin) throw Object.assign(new Error('Saved class not found.'), { statusCode: 404 });
+  }
+  const saved = await (dependencies.SessionModel || LearningTutorSession).findOne({ userId, subjectCode, topicKey, checkinId: input.checkinId || null }).sort({ updatedAt: -1 });
+  const lastReply = [...(saved?.messages || [])].reverse().find((item) => item.role === 'tutor');
+  if (!lastReply) return null;
+  let reply;
+  try { reply = parseTutorResponse(lastReply.content); } catch { return null; }
+  if (input.checkinId) await (dependencies.CheckinModel || DailyLearningCheckin).updateOne({ _id: input.checkinId, userId }, { $set: { lastTopicKey: topicKey } });
+  return { available: true, resumed: true, session: saved.toObject ? saved.toObject() : saved, reply, sources: saved.sources, affectsMastery: false };
+}
+
 async function tutorReply(userId, input, dependencies = {}) {
   const SessionModel = dependencies.SessionModel || LearningTutorSession;
   const mode = String(input.mode || 'SIMPLE').toUpperCase();
@@ -83,6 +100,15 @@ async function tutorReply(userId, input, dependencies = {}) {
   const canonicalTopic = canonicalTopics.find((item) => item.topicKey === topicKey);
   if (!canonicalTopic) throw Object.assign(new Error('Choose a valid topic from this subject.'), { statusCode: 400 });
   topicName = canonicalTopic.name;
+  if (input.checkinId) {
+    const checkin = await (dependencies.CheckinModel || DailyLearningCheckin).findOne({ _id: input.checkinId, userId }).lean();
+    if (!checkin || checkin.subjectCode !== subjectCode || !checkin.topics.some((topic) => topic.topicKey === topicKey)) throw Object.assign(new Error('This topic is not in your saved class.'), { statusCode: 404 });
+  }
+  // Reopening a class should restore the saved lesson even when AI is offline.
+  if (input.resume === true && !input.sessionId) {
+    const saved = await resumeTutor(userId, input, dependencies);
+    if (saved) return saved;
+  }
   const studentContext = await (dependencies.buildContext || buildStudentLearningContext)({ userId, subjectCode, topicKey }, dependencies);
   const sourceContext = await (dependencies.retrieveContext || retrieveLearningContext)({
     userId, subjectCode, topicKeys: [topicKey], query: `${topicName} ${input.question || ''}`, maxPrivateChunks: 5, maxVerifiedResources: 3,
@@ -113,6 +139,7 @@ async function tutorReply(userId, input, dependencies = {}) {
   session = session
     ? await SessionModel.findOneAndUpdate({ _id: session._id, userId }, { $set: update }, { new: true })
     : await SessionModel.create(update);
+  if (update.checkinId) await (dependencies.CheckinModel || DailyLearningCheckin).updateOne({ _id: update.checkinId, userId }, { $set: { lastTopicKey: topicKey } });
   return { available: true, fallback: false, session: session.toObject ? session.toObject() : session, reply, studentContext, sources: sourceContext.sources, affectsMastery: false };
 }
 
@@ -125,4 +152,4 @@ async function completeTutorSession(userId, sessionId, dependencies = {}) {
   return session;
 }
 
-module.exports = { MODES, buildPrompt, completeTutorSession, parseTutorResponse, suggestedActions, tutorReply };
+module.exports = { MODES, buildPrompt, completeTutorSession, parseTutorResponse, resumeTutor, suggestedActions, tutorReply };

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import LearningTodayPage from './LearningTodayPage';
+import LearningClassPage from './LearningClassPage';
 import LearningTutorPage from './LearningTutorPage';
 import PracticePage from './PracticePage';
 import LearningDashboardPage from './LearningDashboardPage';
@@ -25,6 +26,7 @@ const questions = [{ _id: 'q1', questionText: 'First question', options: ['A', '
 
 beforeEach(() => {
   jest.clearAllMocks();
+  sessionStorage.clear();
   mockSearch = '';
   api.getLearningDashboard.mockResolvedValue(dashboard);
   api.getPrivateStudyResources.mockResolvedValue({ resources: [] });
@@ -38,11 +40,8 @@ test('saving a class adds it to the timeline and offers a topic tutor without fo
   fireEvent.change(await screen.findByRole('textbox', { name: 'What did your class cover today?' }), { target: { value: 'Today we studied semaphore.' } });
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Confirm topics' }));
-  expect(await screen.findByText('What would help next?')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Recent classes' })).toBeInTheDocument();
+  await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/learn?class=checkin1'));
   expect(api.createPracticeSession).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: /Understand with AI Semaphore/i }));
-  expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('/learn/topic/CS301%3Asemaphore?'));
 });
 
 test('practice resumes at the first unanswered question', async () => {
@@ -95,7 +94,80 @@ test('tutor recovers after failure and asking a doubt does not call AI with an e
   render(<LearningTutorPage user={user} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
   expect(await screen.findByRole('heading', { name: 'Understanding semaphore' })).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Change explanation style'));
   fireEvent.click(screen.getByRole('button', { name: 'Clear a doubt' }));
   expect(api.askLearningTutor).toHaveBeenCalledTimes(2);
   expect(screen.getByRole('textbox', { name: 'Ask a question about this topic' })).toHaveFocus();
+});
+
+test('saved classes open a stable continuation page and preserve all class topics', async () => {
+  const checkin = { _id: 'c1', subjectCode: 'CS301', subjectName: 'Operating Systems', originalText: 'Today we studied semaphore.', topics: [topic], createdAt: '2026-10-12' };
+  api.getLearningCheckin.mockResolvedValue({ checkin });
+  render(<LearningClassPage checkinId="c1" user={user} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue learning' }));
+  expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('checkinId=c1'));
+  expect(screen.getByRole('link', { name: 'My classes' })).toHaveAttribute('href', '/learn');
+});
+
+test('an unfinished class offers resume practice with its saved class id', async () => {
+  api.getLearningCheckin.mockResolvedValue({ checkin: { _id: 'c1', subjectCode: 'CS301', subjectName: 'Operating Systems', topics: [topic], practiceSessionId: 's1' } });
+  api.createPracticeSession.mockResolvedValue({ session: { _id: 's1' }, resumed: true });
+  render(<LearningClassPage checkinId="c1" user={user} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Resume practice' }));
+  await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/practice?sessionId=s1&checkinId=c1'));
+  expect(api.createPracticeSession).not.toHaveBeenCalled();
+});
+
+test('wrong MCQ choice is marked and correct option and explanation are shown', async () => {
+  mockSearch = 'sessionId=session1';
+  api.getPracticeSession.mockResolvedValue({ session: { ...session, checkinId: 'c1' }, questions, attempts: [] });
+  api.submitPracticeAttempt.mockResolvedValue({ attempt: { questionId: 'q1' }, evaluation: { correct: false, actualScore: 0, evaluationMode: 'objective', correctAnswer: 'B', explanation: 'B is correct because it protects the critical section.' }, complete: false });
+  render(<PracticePage user={user} />);
+  fireEvent.click(await screen.findByRole('radio', { name: 'A' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }));
+  expect(await screen.findByText('B is correct because it protects the critical section.')).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: /A Your answer · Incorrect/ }).closest('label')).toHaveClass('is-wrong');
+  expect(screen.getByRole('radio', { name: /B Correct answer/ }).closest('label')).toHaveClass('is-correct');
+  expect(screen.getByRole('link', { name: 'Back to class' })).toHaveAttribute('href', '/learn?class=c1');
+});
+
+test('leaving an unsaved class draft and returning restores the text', async () => {
+  const first = render(<LearningTodayPage user={user} />);
+  fireEvent.change(await screen.findByRole('textbox', { name: 'What did your class cover today?' }), { target: { value: 'We learned SQL joins today.' } });
+  first.unmount();
+  render(<LearningTodayPage user={user} />);
+  expect(await screen.findByRole('textbox', { name: 'What did your class cover today?' })).toHaveValue('We learned SQL joins today.');
+});
+
+test('reopening a saved explanation uses a read request instead of generating another answer', async () => {
+  mockSearch = 'subjectCode=CS301&topicName=Semaphore&checkinId=c1';
+  api.getSavedLearningTutor.mockResolvedValueOnce({ resumed: true, session: { _id: 'tutor1', lastMode: 'EXAMPLE' }, reply: { title: 'Your saved explanation', explanation: 'A semaphore coordinates access.' } });
+  render(<LearningTutorPage user={user} />);
+  expect(await screen.findByRole('heading', { name: 'Your saved explanation' })).toBeInTheDocument();
+  expect(api.askLearningTutor).not.toHaveBeenCalled();
+  expect(screen.getByRole('link', { name: 'Back to class' })).toHaveAttribute('href', '/learn?class=c1');
+});
+
+test('leaving while questions are prepared does not redirect the student back into practice', async () => {
+  mockSearch = 'subjectCode=CS301&topicKey=CS301%3Asemaphore&checkinId=c1';
+  let finish;
+  api.createPracticeSession.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  const page = render(<PracticePage user={user} />);
+  await waitFor(() => expect(api.createPracticeSession).toHaveBeenCalled());
+  page.unmount();
+  finish({ session: { _id: 's1' } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+test('leaving a tutor while progress saves does not override the back navigation', async () => {
+  api.getSavedLearningTutor.mockResolvedValueOnce({ resumed: true, session: { _id: 'tutor1' }, reply: { title: 'Saved lesson', explanation: 'A semaphore coordinates access.' } });
+  let finish;
+  api.completeLearningTutorSession.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  const page = render(<LearningTutorPage user={user} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Practice now' }));
+  page.unmount();
+  finish({});
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(mockNavigate).not.toHaveBeenCalled();
 });

@@ -1,4 +1,44 @@
-# Learning workspace design QA
+# Saved learning and MCQ flow — latest QA
+
+Date: 2026-10-12. final result: passed
+
+## Current evidence
+
+The user's new references are `C:/Users/Acer/AppData/Local/Temp/codex-clipboard-988659a2-53c5-46ef-a2ca-605390c2e5b6.png` (MCQ/error) and `C:/Users/Acer/AppData/Local/Temp/codex-clipboard-aa1f5e98-6a8f-48f6-aa87-2f462f5c57e5.png` (class timeline), both 1920 × 1080 including browser/OS chrome. The MCQ reference also includes docked developer tools. These demonstrate the previous problems; the user's requested changes intentionally alter layout, feedback and navigation.
+
+Rendered production-build evidence is under `D:/PaperStack/.cache/learning-flow/`:
+
+- `mcq-wrong-desktop.png`: 1440 × 1112; `mcq-wrong-focus.png`: 1376 × 489.
+- `mcq-wrong-mobile.png`: 390 × 2044; `mcq-correct-mobile.png` captures correct-answer feedback.
+- `class-desktop.png`: 1440 × 1000; `class-390.png`: 390 × 1652.
+- `learn-1440.png`: 1440 × 1690; `tutor-1440.png`: 1440 × 1642.
+- Learn, class, tutor, practice picker and progress were also captured at 768 px and 390 px. CSS viewports were 1440 × 1000, 768 × 1000 and 390 × 844, device scale factor 1. All page scroll widths equalled viewport widths.
+
+Source and final implementation images were opened in the same comparison inputs. The focused MCQ crop was inspected separately alongside the supplied source so option labels, borders and feedback were legible. Source density and exact page viewport are unknown; browser chrome, docked tools, fixture subjects and counts were treated as expected differences, not pixel-fidelity defects.
+
+## Findings, fixes and final comparison
+
+- Resolved P1: class continuation used disconnected topic/practice actions. Each saved class now has one Continue learning entry, a persistent class URL, a next-step panel, and explicit return links. Stored lessons reopen through an authenticated read endpoint without spending another AI request. Incomplete practice resumes its existing session. Unsaved text drafts remain in the same browser tab.
+- Resolved P1: wrong MCQs displayed only an estimated score and generic advice. Feedback now identifies the selected wrong answer in red, the correct option in green, and includes text/icon labels and a short explanation. Correct answers remain hidden in question payloads until submission. An explanation-provider failure does not block objective marking.
+- Resolved P2 during this iteration: the first rendered desktop MCQ pass stacked radio, option letter and text vertically. Added explicit flex layout and re-captured the same desktop/mobile states. Final `mcq-wrong-focus.png` shows aligned options and compact feedback. The earlier finding is recorded here; the capture filenames now hold the final corrected pass.
+- Resolved P2: using the full desktop width made tutor lines unnecessarily long. The final tutor uses a wide two-column layout with the lesson on the left and optional help on the right; it stacks below 900 px. Navigation is reduced to the learning path, with secondary workspace links under More.
+- Small copy fix: the class count now uses singular/plural correctly.
+
+Required surfaces checked: existing font family and hierarchy retained; option and form spacing aligned; teal/cream theme retained with semantic red/green feedback; existing imagery and icons retained without replacements; copy explains the next action and save state. Wider margins and new column proportions are intentional user-requested changes. Final captures show no actionable P0/P1/P2 issue in the reviewed states.
+
+## Verification and limits
+
+- 73 frontend tests, 449 backend tests, production build and whitespace checks passed.
+- Browser flow passed: save class → open lesson → browser Back → restore lesson → start practice → simulated 503 preserves selected answer → retry → show wrong/correct options and explanation → return to class → resume at question two → finish at the class page.
+- Final browser run had no JavaScript page errors. API data and the injected 503 were controlled local fixtures; no production records were changed. Local Vercel analytics was stubbed as in the previous QA run.
+- Local-development service workers are now unregistered and PaperStack's old local offline caches cleared; development analytics is disabled. Production offline behaviour is retained.
+- The screenshot does not expose the original failing request URL/response. Its exact 503 cause is not proven fixed. Retry recovery and local-worker behaviour are addressed; live provider health and deployment still require runtime evidence.
+
+Implementation checklist: saved class and lesson resumption, explicit back links, on-demand AI inventory for sparse topics, post-submit explanations, MCQ feedback, wider responsive layouts, and regression/browser checks are complete. No blocking visual follow-up remains.
+
+---
+
+# Earlier learning workspace design QA
 
 Date: 2026-10-12
 

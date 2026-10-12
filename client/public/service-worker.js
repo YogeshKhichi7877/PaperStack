@@ -2,7 +2,7 @@
 /* eslint-env serviceworker */
 /* global self, caches, URL */
 
-const CACHE_NAME = 'paperstack-pwa-v4';
+const CACHE_NAME = 'paperstack-pwa-v5';
 
 const STATIC_ASSETS = [
   '/',
@@ -14,6 +14,7 @@ const STATIC_ASSETS = [
 
 function shouldBypassCache(request, url) {
   if (request.method !== 'GET') return true;
+  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return true;
 
   if (url.pathname.startsWith('/api/')) return true;
   if (url.pathname.startsWith('/admin')) return true;

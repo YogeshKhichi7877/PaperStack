@@ -179,6 +179,7 @@ const questionSchema = new mongoose.Schema({
   options: { type: [String], default: [] },
   // Kept out of ordinary queries and every public question projection.
   answerKey: { type: String, default: '', select: false },
+  answerExplanation: { type: String, default: '', maxlength: 1500, select: false },
 
   sourceLocation: {
     type: sourceLocationSchema,

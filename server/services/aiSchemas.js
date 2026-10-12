@@ -67,6 +67,7 @@ const practiceQuestionSchema = z.object({
     topicKey: z.string().min(1).max(180),
     options: z.array(z.string().trim().min(1).max(500)).max(6).optional(),
     answerKey: z.string().trim().min(1).max(5000),
+    explanation: z.string().trim().min(1).max(1500).optional(),
     marks: z.number().min(1).max(20),
   })).min(1).max(30),
 });

@@ -328,6 +328,7 @@ const studentAiPaths = [
   '/api/mock-evaluation/evaluate',
   '/api/learning/topic-map',
   '/api/learning/tutor',
+  '/api/learning/practice-sessions',
   '/api/learning/practice-sessions/:id/attempts',
 ];
 app.use(studentAiPaths, (req, res, next) => {
