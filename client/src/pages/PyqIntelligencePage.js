@@ -506,10 +506,11 @@ export default function PyqIntelligencePage({
     setLoading(true);
 
     setSearchParams(
-      {
-        subjectCode,
-        threshold:
-          String(threshold),
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set('subjectCode', subjectCode);
+        next.set('threshold', String(threshold));
+        return next;
       },
       {
         replace: true,

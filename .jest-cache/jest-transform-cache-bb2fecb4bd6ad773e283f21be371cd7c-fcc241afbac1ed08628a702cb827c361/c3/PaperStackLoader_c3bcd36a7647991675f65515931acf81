@@ -1,0 +1,83 @@
+a7dfdc53e57a9da21c5be860fd4345ff
+"use strict";
+
+var _interopRequireDefault = require("D:/PaperStack/client/node_modules/@babel/runtime/helpers/interopRequireDefault.js").default;
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = PaperStackLoader;
+var _react = _interopRequireDefault(require("react"));
+var _Paperstack_auth_owl = _interopRequireDefault(require("../assets/Paperstack_auth_owl.png"));
+require("./PaperStackLoader.css");
+var _jsxDevRuntime = require("react/jsx-dev-runtime");
+var _jsxFileName = "D:\\PaperStack\\client\\src\\components\\PaperStackLoader.js";
+function PaperStackLoader({
+  label = 'Loading PaperStack...',
+  compact = false
+}) {
+  return /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("span", {
+    className: `paperstack-loading${compact ? ' is-compact' : ''}`,
+    role: "status",
+    "aria-live": "polite",
+    children: [/*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("span", {
+      className: "paperstack-loading-art",
+      "aria-hidden": "true",
+      children: [/*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("span", {
+        className: "loading-sheet sheet-back"
+      }, void 0, false, {
+        fileName: _jsxFileName,
+        lineNumber: 8,
+        columnNumber: 7
+      }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("span", {
+        className: "loading-sheet sheet-front"
+      }, void 0, false, {
+        fileName: _jsxFileName,
+        lineNumber: 8,
+        columnNumber: 52
+      }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("img", {
+        src: _Paperstack_auth_owl.default,
+        alt: ""
+      }, void 0, false, {
+        fileName: _jsxFileName,
+        lineNumber: 9,
+        columnNumber: 7
+      }, this)]
+    }, void 0, true, {
+      fileName: _jsxFileName,
+      lineNumber: 7,
+      columnNumber: 5
+    }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("span", {
+      className: "paperstack-loading-label",
+      children: [label, /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("span", {
+        className: "loading-dots",
+        "aria-hidden": "true",
+        children: [/*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("i", {}, void 0, false, {
+          fileName: _jsxFileName,
+          lineNumber: 11,
+          columnNumber: 105
+        }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("i", {}, void 0, false, {
+          fileName: _jsxFileName,
+          lineNumber: 11,
+          columnNumber: 110
+        }, this), /*#__PURE__*/(0, _jsxDevRuntime.jsxDEV)("i", {}, void 0, false, {
+          fileName: _jsxFileName,
+          lineNumber: 11,
+          columnNumber: 115
+        }, this)]
+      }, void 0, true, {
+        fileName: _jsxFileName,
+        lineNumber: 11,
+        columnNumber: 55
+      }, this)]
+    }, void 0, true, {
+      fileName: _jsxFileName,
+      lineNumber: 11,
+      columnNumber: 5
+    }, this)]
+  }, void 0, true, {
+    fileName: _jsxFileName,
+    lineNumber: 6,
+    columnNumber: 10
+  }, this);
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJfcmVhY3QiLCJfaW50ZXJvcFJlcXVpcmVEZWZhdWx0IiwicmVxdWlyZSIsIl9QYXBlcnN0YWNrX2F1dGhfb3dsIiwiX2pzeERldlJ1bnRpbWUiLCJfanN4RmlsZU5hbWUiLCJQYXBlclN0YWNrTG9hZGVyIiwibGFiZWwiLCJjb21wYWN0IiwianN4REVWIiwiY2xhc3NOYW1lIiwicm9sZSIsImNoaWxkcmVuIiwiZmlsZU5hbWUiLCJsaW5lTnVtYmVyIiwiY29sdW1uTnVtYmVyIiwic3JjIiwib3dsIiwiYWx0Il0sInNvdXJjZXMiOlsiUGFwZXJTdGFja0xvYWRlci5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgUmVhY3QgZnJvbSAncmVhY3QnO1xuaW1wb3J0IG93bCBmcm9tICcuLi9hc3NldHMvUGFwZXJzdGFja19hdXRoX293bC5wbmcnO1xuaW1wb3J0ICcuL1BhcGVyU3RhY2tMb2FkZXIuY3NzJztcblxuZXhwb3J0IGRlZmF1bHQgZnVuY3Rpb24gUGFwZXJTdGFja0xvYWRlcih7IGxhYmVsID0gJ0xvYWRpbmcgUGFwZXJTdGFjay4uLicsIGNvbXBhY3QgPSBmYWxzZSB9KSB7XG4gIHJldHVybiA8c3BhbiBjbGFzc05hbWU9e2BwYXBlcnN0YWNrLWxvYWRpbmcke2NvbXBhY3QgPyAnIGlzLWNvbXBhY3QnIDogJyd9YH0gcm9sZT1cInN0YXR1c1wiIGFyaWEtbGl2ZT1cInBvbGl0ZVwiPlxuICAgIDxzcGFuIGNsYXNzTmFtZT1cInBhcGVyc3RhY2stbG9hZGluZy1hcnRcIiBhcmlhLWhpZGRlbj1cInRydWVcIj5cbiAgICAgIDxzcGFuIGNsYXNzTmFtZT1cImxvYWRpbmctc2hlZXQgc2hlZXQtYmFja1wiIC8+PHNwYW4gY2xhc3NOYW1lPVwibG9hZGluZy1zaGVldCBzaGVldC1mcm9udFwiIC8+XG4gICAgICA8aW1nIHNyYz17b3dsfSBhbHQ9XCJcIiAvPlxuICAgIDwvc3Bhbj5cbiAgICA8c3BhbiBjbGFzc05hbWU9XCJwYXBlcnN0YWNrLWxvYWRpbmctbGFiZWxcIj57bGFiZWx9PHNwYW4gY2xhc3NOYW1lPVwibG9hZGluZy1kb3RzXCIgYXJpYS1oaWRkZW49XCJ0cnVlXCI+PGkgLz48aSAvPjxpIC8+PC9zcGFuPjwvc3Bhbj5cbiAgPC9zcGFuPjtcbn1cbiJdLCJtYXBwaW5ncyI6Ijs7Ozs7OztBQUFBLElBQUFBLE1BQUEsR0FBQUMsc0JBQUEsQ0FBQUMsT0FBQTtBQUNBLElBQUFDLG9CQUFBLEdBQUFGLHNCQUFBLENBQUFDLE9BQUE7QUFDQUEsT0FBQTtBQUFnQyxJQUFBRSxjQUFBLEdBQUFGLE9BQUE7QUFBQSxJQUFBRyxZQUFBO0FBRWpCLFNBQVNDLGdCQUFnQkEsQ0FBQztFQUFFQyxLQUFLLEdBQUcsdUJBQXVCO0VBQUVDLE9BQU8sR0FBRztBQUFNLENBQUMsRUFBRTtFQUM3RixvQkFBTyxJQUFBSixjQUFBLENBQUFLLE1BQUE7SUFBTUMsU0FBUyxFQUFFLHFCQUFxQkYsT0FBTyxHQUFHLGFBQWEsR0FBRyxFQUFFLEVBQUc7SUFBQ0csSUFBSSxFQUFDLFFBQVE7SUFBQyxhQUFVLFFBQVE7SUFBQUMsUUFBQSxnQkFDM0csSUFBQVIsY0FBQSxDQUFBSyxNQUFBO01BQU1DLFNBQVMsRUFBQyx3QkFBd0I7TUFBQyxlQUFZLE1BQU07TUFBQUUsUUFBQSxnQkFDekQsSUFBQVIsY0FBQSxDQUFBSyxNQUFBO1FBQU1DLFNBQVMsRUFBQztNQUEwQjtRQUFBRyxRQUFBLEVBQUFSLFlBQUE7UUFBQVMsVUFBQTtRQUFBQyxZQUFBO01BQUEsT0FBRSxDQUFDLG1CQUFBWCxjQUFBLENBQUFLLE1BQUE7UUFBTUMsU0FBUyxFQUFDO01BQTJCO1FBQUFHLFFBQUEsRUFBQVIsWUFBQTtRQUFBUyxVQUFBO1FBQUFDLFlBQUE7TUFBQSxPQUFFLENBQUMsZUFDM0YsSUFBQVgsY0FBQSxDQUFBSyxNQUFBO1FBQUtPLEdBQUcsRUFBRUMsNEJBQUk7UUFBQ0MsR0FBRyxFQUFDO01BQUU7UUFBQUwsUUFBQSxFQUFBUixZQUFBO1FBQUFTLFVBQUE7UUFBQUMsWUFBQTtNQUFBLE9BQUUsQ0FBQztJQUFBO01BQUFGLFFBQUEsRUFBQVIsWUFBQTtNQUFBUyxVQUFBO01BQUFDLFlBQUE7SUFBQSxPQUNwQixDQUFDLGVBQ1AsSUFBQVgsY0FBQSxDQUFBSyxNQUFBO01BQU1DLFNBQVMsRUFBQywwQkFBMEI7TUFBQUUsUUFBQSxHQUFFTCxLQUFLLGVBQUMsSUFBQUgsY0FBQSxDQUFBSyxNQUFBO1FBQU1DLFNBQVMsRUFBQyxjQUFjO1FBQUMsZUFBWSxNQUFNO1FBQUFFLFFBQUEsZ0JBQUMsSUFBQVIsY0FBQSxDQUFBSyxNQUFBO1VBQUFJLFFBQUEsRUFBQVIsWUFBQTtVQUFBUyxVQUFBO1VBQUFDLFlBQUE7UUFBQSxPQUFJLENBQUMsbUJBQUFYLGNBQUEsQ0FBQUssTUFBQTtVQUFBSSxRQUFBLEVBQUFSLFlBQUE7VUFBQVMsVUFBQTtVQUFBQyxZQUFBO1FBQUEsT0FBSSxDQUFDLG1CQUFBWCxjQUFBLENBQUFLLE1BQUE7VUFBQUksUUFBQSxFQUFBUixZQUFBO1VBQUFTLFVBQUE7VUFBQUMsWUFBQTtRQUFBLE9BQUksQ0FBQztNQUFBO1FBQUFGLFFBQUEsRUFBQVIsWUFBQTtRQUFBUyxVQUFBO1FBQUFDLFlBQUE7TUFBQSxPQUFNLENBQUM7SUFBQTtNQUFBRixRQUFBLEVBQUFSLFlBQUE7TUFBQVMsVUFBQTtNQUFBQyxZQUFBO0lBQUEsT0FBTSxDQUFDO0VBQUE7SUFBQUYsUUFBQSxFQUFBUixZQUFBO0lBQUFTLFVBQUE7SUFBQUMsWUFBQTtFQUFBLE9BQzdILENBQUM7QUFDVCIsImlnbm9yZUxpc3QiOltdfQ==

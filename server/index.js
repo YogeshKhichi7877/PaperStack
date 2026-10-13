@@ -40,6 +40,7 @@ const Comment = require('./models/Comment');
 const Contribution = require('./models/Contribution');
 const Report = require('./models/Report');
 const PaperRequest = require('./models/PaperRequest');
+const { addUniquePaperRequester } = require('./services/paperRequestVoteService');
 const PaperVote = require('./models/PaperVote');
 const { getPaperBounty, getBountyPriority } = require('./utils/paperBounty');
 const archiveCompletionRoutes = require('./routes/archiveCompletionRoutes');
@@ -74,7 +75,7 @@ const { recordPaperEngagement } = require('./services/trendingService');
 const createQuestionSolutionRoutes = require('./routes/questionSolutionRoutes');
 const createAdminQuestionSolutionRoutes = require('./routes/adminQuestionSolutionRoutes');
 const { createContributorProfileRoutes } = require('./routes/contributorProfileRoutes');
-const { createAuthMiddleware } = require('./middleware/auth');
+const { createAuthMiddleware, getBearerToken } = require('./middleware/auth');
 const { createRateLimiters } = require('./middleware/aiRateLimiters');
 const { PHOTO_TYPES, normalizeDisplayName, validDisplayName, validPhoto } = require('./services/profileValidation');
 const { findHardestSubject } = require('./utils/analytics');
@@ -301,7 +302,6 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5000',
-    'https://paperstack.onrender.com',
     'https://paperstack-backend-7oeo.onrender.com',
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -2198,6 +2198,7 @@ app.get('/api/paper-requests', async (req, res) => {
 });
 
 app.post('/api/paper-requests', authenticate, async (req, res) => {
+  let requestKey = '';
   try {
     const payload = {
       subject: String(req.body.subject || '').trim(),
@@ -2215,7 +2216,7 @@ app.post('/api/paper-requests', authenticate, async (req, res) => {
       return res.status(400).json({ error: `Missing fields: ${missing.join(', ')}` });
     }
 
-    const requestKey = buildPaperRequestKey(payload);
+    requestKey = buildPaperRequestKey(payload);
     const userId = req.user._id || req.user.id;
     const email = req.user.email || '';
     let request = await PaperRequest.findOne({ requestKey });
@@ -2231,20 +2232,10 @@ app.post('/api/paper-requests', authenticate, async (req, res) => {
         requestCount: 1,
         status: 'open'
       });
+      await request.save();
     } else {
-      alreadyRequested = request.requestedUsers.some((entry) => {
-        return String(entry.userId || '') === String(userId) ||
-          (email && String(entry.email || '').toLowerCase() === String(email).toLowerCase());
-      });
-
-      if (!alreadyRequested) {
-        request.requestedUsers.push({ userId, email });
-        request.requestCount = request.requestedUsers.length;
-        if (request.status === 'dismissed') request.status = 'open';
-      }
+      ({ request, alreadyRequested } = await addUniquePaperRequester(PaperRequest, request, userId, email));
     }
-
-    await request.save();
     res.status(alreadyRequested ? 200 : 201).json({
       message: alreadyRequested ? 'You already requested this paper.' : 'Paper request submitted.',
       alreadyRequested,
@@ -2252,7 +2243,15 @@ app.post('/api/paper-requests', authenticate, async (req, res) => {
     });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ error: 'Paper request already exists. Refresh and try again.' });
+      const existing = await PaperRequest.findOne({ requestKey });
+      if (existing) {
+        const result = await addUniquePaperRequester(PaperRequest, existing, req.user._id || req.user.id, req.user.email || '');
+        return res.status(result.alreadyRequested ? 200 : 201).json({
+          message: result.alreadyRequested ? 'You already requested this paper.' : 'Paper request submitted.',
+          alreadyRequested: result.alreadyRequested,
+          request: publicPaperRequest(result.request)
+        });
+      }
     }
     res.status(500).json({ error: 'Failed to save paper request' });
   }
@@ -2265,22 +2264,12 @@ app.post('/api/paper-requests/:id/vote', authenticate, async (req, res) => {
 
     const userId = req.user._id || req.user.id;
     const email = req.user.email || '';
-    const alreadyRequested = request.requestedUsers.some((entry) => {
-      return String(entry.userId || '') === String(userId) ||
-        (email && String(entry.email || '').toLowerCase() === String(email).toLowerCase());
-    });
-
-    if (!alreadyRequested) {
-      request.requestedUsers.push({ userId, email });
-      request.requestCount = request.requestedUsers.length;
-      if (request.status === 'dismissed') request.status = 'open';
-      await request.save();
-    }
+    const result = await addUniquePaperRequester(PaperRequest, request, userId, email);
 
     res.json({
-      message: alreadyRequested ? 'You already requested this paper.' : 'Request vote added.',
-      alreadyRequested,
-      request: publicPaperRequest(request)
+      message: result.alreadyRequested ? 'You already requested this paper.' : 'Request vote added.',
+      alreadyRequested: result.alreadyRequested,
+      request: publicPaperRequest(result.request)
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to vote for paper request' });
@@ -2603,6 +2592,14 @@ function paperExistsForExpectedItem(papers, expectedItem) {
 
 app.get('/api/missing-papers', async (req, res) => {
   try {
+    let viewerId = '';
+    const token = getBearerToken(req);
+    if (token) {
+      try {
+        const verified = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+        if (verified.role !== 'admin' && verified.tokenType !== 'admin' && verified._id) viewerId = String(verified._id);
+      } catch { /* The board is public; an expired token is treated as a guest. */ }
+    }
     const selectedBranch = req.query.branch ? String(req.query.branch).toUpperCase() : '';
     const selectedSemester = req.query.semester ? Number(req.query.semester) : null;
     const selectedExamType = req.query.examType ? String(req.query.examType) : '';
@@ -2708,6 +2705,7 @@ app.get('/api/missing-papers', async (req, res) => {
       item.requestKey = buildPaperRequestKey(item);
       item.requestCount = request?.requestCount || 0;
       item.requestStatus = request?.status || 'open';
+      item.requestedByMe = Boolean(viewerId && request?.requestedUsers?.some((entry) => String(entry.userId || '') === viewerId));
       Object.assign(item, getPaperBounty({
         requestCount: item.requestCount,
         priority: item.priority

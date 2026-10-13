@@ -1025,7 +1025,7 @@ export default function PaperStackHomePage({ user }) {
             </span>
 
             <div>
-              <h2>Repeated topics</h2>
+              <h2>Exam topic insights</h2>
 
               <p>
                 Understand what previous papers actually
@@ -1038,7 +1038,7 @@ export default function PaperStackHomePage({ user }) {
             <div className="home-check-list">
               <span>
                 <Check size={15} />
-                Repeated topic analysis
+                Repeated question patterns
               </span>
 
               <span>
@@ -1048,7 +1048,7 @@ export default function PaperStackHomePage({ user }) {
 
               <span>
                 <Check size={15} />
-                Most asked concepts
+                Top exam topics
               </span>
 
               <span>
@@ -1057,10 +1057,10 @@ export default function PaperStackHomePage({ user }) {
               </span>
 
               <Link
-                to="/pyq-intelligence"
+                to="/topic-insights"
                 className="home-feature-button"
               >
-                Explore PYQ Intel
+                Explore topic insights
                 <ArrowRight size={18} />
               </Link>
             </div>
@@ -1123,16 +1123,15 @@ export default function PaperStackHomePage({ user }) {
               <ArrowRight size={17} />
             </Link>
 
-            <Link to="/important-topics">
+            <Link to="/revision-sheets">
               <span className="home-tool-index">
                 3
               </span>
 
               <span>
-                <strong>Top Exam Topics</strong>
+                <strong>Revision Notes</strong>
                 <small>
-                  Focus on concepts that deserve
-                  attention
+                  Make a clear plan from your subjects
                 </small>
               </span>
 

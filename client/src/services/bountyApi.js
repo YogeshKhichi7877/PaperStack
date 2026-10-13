@@ -3,7 +3,7 @@ import { API_URL } from '../config/appConfig';
 import { authHeader } from './authHeaders';
 
 export async function fetchPaperBounties() {
-  const response = await axios.get(`${API_URL}/api/missing-papers`);
+  const response = await axios.get(`${API_URL}/api/missing-papers`, { headers: authHeader() });
   return response.data || { summary: null, missingPapers: [] };
 }
 

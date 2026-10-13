@@ -336,8 +336,7 @@ export default function SubjectPage({ user, toast }) {
 
       <nav className="subject-hub-tools" aria-label="Study this subject">
         <Link to={`/questions${studyQuery}`}>Practice questions</Link>
-        <Link to={`/pyq-intelligence${studyQuery}`}>Repeated topics</Link>
-        <Link to={`/important-topics${studyQuery}`}>Top Exam Topics</Link>
+        <Link to={`/topic-insights${studyQuery}`}>Exam topic insights</Link>
         <Link to={`/revision-sheets${studyQuery}`}>Revision Notes</Link>
         <Link to={`/exam-war-room${studyQuery}`}>Exam Planner</Link>
         <Link to={`/mock-exams${studyQuery}`}>Mock exam</Link>

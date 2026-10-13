@@ -790,11 +790,12 @@ export default function ImportantTopicsPage({
     setLoading(true);
 
     setSearchParams(
-      {
-        subjectCode,
-        limit: String(limit),
-        threshold:
-          String(threshold),
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set('subjectCode', subjectCode);
+        next.set('limit', String(limit));
+        next.set('threshold', String(threshold));
+        return next;
       },
       {
         replace: true,
@@ -1526,7 +1527,7 @@ export default function ImportantTopicsPage({
                 </strong>
               </div>
 
-              <Link to="/pyq-intelligence">
+              <Link to={`/topic-insights?view=repeated&subjectCode=${encodeURIComponent(subjectCode)}`}>
                 Compare repeat patterns
 
                 <ArrowRight

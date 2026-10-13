@@ -62,8 +62,9 @@ const pageLoaders = {
   '/archive-progress': () => import('./pages/ArchiveCompletionPage'),
   '/verify-archive': () => import('./pages/VerificationPage'),
   '/questions': () => import('./pages/InteractiveQuestionsPage'),
-  '/pyq-intelligence': () => import('./pages/PyqIntelligencePage'),
-  '/important-topics': () => import('./pages/ImportantTopicsPage'),
+  '/pyq-intelligence': () => import('./pages/TopicInsightsPage'),
+  '/important-topics': () => import('./pages/TopicInsightsPage'),
+  '/topic-insights': () => import('./pages/TopicInsightsPage'),
   '/revision-sheets': () => import('./pages/RevisionSheetsPage'),
   '/exam-war-room': () => import('./pages/ExamWarRoomPage'),
   '/ask-paperstack': () => import('./pages/AskPaperStackPage'),
@@ -99,8 +100,14 @@ const PaperBountiesPage = lazyPage(pageLoaders['/missing-papers']);
 const ArchiveCompletionPage = lazyPage(pageLoaders['/archive-progress']);
 const VerificationPage = lazyPage(pageLoaders['/verify-archive']);
 const InteractiveQuestionsPage = lazyPage(pageLoaders['/questions']);
-const PyqIntelligencePage = lazyPage(pageLoaders['/pyq-intelligence']);
-const ImportantTopicsPage = lazyPage(pageLoaders['/important-topics']);
+const TopicInsightsPage = lazyPage(pageLoaders['/topic-insights']);
+
+function LegacyTopicRedirect({ view }) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set('view', view);
+  return <Navigate to={`/topic-insights?${params.toString()}`} replace />;
+}
 const RevisionSheetsPage = lazyPage(pageLoaders['/revision-sheets']);
 const ExamWarRoomPage = lazyPage(pageLoaders['/exam-war-room']);
 const AskPaperStackPage = lazyPage(pageLoaders['/ask-paperstack']);
@@ -392,6 +399,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
   const primaryItems = [
     { to: '/', label: 'Home' },
     { to: '/archive', label: 'Archive' },
+    { to: '/questions', label: 'Questions' },
     { to: '/mock-exams', label: 'Mock Exams' },
     { to: '/practice', label: 'Practice' },
     { to: '/exam-war-room', label: 'Exams' },
@@ -404,8 +412,7 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
       items: [
         { to: '/leaderboard', label: 'Academic Leaderboard' },
         { to: '/exam-mode', label: 'ZIP download' },
-        { to: '/pyq-intelligence', label: 'Repeated topics' },
-        { to: '/important-topics', label: 'Top Exam Topics' },
+        { to: '/topic-insights', label: 'Exam Topic Insights' },
         { to: '/revision-sheets', label: 'Revision Notes' },
         { to: '/semester-survival', label: 'Semester Survival' },
         { to: '/ask-paperstack', label: 'Ask PaperStack' },
@@ -427,7 +434,6 @@ export function Navbar({ user, setUser, isAdmin, setIsAdmin, toast }) {
     {
       title: 'Archive',
       items: [
-        { to: '/questions', label: 'Question Library' },
         { to: '/archive-progress', label: 'Archive Progress' },
         { to: '/analytics', label: 'Archive Analytics' },
       ],
@@ -3578,27 +3584,21 @@ export default function App() {
         />
 
         <Route
-          path="/pyq-intelligence"
+          path="/topic-insights"
           element={
             <div className="app-container">
               <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
-              <PyqIntelligencePage toast={toast} />
+              <TopicInsightsPage toast={toast} />
               <Footer />
             </div>
           }
         />
 
+        <Route path="/pyq-intelligence" element={<LegacyTopicRedirect view="repeated" />} />
+
+        <Route path="/important-topics" element={<LegacyTopicRedirect view="top" />} />
+
         {/* Admin panel routes */}
-                <Route
-          path="/important-topics"
-          element={
-            <div className="app-container">
-              <Navbar user={user} setUser={setUser} isAdmin={isAdmin} setIsAdmin={setIsAdmin} toast={toast} />
-              <ImportantTopicsPage toast={toast} />
-              <Footer />
-            </div>
-          }
-        />
 
                 <Route
           path="/revision-sheets"

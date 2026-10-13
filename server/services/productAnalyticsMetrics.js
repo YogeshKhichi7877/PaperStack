@@ -18,6 +18,7 @@ const STUDY_ROUTES =
     'exam_mode',
     'pyq_intelligence',
     'important_topics',
+    'topic_insights',
     'revision',
     'war_room',
     'ask',

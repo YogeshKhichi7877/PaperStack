@@ -63,6 +63,10 @@ function routeKeyForPath(
 
   const routes = [
     [
+      '/topic-insights',
+      'topic_insights',
+    ],
+    [
       '/semester-survival',
       'survival',
     ],

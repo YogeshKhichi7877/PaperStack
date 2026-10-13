@@ -208,7 +208,7 @@ export default function PaperBountiesPage({
 
   useEffect(() => {
     loadBounties();
-  }, [loadBounties]);
+  }, [loadBounties, user?._id]);
 
   /* =========================================================
      FILTER OPTIONS
@@ -1767,7 +1767,7 @@ export default function PaperBountiesPage({
                           className="bounty-need-btn"
                           disabled={
                             requestingKey ===
-                            itemKey
+                            itemKey || item.requestedByMe
                           }
                           onClick={() =>
                             handleNeedThis(
@@ -1775,14 +1775,12 @@ export default function PaperBountiesPage({
                             )
                           }
                         >
-                          <Users
-                            size={13}
-                          />
+                          {item.requestedByMe ? <CheckCircle2 size={16} /> : <Users size={16} />}
 
                           {requestingKey ===
                           itemKey
                             ? 'Counting…'
-                            : 'I need this'}
+                            : item.requestedByMe ? 'Requested' : 'I need this'}
                         </button>
                       </div>
                     </article>

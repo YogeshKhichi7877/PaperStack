@@ -27,7 +27,7 @@ function routeCategory(path) {
   if (route === '/') return 'HOME';
   const groups = [
     ['QUESTIONS', ['questions']], ['LEARN', ['learn']], ['PRACTICE', ['practice']],
-    ['SUBJECT', ['subject']], ['EXAM_WAR_ROOM', ['exam-war-room']], ['EXAMS', ['exam-mode', 'important-topics', 'pyq-intelligence']],
+    ['SUBJECT', ['subject']], ['EXAM_WAR_ROOM', ['exam-war-room']], ['EXAMS', ['exam-mode', 'important-topics', 'pyq-intelligence', 'topic-insights']],
     ['MOCK', ['mock-exams', 'mock-evaluation']], ['DASHBOARD', ['dashboard', 'learning-dashboard', 'streaks']],
     ['PROFILE', ['profile']], ['RESOURCES', ['archive', 'revision-sheets', 'semester-survival']],
   ];

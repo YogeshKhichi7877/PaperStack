@@ -20,7 +20,7 @@ test('primary navigation has no Dashboard, More, or theme toggle', () => {
   render(<Navbar user={null} setUser={() => {}} isAdmin={false} setIsAdmin={() => {}} toast={() => {}} />);
   const primary = screen.getByLabelText('Primary navigation');
   expect(within(primary).getByText('Archive')).toBeInTheDocument();
-  expect(within(primary).queryByText('Questions')).not.toBeInTheDocument();
+  expect(within(primary).getByText('Questions')).toBeInTheDocument();
   expect(within(primary).getByText('Mock Exams')).toBeInTheDocument();
   expect(within(primary).getByText('Practice')).toBeInTheDocument();
   expect(within(primary).getByText('Exams')).toBeInTheDocument();
@@ -41,11 +41,9 @@ test('primary navigation has no Dashboard, More, or theme toggle', () => {
   expect(screen.queryByText('Report Issue')).not.toBeInTheDocument();
   for (const label of [
     'ZIP download',
-    'Repeated topics',
-    'Top Exam Topics',
+    'Exam Topic Insights',
     'Revision Notes',
     'Ask PaperStack',
-    'Question Library',
     'Upload Notes & Resources',
     'Verify Papers',
     'Branch Rankings',
