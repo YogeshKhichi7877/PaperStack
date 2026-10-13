@@ -8,14 +8,34 @@ test('combined numeric labels and nested Roman parts retain shared stems and mat
 (ii) Calculate the second output. [3]
 (b) Explain the stability of the system. [5]
 2(a) Explain the next model. [4]`);
-  assert.deepEqual(r.questions.map(q => q.questionKey), ['q1-a-i', 'q1-a-ii', 'q1-b', 'q2-a']);
+  assert.deepEqual(r.questions.map(q => q.questionKey), ['q1', 'q2']);
   assert.match(r.questions[0].questionText, /x² \+ y₂/);
   assert.match(r.questions[0].questionText, /Use the given values/);
-  assert.doesNotMatch(r.questions[2].questionText, /Use the given values/);
+  assert.match(r.questions[0].questionText, /\(i\) Calculate the first output/);
+  assert.match(r.questions[0].questionText, /\(ii\) Calculate the second output/);
+  assert.match(r.questions[0].questionText, /\(b\) Explain the stability/);
+  assert.equal(r.questions[0].marks, 10);
 });
 test('standalone Roman and uppercase labels are supported', () => {
-  assert.deepEqual(extractQuestionsFromText('Q1\n(i) Explain the first model. [2]\n(ii) Explain the second model. [3]').questions.map(q=>q.questionKey), ['q1-i','q1-ii']);
+  assert.deepEqual(extractQuestionsFromText('Q1\n(i) Explain the first model. [2]\n(ii) Explain the second model. [3]').questions.map(q=>q.questionKey), ['q1']);
   assert.deepEqual(extractQuestionsFromText('A. Explain the first model. [2]\nB. Explain the second model. [3]').questions.map(q=>q.questionKey), ['qA','qB']);
+});
+
+test('Q2(i) and Q2(ii) form one complete question with preserved mathematical notation', () => {
+  const result = extractQuestionsFromText(`${PAGE_BREAK}\nQ2(i) Evaluate ∫₀¹ x² dx and show every step. [3]\n${PAGE_BREAK}\nQ2(ii) Find y when x ≤ 2 and y = √(x² + 1). [4]\nQ3. Explain the physical meaning of the result. [2]`);
+  assert.deepEqual(result.questions.map((item) => item.questionKey), ['q2', 'q3']);
+  assert.equal(result.questions[0].marks, 7);
+  assert.equal(result.questions[0].pageStart, 1);
+  assert.equal(result.questions[0].pageEnd, 2);
+  assert.match(result.questions[0].questionText, /\(i\) Evaluate ∫₀¹ x² dx/);
+  assert.match(result.questions[0].questionText, /\(ii\) Find y when x ≤ 2 and y = √/);
+});
+
+test('formula-only subparts are not dropped just because they have no prose', () => {
+  const result = extractQuestionsFromText('Q2(i) √(49) + 3² = ? [2]\nQ2(ii) 8 × 7 + 6 = ? [2]');
+  assert.equal(result.questions.length, 1);
+  assert.match(result.questions[0].questionText, /√\(49\) \+ 3²/);
+  assert.match(result.questions[0].questionText, /8 × 7 \+ 6/);
 });
 test('OR alternatives survive and share a choice group with attempt instructions', () => {
   const r = extractQuestionsFromText('Attempt any 2 questions\nQ1. Explain virtualization. [5]\nOR\nQ1. Explain containers. [5]\nOR\nQ1. Explain memory segmentation. [5]\nQ2. Discuss memory paging. [5]');
@@ -41,5 +61,5 @@ test('multi-page questions preserve pages and math line breaks', () => {
 });
 test('duplicates, visual references and numbering gaps are handled safely', () => {
   const r = extractQuestionsFromText('Q1. Explain the first model. [5]\nQ2. Explain the first model. [5]\nQ4. Calculate the current in the circuit shown below. [5]');
-  assert.equal(r.questions.length,2); assert.equal(r.questions[1].hasVisualContext,true); assert.equal(r.questions[1].needsReview,true);
+  assert.equal(r.questions.length,3); assert.equal(r.questions[2].hasVisualContext,true); assert.equal(r.questions[2].needsReview,true);
 });

@@ -1,4 +1,5 @@
 const PAGE_BREAK = '[[PAPERSTACK_PAGE_BREAK]]';
+const { combineSubparts } = require('./questionGroupingService');
 // Compatibility normalization (NFKC) would flatten mathematical superscripts.
 const cleanLine = (v) => String(v || '').normalize('NFC').replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').trim();
 const cleanPdfText = (v) => String(v || '').normalize('NFC').replace(/\u00a0/g, ' ').replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').trim();
@@ -25,7 +26,8 @@ function classifyQuestionType(text) {
 }
 function isQuestionText(text) {
   const v = cleanLine(text);
-  return v.length >= 10 && /\p{L}/u.test(v) && !/^(?:page\s*\d+|\d+|end of (?:paper|question paper)|(?:total|max(?:imum)?)\s*marks\s*:?\s*\d+|(?:subject|course|semester|time|date)\s*:.*)$/i.test(v);
+  const meaningful = /\p{L}/u.test(v) || /\d.*[=+×÷√∫∑≤≥±?]/u.test(v);
+  return v.length >= 8 && meaningful && !/^(?:page\s*\d+|\d+|end of (?:paper|question paper)|(?:total|max(?:imum)?)\s*marks\s*:?\s*\d+|(?:subject|course|semester|time|date)\s*:.*)$/i.test(v);
 }
 function normalizeQuestionCandidate(c) {
   const combined = cleanPdfText(c.lines.join('\n'));
@@ -44,7 +46,7 @@ function normalizeQuestionCandidate(c) {
 function dedupeQuestions(questions) {
   const keys = new Map(), texts = new Set();
   return questions.filter((item) => {
-    const text = cleanLine(item.questionText).toLowerCase();
+    const text = `${item.section || ''}:${item.questionKey}:${cleanLine(item.questionText).toLowerCase()}`;
     if (!text || texts.has(text)) return false;
     texts.add(text);
     const count = (keys.get(item.questionKey) || 0) + 1;
@@ -118,7 +120,7 @@ function extractQuestionsFromText(rawText) {
     if (current) { current.lines.push(line); current.pageEnd = sawPage ? page : null; current.charEnd = offset; }
   }
   flush();
-  const questions = dedupeQuestions(candidates), warnings = [];
+  const questions = dedupeQuestions(combineSubparts(candidates)), warnings = [];
   const tops = new Map();
   for (const q of questions) {
     const previous = tops.get(q.section);

@@ -72,8 +72,27 @@ test('long AI input is chunked with overlap without truncating the final questio
   const text = `${PAGE_BREAK}\n${'context '.repeat(6000)}\n${PAGE_BREAK}\nQ99. Explain the final concept.`;
   const chunks = textChunks(text);
   assert.ok(chunks.length > 3);
+  assert.equal(chunks.fragmented, true);
   assert.match(chunks.at(-1), /final concept/);
   assert.match(chunks.at(-1), /Physical page 2/);
+});
+
+test('AI chunks keep a whole numbered question and its continuation together', () => {
+  const q1 = 'Q1. Calculate the value of x² + y².\nContinue using the matrix below. [5]';
+  const q2 = 'Q2. Explain the following derivation fully.\nShow the final operator. [5]';
+  const chunks = textChunks(`${PAGE_BREAK}\n${q1}\n${PAGE_BREAK}\n${q2}`, 100, 20);
+  assert.equal(chunks.length, 2);
+  assert.ok(chunks[0].includes('Continue using the matrix below'));
+  assert.ok(chunks[1].includes('Show the final operator'));
+  assert.match(chunks[1], /Physical page 2/);
+});
+
+test('AI chunking does not separate Q2(i) from Q2(ii)', () => {
+  const text = `${PAGE_BREAK}\nQ1. Explain caching. [2]\nQ2(i) Calculate x² + 1. [3]\nQ2(ii) Calculate y² + 1. [3]\nQ3. Explain the result. [2]`;
+  const chunks = textChunks(text, 90, 20);
+  const containingFirstPart = chunks.find((chunk) => chunk.includes('Q2(i)'));
+  assert.ok(containingFirstPart);
+  assert.match(containingFirstPart, /Q2\(ii\)/);
 });
 
 test('AI structure fallback repairs malformed output once and validates repaired questions', async () => {
@@ -89,7 +108,23 @@ test('AI structure fallback repairs malformed output once and validates repaired
     },
   });
   assert.equal(calls, 2);
-  assert.equal(result.questions[0].questionLabel, 'Q2(a)');
+  assert.equal(result.questions[0].questionLabel, 'Q2');
+  assert.match(result.questions[0].questionText, /\(a\) Explain virtual memory/);
+});
+
+test('AI subparts are combined into one record after extraction', async () => {
+  const result = await extractQuestionsWithAi({ paper: { _id: 'combined-ai-test' }, extractedText: 'Q2(i) Evaluate x². [2]\nQ2(ii) Evaluate y². [3]\n'.repeat(4) }, {
+    status: { enabled: true }, aiAvailable: () => true,
+    generateForTask: async () => JSON.stringify({ questions: [
+      { questionNumber: '2', part: 'i', questionText: 'Evaluate x² carefully.', marks: 2, confidence: 96 },
+      { questionNumber: '2', part: 'ii', questionText: 'Evaluate y² carefully.', marks: 3, confidence: 96 },
+    ] }),
+  });
+  assert.equal(result.questions.length, 1);
+  assert.equal(result.questions[0].questionKey, 'q2');
+  assert.equal(result.questions[0].marks, 5);
+  assert.match(result.questions[0].questionText, /\(i\).*x²/);
+  assert.match(result.questions[0].questionText, /\(ii\).*y²/);
 });
 test('AI provider failure preserves safe retry diagnostics without leaking provider messages', async () => {
   const result = await extractQuestionsWithAi({ paper: { _id: 'synthetic-outage-test' }, extractedText: 'Explain virtual memory. '.repeat(20) }, {

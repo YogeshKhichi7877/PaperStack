@@ -14,6 +14,14 @@ function needsOcr(text) {
   const words = meaningful.match(/\p{L}{2,}/gu) || [];
   return meaningful.length < 80 || words.length < 8;
 }
+function hasDamagedMathGlyphs(text) {
+  // Broken PDF font maps often leak replacement/private-use glyphs or CID IDs
+  // into otherwise selectable exam text. Text-only AI cannot repair these.
+  return /[\uFFFD\uE000-\uF8FF]|\(cid:\d+\)|\u25A1/.test(String(text || ''));
+}
+function questionMarkerCount(text) {
+  return (String(text || '').match(/^(?:Q(?:uestion)?\s*\.?\s*\d{1,3}|\d{1,3}[.)])/gim) || []).length;
+}
 function pagesToText(pages) {
   return pages.map((page) => `${PAGE_BREAK}\n${page.text}\n`).join('\n');
 }
@@ -64,7 +72,7 @@ async function ocrPage(image, pageNumber, paperId) {
 
 async function completeScannedPages({ buffer, parsedPdf, paperId, allowAi, onStage = async () => {}, readPage = ocrPage }) {
   const pages = parsedPdf.pageTexts.map((page) => ({ ...page }));
-  const scanPages = pages.filter((page) => needsOcr(page.text));
+  const scanPages = pages.filter((page) => needsOcr(page.text) || hasDamagedMathGlyphs(page.text));
   const warnings = [], failures = [], errors = [];
   if (!scanPages.length) return { ...parsedPdf, ocrPages: [], unreadablePages: [], warnings };
   if (!allowAi) return { ...parsedPdf, ocrPages: [], unreadablePages: scanPages.map((p) => p.pageNumber),
@@ -80,11 +88,20 @@ async function completeScannedPages({ buffer, parsedPdf, paperId, allowAi, onSta
         const image = screenshot.pages[0]?.data;
         if (!image?.length) throw processingError('OCR_FAILED', 'This page could not be rendered for OCR.');
         const result = await readPage(Buffer.from(image), page.pageNumber, paperId);
-        page.text = result.text;
-        page.method = 'ocr';
-        page.confidence = result.confidence;
-        ocrPages.push(page.pageNumber);
-        if (result.confidence < 90 || !result.text.trim()) failures.push(page.pageNumber);
+        const damagedSelectableText = page.text.trim().length >= 20 && hasDamagedMathGlyphs(page.text);
+        const usableRepair = result.confidence >= 90 && result.text.trim() &&
+          !hasDamagedMathGlyphs(result.text) &&
+          questionMarkerCount(result.text) >= questionMarkerCount(page.text);
+        if (!damagedSelectableText || usableRepair) {
+          page.text = result.text;
+          page.method = 'ocr';
+          page.confidence = result.confidence;
+          ocrPages.push(page.pageNumber);
+        }
+        if (!usableRepair) {
+          failures.push(page.pageNumber);
+          if (damagedSelectableText) warnings.push(`Page ${page.pageNumber}: mathematical symbols need visual review.`);
+        }
       } catch (error) {
         failures.push(page.pageNumber);
         errors.push({ pageNumber: page.pageNumber, code: error.code === 'OCR_UNAVAILABLE' ? 'OCR_UNAVAILABLE' : 'OCR_FAILED', retryable: isTransientError(error) });
@@ -95,4 +112,5 @@ async function completeScannedPages({ buffer, parsedPdf, paperId, allowAi, onSta
   return { text: pagesToText(pages), pages: parsedPdf.pages, pageTexts: pages, ocrPages,
     unreadablePages: failures, warnings, errors };
 }
-module.exports = { parsePdfBuffer, completeScannedPages, needsOcr, pagesToText, ocrPage, processingError };
+module.exports = { parsePdfBuffer, completeScannedPages, needsOcr, hasDamagedMathGlyphs,
+  pagesToText, ocrPage, processingError };

@@ -38,11 +38,13 @@ function fixture(t, buffer, existing = []) {
 test('real text PDF processing saves questions and stages without AI',async t=>{
   const f=fixture(t,syntheticPdf([['Q1. Explain virtual memory allocation in detail. [5]','Q2(a) Explain paging and address translation. [3]','(b) Compare virtual and physical memory. [2]']]));
   const result=await extractPaperQuestions({paperId:f.paper._id,allowAi:false});
-  assert.equal(result.extractionStatus,'complete');assert.equal(result.detectedQuestions,3);
-  assert.deepEqual(f.writes.map(q=>q.questionKey),['q1','q2-a','q2-b']);
+  assert.equal(result.extractionStatus,'complete');assert.equal(result.detectedQuestions,2);
+  assert.deepEqual(f.writes.map(q=>q.questionKey),['q1','q2']);
   assert.equal(result.ai.attempted,false);
   assert.equal(f.writes[1].paperId,f.paper._id);
   assert.equal(f.writes[1].sourceLocation.pageStart,1);
+  assert.match(f.writes[1].questionText,/\(a\).*paging/);
+  assert.match(f.writes[1].questionText,/\(b\).*physical memory/);
   const stages=f.updates.map(u=>u.$set?.['processing.stage']).filter(Boolean);
   assert.deepEqual(stages,['extracting_metadata','extracting_questions','classifying','saving','completed']);
 });
@@ -51,7 +53,7 @@ test('PDF-only import detects metadata and saves question records without manual
   Object.assign(f.paper, { title: 'Detecting details', subject: '', subjectCode: '', branch: '', semester: null, examType: '', year: null, importBatchId: new mongoose.Types.ObjectId() });
   t.mock.method(require('./resourceService'), 'syncResourceFromPaper', async () => {});
   const result = await extractPaperQuestions({ paperId: f.paper._id, allowAi: false });
-  assert.equal(result.extractionStatus, 'complete'); assert.equal(result.detectedQuestions, 3);
+  assert.equal(result.extractionStatus, 'complete'); assert.equal(result.detectedQuestions, 2);
   assert.equal(f.writes[0].subjectCode, 'CS504'); assert.equal(f.writes[0].semester, 5); assert.equal(f.writes[0].year, 2025);
   assert.ok(f.updates.some((update) => update.$set?.reviewStatus === 'approved'));
 });
@@ -83,6 +85,18 @@ test('reprocessing preserves reviewed/manual keys and does not prune partial res
   const r=await persistQuestions({paper:f.paper,selected:{source:'rule',questions:[q('q1',98),q('q2',75)],confidence:75,incomplete:true}});
   assert.equal(r.protectedQuestionsSkipped,1);assert.equal(f.writes.length,1);assert.equal(f.writes[0].needsReview,true);
   assert.equal(f.deletion.mock.callCount(),0);
+});
+
+test('reprocessing retires only old machine-extracted subpart records', async t => {
+  const f = fixture(t, syntheticPdf([[]]));
+  await persistQuestions({ paper: f.paper, selected: { source: 'rule', confidence: 86, incomplete: true,
+    questions: [{ questionKey: 'q2', questionNumber: '2', questionText: '(i) Explain paging.\n(ii) Explain segmentation.',
+      mergedPartKeys: ['q2-i', 'q2-ii'], marks: 5, confidence: 86 }] } });
+  assert.equal(f.deletion.mock.callCount(), 1);
+  const filter = f.deletion.mock.calls[0].arguments[0];
+  assert.deepEqual(filter.questionKey.$in, ['q2-i', 'q2-ii']);
+  assert.equal(filter.status, 'extracted');
+  assert.deepEqual(filter['extraction.source'].$in, ['rule', 'ai']);
 });
 test('current extraction is idempotent and old versions can be reprocessed',async t=>{
   const f=fixture(t,syntheticPdf([['Q1. Explain memory paging in detail. [5]']]));

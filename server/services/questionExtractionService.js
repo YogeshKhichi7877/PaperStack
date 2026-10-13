@@ -18,7 +18,7 @@ const {
   getQuestionAiStatus,
 } = require('./freeAiQuestionService');
 
-const EXTRACTION_VERSION = 'paper-processing-v2';
+const EXTRACTION_VERSION = 'paper-processing-v3';
 const AUTO_SOURCES = ['rule', 'ai'];
 const PROTECTED_STATUSES = ['reviewed', 'verified'];
 
@@ -80,7 +80,20 @@ function chooseExtraction({ localResult, aiResult, allowAi }) {
   const byKey = new Map(localResult.questions.map((q) => [q.questionKey, q]));
   for (const question of aiQuestions) {
     const local = byKey.get(question.questionKey);
-    if (!local || (local.confidence < extractionThreshold() && question.confidence > local.confidence)) byKey.set(question.questionKey, question);
+    const localText = String(local?.questionText || '');
+    const aiText = String(question.questionText || '');
+    // A high model confidence must not replace a complete local question with
+    // a shortened answer fragment from a page/chunk boundary.
+    const preservesParts = !local?.mergedPartKeys?.length ||
+      local.mergedPartKeys.every((key) => {
+        const part = key.slice(String(local.questionKey).length + 1).split('-');
+        return part.every((label) => aiText.includes(`(${label})`));
+      });
+    if (!local || (local.confidence < extractionThreshold() && question.confidence > local.confidence &&
+      aiText.length >= localText.length * 0.8 && preservesParts)) {
+      byKey.set(question.questionKey, { ...question,
+        mergedPartKeys: [...new Set([...(local?.mergedPartKeys || []), ...(question.mergedPartKeys || [])])] });
+    }
   }
   const questions = require('./questionExtractionRules').dedupeQuestions([...byKey.values()]);
   return { engine: 'ai', source: 'ai', questions,
@@ -185,9 +198,16 @@ async function persistQuestions({
 
   if (writeDocuments.length) {
     const existingIds = await Question.find({ paperId: paper._id, questionKey: { $in: writeDocuments.map((document) => document.questionKey) } }).distinct('_id');
-    if (existingIds.length) {
+    const writtenKeys = new Set(writeDocuments.map((document) => document.questionKey));
+    const mergedChildKeys = [...new Set(selected.questions
+      .filter((question) => writtenKeys.has(question.questionKey))
+      .flatMap((question) => question.mergedPartKeys || []))];
+    const oldChildFilter = { paperId: paper._id, questionKey: { $in: mergedChildKeys },
+      status: 'extracted', 'extraction.source': { $in: AUTO_SOURCES } };
+    const oldChildIds = mergedChildKeys.length ? await Question.find(oldChildFilter).distinct('_id') : [];
+    if (existingIds.length || oldChildIds.length) {
       const { invalidateQuestionAnswers } = require('./semanticAiAnswerService');
-      await invalidateQuestionAnswers(existingIds);
+      await invalidateQuestionAnswers([...existingIds, ...oldChildIds]);
     }
     await Question.bulkWrite(
       writeDocuments.map((document) => ({
@@ -206,6 +226,9 @@ async function persistQuestions({
       })),
       { ordered: false, updatePipeline: true }
     );
+    // Retire only old machine-extracted child records represented by the new
+    // parent. Reviewed, verified, manual and imported records stay untouched.
+    if (mergedChildKeys.length) await Question.deleteMany(oldChildFilter);
 
     const activeKeys = documents.map((document) => document.questionKey);
 

@@ -20,13 +20,15 @@ Q3) Draw the architecture of a raster display system. 5 Marks
 
   const result = extractQuestionsFromText(text);
 
-  assert.equal(result.questions.length, 4);
+  assert.equal(result.questions.length, 3);
   assert.equal(result.questions[0].questionKey, 'q1');
   assert.equal(result.questions[0].marks, 2);
-  assert.equal(result.questions[1].questionKey, 'q2-a');
-  assert.equal(result.questions[2].questionKey, 'q2-b');
-  assert.equal(result.questions[3].questionKey, 'q3');
-  assert.equal(result.questions[3].questionType, 'diagram');
+  assert.equal(result.questions[1].questionKey, 'q2');
+  assert.equal(result.questions[1].marks, 5);
+  assert.match(result.questions[1].questionText, /\(a\) Explain DDA/);
+  assert.match(result.questions[1].questionText, /\(b\) Compare DDA/);
+  assert.equal(result.questions[2].questionKey, 'q3');
+  assert.equal(result.questions[2].questionType, 'diagram');
   assert.ok(result.confidence >= 70);
 });
 

@@ -354,6 +354,8 @@ export default function AdminQuestionExtractionPage({ toast }) {
               const paperStatus = paper.questionExtractionStatus || 'not_started';
               const isRunning = runningId === String(paper._id);
               const isQueued = ['queued', 'processing'].includes(paperStatus);
+              const hasOlderExtraction = Boolean(system?.version && paper.questionExtractionVersion &&
+                paper.questionExtractionVersion !== system.version);
 
               return (
                 <article className="qe-paper" key={paper._id}>
@@ -368,6 +370,7 @@ export default function AdminQuestionExtractionPage({ toast }) {
                       {' · '}{paper.examType || '—'} · {paper.year || '—'}
                     </p>
                     {paper.processing?.reviewCount > 0 && <p>{paper.processing.reviewCount} questions need review</p>}
+                    {hasOlderExtraction && !isQueued && <p>Older extraction format · update to group subparts and check maths</p>}
                     {paper.processing?.error?.code && <p>{paper.processing.error.code} · {statusLabel(paper.processing.error.stage)}</p>}
                   </div>
 
@@ -386,6 +389,8 @@ export default function AdminQuestionExtractionPage({ toast }) {
                         ? 'Queued / Processing…'
                         : isQueued
                           ? paperStatus === 'queued' ? 'Queued…' : 'Processing…'
+                        : hasOlderExtraction
+                          ? 'Update extraction'
                         : paperStatus === 'complete'
                           ? 'Re-extract'
                           : paperStatus === 'failed' ? 'Retry' : 'Extract questions'}
