@@ -89,6 +89,10 @@ test('reprocessing preserves reviewed/manual keys and does not prune partial res
 
 test('reprocessing retires only old machine-extracted subpart records', async t => {
   const f = fixture(t, syntheticPdf([[]]));
+  t.mock.method(Question, 'find', filter => query(filter.status === 'extracted' && filter.questionKey?.$in?.includes('q2-i') ? [
+    { questionKey: 'q2-i', questionText: 'Explain paging.' },
+    { questionKey: 'q2-ii', questionText: 'Explain segmentation.' },
+  ] : []));
   await persistQuestions({ paper: f.paper, selected: { source: 'rule', confidence: 86, incomplete: true,
     questions: [{ questionKey: 'q2', questionNumber: '2', questionText: '(i) Explain paging.\n(ii) Explain segmentation.',
       mergedPartKeys: ['q2-i', 'q2-ii'], marks: 5, confidence: 86 }] } });
@@ -97,6 +101,42 @@ test('reprocessing retires only old machine-extracted subpart records', async t 
   assert.deepEqual(filter.questionKey.$in, ['q2-i', 'q2-ii']);
   assert.equal(filter.status, 'extracted');
   assert.deepEqual(filter['extraction.source'].$in, ['rule', 'ai']);
+});
+
+test('old subparts with missing source content are never deleted by a shorter merged parent', async t => {
+  const f = fixture(t, syntheticPdf([[]]));
+  t.mock.method(Question, 'find', filter => query(filter.status === 'extracted' && filter.questionKey?.$in?.includes('q2-i') ? [
+    { questionKey: 'q2-i', questionText: 'Explain paging and calculate the page fault rate for 25 references.' },
+  ] : []));
+  const selected = { source: 'rule', confidence: 98, incomplete: false, questions: [{
+    questionKey: 'q2', questionNumber: '2', questionText: '(i) Explain paging.', mergedPartKeys: ['q2-i'], marks: 5, confidence: 98,
+  }] };
+  await persistQuestions({ paper: f.paper, selected });
+  assert.equal(f.deletion.mock.callCount(), 0);
+  assert.equal(selected.incomplete, true);
+  assert.equal(f.writes[0].needsReview, true);
+});
+
+test('partial retries cannot overwrite a longer saved question with a fragment', async t => {
+  const f = fixture(t, syntheticPdf([[]]));
+  t.mock.method(Question, 'find', filter => query(filter.status === 'extracted' ? [
+    { questionKey: 'q2', questionText: '(i) Explain paging.\n(ii) Calculate the page fault rate for 25 references and explain the result.' },
+  ] : []));
+  const result = await persistQuestions({ paper: f.paper, selected: { source: 'rule', confidence: 75, incomplete: true, questions: [{
+    questionKey: 'q2', questionNumber: '2', questionText: '(i) Explain paging.', marks: 5, confidence: 75,
+  }] } });
+  assert.equal(f.writes.length, 0);
+  assert.equal(f.deletion.mock.callCount(), 0);
+  assert.equal(result.retainedQuestions, 1);
+});
+
+test('reviewing visible questions cannot mark a missing-page extraction complete', async t => {
+  const f = fixture(t, syntheticPdf([[]]));
+  f.paper.questionExtractionStatus = 'partial';
+  f.paper.processing = { result: { sourceIncomplete: true } };
+  t.mock.method(Question, 'countDocuments', async filter => filter.needsReview ? 0 : 4);
+  await require('./questionExtractionService').syncPaperQuestionReview(f.paper._id);
+  assert.equal(f.updates.some(update => update.$set?.questionExtractionStatus === 'complete'), false);
 });
 test('current extraction is idempotent and old versions can be reprocessed',async t=>{
   const f=fixture(t,syntheticPdf([['Q1. Explain memory paging in detail. [5]']]));

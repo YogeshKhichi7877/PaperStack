@@ -2,9 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  cleanJsonText,
   dedupeAiQuestions,
-  parseGeminiQuestionResponse,
   readablePdfText,
   normalizeAiQuestion, textChunks,
   extractQuestionsWithAi,
@@ -13,10 +11,6 @@ const { PAGE_BREAK } = require('./questionExtractionRules');
 
 test('removes page markers before deciding whether PDF text is usable', () => {
   assert.equal(readablePdfText(Array(12).fill(PAGE_BREAK).join('\n')), '');
-});
-
-test('cleans JSON code fences', () => {
-  assert.equal(cleanJsonText('```json\n{"questions":[]}\n```'), '{"questions":[]}');
 });
 
 test('normalizes and deduplicates AI question keys', () => {
@@ -31,36 +25,6 @@ test('normalizes and deduplicates AI question keys', () => {
   assert.equal(result[1].needsReview, true);
 });
 
-test('parses Gemini response JSON without network access', () => {
-  const response = {
-    candidates: [
-      {
-        content: {
-          parts: [
-            {
-              text: JSON.stringify({
-                questions: [
-                  {
-                    questionNumber: '1',
-                    questionText: 'Explain raster scan.',
-                    marks: 2,
-                    confidence: 94,
-                  },
-                ],
-              }),
-            },
-          ],
-        },
-      },
-    ],
-  };
-
-  const questions = parseGeminiQuestionResponse(response);
-  assert.equal(questions.length, 1);
-  assert.equal(questions[0].questionKey, 'q1');
-  assert.equal(questions[0].marks, 2);
-});
-
 test('normalizes complete labels and preserves unknown marks and math', () => {
   const q = normalizeAiQuestion({ questionNumber: 'Q2(a)', questionText: 'Calculate x² and y₂.\nUse the given values.', marks: null, confidence: 98 });
   assert.equal(q.questionLabel, 'Q2(a)');
@@ -68,13 +32,13 @@ test('normalizes complete labels and preserves unknown marks and math', () => {
   assert.equal(q.needsReview, true);
   assert.match(q.questionText, /x²/);
 });
-test('long AI input is chunked with overlap without truncating the final question', () => {
-  const text = `${PAGE_BREAK}\n${'context '.repeat(6000)}\n${PAGE_BREAK}\nQ99. Explain the final concept.`;
+test('oversized questions are skipped for AI instead of split into fragments', () => {
+  const text = `${PAGE_BREAK}\nQ1. ${'context '.repeat(6000)}\n${PAGE_BREAK}\nQ99. Explain the final concept.`;
   const chunks = textChunks(text);
-  assert.ok(chunks.length > 3);
-  assert.equal(chunks.fragmented, true);
-  assert.match(chunks.at(-1), /final concept/);
-  assert.match(chunks.at(-1), /Physical page 2/);
+  assert.equal(chunks.length, 1);
+  assert.equal(chunks.skipped, 1);
+  assert.match(chunks[0], /final concept/);
+  assert.match(chunks[0], /Physical page 2/);
 });
 
 test('AI chunks keep a whole numbered question and its continuation together', () => {

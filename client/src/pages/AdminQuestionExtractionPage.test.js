@@ -91,3 +91,18 @@ test('uses structured retry timing for an extraction limiter response', async ()
     'error'
   ));
 });
+
+test('shows missing-source warnings after extraction and after reloading the paper list', async () => {
+  const warning = 'The instructions refer to 7 questions, but fewer were found. Check for missing pages or labels.';
+  getQuestionExtractionPapers.mockResolvedValue({ papers: [{
+    _id: 'paper-1', title: 'Example exam', hasPdf: true, questionExtractionStatus: 'partial',
+    processing: { warnings: [warning] },
+  }] });
+  extractQuestionsForPaper.mockResolvedValue({ result: {
+    extractionStatus: 'partial', totalQuestionCount: 4, warnings: [warning],
+  } });
+  render(<HelmetProvider><AdminQuestionExtractionPage toast={jest.fn()} /></HelmetProvider>);
+  expect(await screen.findByText(warning)).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Extract questions' }));
+  expect(await screen.findByRole('list', { name: 'Extraction checks' })).toHaveTextContent(warning);
+});

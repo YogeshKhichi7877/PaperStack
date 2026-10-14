@@ -317,6 +317,11 @@ export default function AdminQuestionExtractionPage({ toast }) {
             {lastResult.failureReason && (
               <p className="qe-failure-reason" role="alert">{lastResult.failureReason}</p>
             )}
+            {lastResult.warnings?.length > 0 && (
+              <ul aria-label="Extraction checks">
+                {[...new Set(lastResult.warnings)].map(warning => <li key={warning}>{warning}</li>)}
+              </ul>
+            )}
             {'engine' in lastResult && (
               <p>
                 Engine: {lastResult.engine || '—'} · Confidence: {lastResult.confidence ?? '—'}%
@@ -372,6 +377,12 @@ export default function AdminQuestionExtractionPage({ toast }) {
                     {paper.processing?.reviewCount > 0 && <p>{paper.processing.reviewCount} questions need review</p>}
                     {hasOlderExtraction && !isQueued && <p>Older extraction format · update to group subparts and check maths</p>}
                     {paper.processing?.error?.code && <p>{paper.processing.error.code} · {statusLabel(paper.processing.error.stage)}</p>}
+                    {paper.processing?.warnings?.length > 0 && (
+                      <details>
+                        <summary>View extraction checks</summary>
+                        <ul>{paper.processing.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+                      </details>
+                    )}
                   </div>
 
                   <div className="qe-count">

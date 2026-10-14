@@ -64,3 +64,12 @@ test('invalid and corrupt PDFs fail with safe diagnostic codes', async () => {
   await assert.rejects(parsePdfBuffer(Buffer.from('not pdf')), { code: 'INVALID_PDF' });
   await assert.rejects(parsePdfBuffer(Buffer.from('%PDF-1.4\nbroken')), { code: 'PDF_CORRUPT' });
 });
+
+test('math verification rejects high-confidence OCR which omits a subpart', async () => {
+  const original = 'Q1. Use the matrix to answer both tasks.\n(i) Calculate the determinant. [2]\n(ii) Explain the meaning of the eigenvalues. [3]';
+  const parsedPdf = { pages: 1, pageTexts: [{ pageNumber: 1, text: original, method: 'text', confidence: 100 }] };
+  const result = await completeScannedPages({ buffer: syntheticPdf([textPage]), parsedPdf, allowAi: true,
+    readPage: async () => ({ text: 'Q1. Use the matrix to answer both tasks.\n(i) Calculate the determinant carefully and justify your result. [2]', confidence: 99 }) });
+  assert.equal(result.pageTexts[0].text, original);
+  assert.deepEqual(result.unreadablePages, [1]);
+});

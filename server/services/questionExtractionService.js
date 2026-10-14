@@ -18,7 +18,8 @@ const {
   getQuestionAiStatus,
 } = require('./freeAiQuestionService');
 
-const EXTRACTION_VERSION = 'paper-processing-v3';
+const EXTRACTION_VERSION = 'paper-processing-v4';
+const { preservesSource } = require('./questionCoverageService');
 const AUTO_SOURCES = ['rule', 'ai'];
 const PROTECTED_STATUSES = ['reviewed', 'verified'];
 
@@ -74,12 +75,18 @@ function chooseExtraction({ localResult, aiResult, allowAi }) {
     return { engine: 'rules', source: 'rule', questions: localResult.questions,
       confidence: localResult.confidence, warnings: [...localResult.warnings,
         ...(allowAi && aiResult?.reason ? [aiResult.reason] : [])],
-      aiAttempted: Boolean(aiResult?.attempted), incomplete: Boolean(aiResult?.attempted && !aiQuestions.length) };
+      aiAttempted: Boolean(aiResult?.attempted), incomplete: Boolean(localResult.incomplete || (aiResult?.attempted && !aiQuestions.length)) };
   }
   // AI may repair an uncertain boundary; it may not discard other local questions.
   const byKey = new Map(localResult.questions.map((q) => [q.questionKey, q]));
+  let identityMismatch = false;
   for (const question of aiQuestions) {
-    const local = byKey.get(question.questionKey);
+    let local = byKey.get(question.questionKey);
+    if (local && question.section && local.section && question.section !== local.section) {
+      local = localResult.questions.find(q => q.section === question.section && q.questionNumber === question.questionNumber);
+      if (!local) { identityMismatch = true; continue; }
+    }
+    const key = local?.questionKey || question.questionKey;
     const localText = String(local?.questionText || '');
     const aiText = String(question.questionText || '');
     // A high model confidence must not replace a complete local question with
@@ -90,28 +97,24 @@ function chooseExtraction({ localResult, aiResult, allowAi }) {
         return part.every((label) => aiText.includes(`(${label})`));
       });
     if (!local || (local.confidence < extractionThreshold() && question.confidence > local.confidence &&
-      aiText.length >= localText.length * 0.8 && preservesParts)) {
-      byKey.set(question.questionKey, { ...question,
+      preservesSource(localText, aiText) && preservesParts)) {
+      byKey.set(key, { ...question, questionKey: key,
+        rawText: local?.rawText || question.rawText,
+        pageStart: local?.pageStart ?? question.pageStart ?? question.pageNumber,
+        pageEnd: local?.pageEnd ?? question.pageEnd,
+        charStart: local?.charStart ?? question.charStart,
+        charEnd: local?.charEnd ?? question.charEnd,
+        hasVisualContext: Boolean(local?.hasVisualContext || question.hasVisualContext),
         mergedPartKeys: [...new Set([...(local?.mergedPartKeys || []), ...(question.mergedPartKeys || [])])] });
     }
   }
   const questions = require('./questionExtractionRules').dedupeQuestions([...byKey.values()]);
-  return { engine: 'ai', source: 'ai', questions,
+  const usedAi = questions.some(q => q.source === 'ai');
+  return { engine: usedAi ? 'ai' : 'rules', source: usedAi ? 'ai' : 'rule', questions,
     confidence: Math.round(questions.reduce((sum, q) => sum + q.confidence, 0) / questions.length),
-    warnings: [...localResult.warnings, ...(aiResult.reason ? [aiResult.reason] : [])],
-    aiAttempted: Boolean(aiResult.attempted), incomplete: Boolean(aiResult.incomplete) };
-}
-
-function uncertainQuestionText(pdf, local) {
-  const uncertain = new Set();
-  for (const page of pdf.pageTexts) {
-    const covering = local.questions.filter((q) => q.pageStart <= page.pageNumber && q.pageEnd >= page.pageNumber);
-    if (!covering.length || covering.some((q) => q.needsReview)) {
-      uncertain.add(page.pageNumber - 1); uncertain.add(page.pageNumber); uncertain.add(page.pageNumber + 1);
-    }
-  }
-  return pdf.pageTexts.filter((p) => uncertain.has(p.pageNumber))
-    .map((p) => `[Physical page ${p.pageNumber}]\n${p.text}`).join('\n');
+    warnings: [...localResult.warnings, ...(aiResult.reason ? [aiResult.reason] : []),
+      ...(identityMismatch ? ['AI returned a conflicting section identity; local questions were retained.'] : [])],
+    aiAttempted: Boolean(aiResult.attempted), incomplete: Boolean(aiResult.incomplete || localResult.incomplete || identityMismatch) };
 }
 
 function extractionFailureReason({ localResult, aiResult, allowAi }) {
@@ -192,19 +195,44 @@ async function persistQuestions({
   );
   const protectedHashes = new Set(protectedQuestions.map((q) => q.textHash).filter(Boolean));
 
-  const writeDocuments = documents.filter(
+  let writeDocuments = documents.filter(
     (document) => !protectedKeys.has(String(document.questionKey)) && !protectedHashes.has(document.textHash)
   );
+  let retainedQuestions = 0;
+  if (selected.incomplete && writeDocuments.length) {
+    const previous = await Question.find({ paperId: paper._id,
+      questionKey: { $in: writeDocuments.map(q => q.questionKey) },
+      status: 'extracted', 'extraction.source': { $in: AUTO_SOURCES } })
+      .select('questionKey questionText').lean();
+    writeDocuments = writeDocuments.filter(document => {
+      const old = previous.find(q => q.questionKey === document.questionKey);
+      if (!old?.questionText || old.questionText.length <= document.questionText.length * 1.2 || preservesSource(old.questionText, document.questionText)) return true;
+      retainedQuestions++;
+      return false;
+    });
+    if (retainedQuestions) (selected.warnings ||= []).push('A partial re-extraction was shorter than saved questions; the saved text was retained.');
+  }
 
   if (writeDocuments.length) {
     const existingIds = await Question.find({ paperId: paper._id, questionKey: { $in: writeDocuments.map((document) => document.questionKey) } }).distinct('_id');
     const writtenKeys = new Set(writeDocuments.map((document) => document.questionKey));
-    const mergedChildKeys = [...new Set(selected.questions
+    const candidateChildKeys = [...new Set(selected.questions
       .filter((question) => writtenKeys.has(question.questionKey))
       .flatMap((question) => question.mergedPartKeys || []))];
-    const oldChildFilter = { paperId: paper._id, questionKey: { $in: mergedChildKeys },
+    const oldChildFilter = { paperId: paper._id, questionKey: { $in: candidateChildKeys },
       status: 'extracted', 'extraction.source': { $in: AUTO_SOURCES } };
-    const oldChildIds = mergedChildKeys.length ? await Question.find(oldChildFilter).distinct('_id') : [];
+    const oldChildren = candidateChildKeys.length ? await Question.find(oldChildFilter).select('_id questionKey questionText').lean() : [];
+    const coveredChildren = oldChildren.filter(child => selected.questions.some(parent => writtenKeys.has(parent.questionKey) &&
+      parent.mergedPartKeys?.includes(child.questionKey) && preservesSource(child.questionText, parent.questionText)));
+    const mergedChildKeys = coveredChildren.map(child => child.questionKey);
+    oldChildFilter.questionKey.$in = mergedChildKeys;
+    const oldChildIds = coveredChildren.map(child => child._id);
+    if (coveredChildren.length < oldChildren.length) {
+      selected.incomplete = true;
+      selected.sourceIncomplete = true;
+      for (const document of writeDocuments) document.needsReview = true;
+      (selected.warnings ||= []).push('Some older subparts contain additional text and were kept for review.');
+    }
     if (existingIds.length || oldChildIds.length) {
       const { invalidateQuestionAnswers } = require('./semanticAiAnswerService');
       await invalidateQuestionAnswers([...existingIds, ...oldChildIds]);
@@ -264,7 +292,8 @@ async function persistQuestions({
   return {
     totalQuestionCount,
     extractionStatus,
-    protectedQuestionsSkipped: documents.length - writeDocuments.length,
+    protectedQuestionsSkipped: documents.length - writeDocuments.length - retainedQuestions,
+    retainedQuestions,
     writtenQuestions: writeDocuments.length,
     reviewCount,
   };
@@ -360,7 +389,7 @@ async function extractPaperQuestions({
     if (shouldTryAi) {
       try {
         aiResult = await extractQuestionsWithAi({
-          buffer, paper, localResult, extractedText: uncertainQuestionText(parsedPdf, localResult),
+          buffer, paper, localResult, extractedText: parsedPdf.text,
         });
       } catch {
         aiResult = { attempted: true, questions: [], confidence: 0,
@@ -422,6 +451,7 @@ async function extractPaperQuestions({
       ocrPages: parsedPdf.ocrPages, unreadablePages: parsedPdf.unreadablePages, metadata,
       extractedTextLength: localResult.textLength,
       detectedQuestions: selected.questions.length,
+      sourceIncomplete: Boolean(localResult.incomplete || selected.sourceIncomplete),
       failureReason,
       resultStatus: !selected.questions.length
         ? 'failed'
@@ -591,7 +621,8 @@ async function listExtractionPapers({
     questionExtractionStatus: paper.questionExtractionStatus || 'not_started',
     questionExtractionVersion: paper.questionExtractionVersion || '',
     questionsUpdatedAt: paper.questionsUpdatedAt || null,
-    processing: paper.processing ? { stage: paper.processing.stage, pages: paper.processing.pages, ocrPages: paper.processing.ocrPages, reviewCount: paper.processing.reviewCount, attempts: paper.processing.attempts, error: paper.processing.error, jobId: paper.processing.jobId } : null,
+    processing: paper.processing ? { stage: paper.processing.stage, pages: paper.processing.pages, ocrPages: paper.processing.ocrPages, reviewCount: paper.processing.reviewCount, attempts: paper.processing.attempts, error: paper.processing.error, jobId: paper.processing.jobId,
+      warnings: (paper.processing.result?.warnings || []).filter(warning => typeof warning === 'string').slice(0, 6) } : null,
   }));
 }
 
@@ -605,6 +636,7 @@ async function syncPaperQuestionReview(paperId) {
   const update = { 'processing.reviewCount': reviewCount, questionCount, questionsUpdatedAt: new Date() };
   if (paper.processing?.result) Object.assign(update, { 'processing.result.reviewCount': reviewCount, 'processing.result.totalQuestionCount': questionCount });
   if (paper.questionExtractionStatus === 'partial' && reviewCount === 0 && questionCount > 0 &&
+      !paper.processing?.result?.sourceIncomplete &&
       !paper.processing?.unreadablePages?.length && !paper.processing?.metadata?.conflicts?.length &&
       !paper.processing?.metadata?.missing?.length && !paper.processing?.metadata?.uncertain?.length && !paper.processing?.error) {
     Object.assign(update, { questionExtractionStatus: 'complete', 'processing.stage': 'completed' });
@@ -624,7 +656,6 @@ module.exports = {
   extractPaperQuestions,
   extractQuestionBatch,
   extractionThreshold,
-  uncertainQuestionText,
   listExtractionPapers,
   parsePdfBuffer,
   persistQuestions,

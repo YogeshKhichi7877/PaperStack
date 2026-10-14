@@ -37,6 +37,14 @@ function renderParts(group) {
       ? items[0].lines.slice(consumed)
       : commonLines(items.map((item) => item.lines.slice(consumed)));
     const body = common.length ? [common.join('\n')] : [];
+    // A separately returned parent stem is not necessarily repeated in its
+    // children. Keep its unshared text instead of dropping it at branch nodes.
+    if (node.children.size) {
+      for (const own of node.items) {
+        const remaining = own.lines.slice(consumed + common.length).join('\n');
+        if (remaining) body.push(remaining);
+      }
+    }
     if (node.items.length && node.children.size === 0) {
       const leaf = node.items[0].question;
       if (leaf.marks != null && node !== root && body.length) body[body.length - 1] += ` [${leaf.marks} marks]`;
@@ -103,4 +111,4 @@ function combineSubparts(questions = []) {
   return result.map((item, index) => ({ ...item, sequence: index + 1 }));
 }
 
-module.exports = { combineSubparts, renderParts };
+module.exports = { combineSubparts };

@@ -1,12 +1,7 @@
-const PAGE_BREAK = '[[PAPERSTACK_PAGE_BREAK]]';
-const { combineSubparts } = require('./questionGroupingService');
+const { PAGE_BREAK, scanQuestionBlocks } = require('./questionBlocksService');
 // Compatibility normalization (NFKC) would flatten mathematical superscripts.
 const cleanLine = (v) => String(v || '').normalize('NFC').replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').trim();
 const cleanPdfText = (v) => String(v || '').normalize('NFC').replace(/\u00a0/g, ' ').replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').trim();
-function parseSection(line) {
-  const m = cleanLine(line).match(/^(?:section|part)\s*[-–—:]?\s*([A-Z0-9]+)(?:\s*[-–—:].*)?$/i);
-  return m ? `Section ${m[1].toUpperCase()}` : '';
-}
 function extractMarks(text) {
   const value = cleanPdfText(text);
   const m = value.match(/(?:\[\s*(\d+(?:\.\d+)?(?:\s*\+\s*\d+(?:\.\d+)?)*)\s*(?:marks?|m)?\s*\]|\(\s*(\d+(?:\.\d+)?)\s*(?:marks?|m)\s*\)|\b(\d+(?:\.\d+)?)\s*(?:marks?|m))\s*$/i);
@@ -27,28 +22,80 @@ function classifyQuestionType(text) {
 function isQuestionText(text) {
   const v = cleanLine(text);
   const meaningful = /\p{L}/u.test(v) || /\d.*[=+×÷√∫∑≤≥±?]/u.test(v);
-  return v.length >= 8 && meaningful && !/^(?:page\s*\d+|\d+|end of (?:paper|question paper)|(?:total|max(?:imum)?)\s*marks\s*:?\s*\d+|(?:subject|course|semester|time|date)\s*:.*)$/i.test(v);
+  return v.length >= 2 && meaningful && !/^(?:page\s*\d+|\d+|end of (?:paper|question paper)|(?:total|max(?:imum)?)\s*marks\s*:?\s*\d+|(?:subject|course|semester|time|date)\s*:.*)$/i.test(v);
 }
-function normalizeQuestionCandidate(c) {
-  const combined = cleanPdfText(c.lines.join('\n'));
-  const r = extractMarks(combined);
-  if (!isQuestionText(r.text)) return null;
-  const confidence = Math.min(98, c.markerStrength - (r.marks === null ? 12 : 0) - (c.ambiguous ? 20 : 0));
-  const prefix = '';
-  return { questionNumber: String(c.number), questionLabel: `Q${c.number}${c.part ? `(${c.part.replace(/-/g, ')(')})` : ''}`,
-    questionKey: `${prefix}q${c.number}${c.part ? `-${c.part}` : ''}`, part: c.part || '', parentQuestionKey: c.parentQuestionKey || '',
-    sequence: c.sequence, section: c.section || '', questionText: r.text, rawText: combined, marks: r.marks,
-    pageNumber: c.pageNumber, pageStart: c.pageNumber, pageEnd: c.pageEnd, questionType: classifyQuestionType(r.text), charStart: c.charStart, charEnd: c.charEnd,
-    source: 'rule', confidence, choiceGroup: c.choiceGroup || '', choiceInstructions: c.choiceInstructions || '',
-    hasVisualContext: /\b(?:figure|diagram|circuit|graph|table)\s+(?:below|above|shown|given)|\b(?:following|given)\s+(?:figure|diagram|circuit|graph|table)/i.test(r.text),
-    needsReview: confidence < 90 || r.marks === null || Boolean(c.ambiguous) };
+function questionFromBlock(block) {
+  const segments = [];
+  let segment = { part: '', lines: [] };
+  for (const line of block.lines) {
+    if (line.part) { segments.push(segment); segment = { part: line.part, lines: [] }; }
+    segment.lines.push(line.text);
+  }
+  segments.push(segment);
+  const entries = segments.map(s => {
+    const text = s.lines.join('\n');
+    // Marks columns often align with the first line, followed by wrapped prose
+    // or a figure. They need not be at the end of the whole subpart.
+    const explicit = [...text.matchAll(/\[\s*(\d+(?:\s*\+\s*\d+)*)\s*marks?\s*\]/gi)]
+      .map(m => m[1].split('+').reduce((sum, value) => sum + Number(value), 0));
+    const lineMarks = s.lines.map(line => extractMarks(line).marks).filter(value => value != null);
+    const annotations = explicit.length ? explicit : lineMarks;
+    return { ...s, text, marks: annotations.length === 1 ? annotations[0] : null,
+      ambiguous: annotations.length > 1 };
+  });
+  const parentMarks = entries.find(s => !s.part)?.marks ?? null;
+  const parts = entries.filter(s => s.part);
+  // Prefer an explicit parent total. Otherwise sum sibling totals, never count
+  // both (a)'s marks and the marks on (a)(i)/(a)(ii).
+  function total(prefix = '') {
+    const children = parts.filter(s => s.part.startsWith(prefix) && !s.part.slice(prefix.length).includes('-'));
+    const names = new Set(parts.filter(s => s.part.startsWith(prefix)).map(s => s.part.slice(prefix.length).split('-')[0]));
+    let sum = 0;
+    for (const name of names) {
+      const own = children.find(s => s.part === prefix + name);
+      const nested = parts.some(s => s.part.startsWith(prefix + name + '-'));
+      const marks = own?.marks ?? (nested ? total(prefix + name + '-') : null);
+      if (marks == null) return null;
+      sum += marks;
+    }
+    return names.size ? sum : null;
+  }
+  const partTotal = block.internalChoice ? null : total();
+  const instructionMarks = block.instructions.match(/each question (?:carries|is (?:of|worth))\s+(\d+)\s*marks?/i);
+  const marks = parentMarks ?? (parts.length ? partTotal : extractMarks(block.lines.map(l => l.text).join('\n')).marks) ??
+    (instructionMarks ? Number(instructionMarks[1]) : null);
+  const rawText = block.lines.map((l, i) => `${l.part && i ? '\n' : ''}${l.text}`).join('\n').trim();
+  // Retain every subpart mark in the body. Only a single un-parted question's
+  // final mark annotation can safely be removed for display.
+  const questionText = parts.length ? rawText : extractMarks(rawText).text;
+  if (!isQuestionText(questionText)) return null;
+  const incompletePart = parts.some(s => !s.text.replace(/^(?:\([^)]+\))+\s*/, '').trim());
+  const ambiguous = block.ambiguous || incompletePart || block.internalChoice || entries.some(s => s.ambiguous) ||
+    (parentMarks != null && partTotal != null && parentMarks !== partTotal);
+  const confidence = Math.min(98, block.strength - (marks == null ? 12 : 0) - (ambiguous ? 20 : 0));
+  return { questionNumber: block.number, questionLabel: `Q${block.number}`, questionKey: `q${block.number}`,
+    part: '', parentQuestionKey: '', section: block.section, questionText, rawText,
+    marks, confidence, source: 'rule', needsReview: confidence < 90 || marks == null || ambiguous,
+    pageNumber: block.pageStart, pageStart: block.pageStart, pageEnd: block.pageEnd,
+    charStart: block.charStart, charEnd: block.charEnd,
+    questionType: classifyQuestionType(questionText), choiceGroup: block.choiceGroup,
+    choiceInstructions: block.instructions,
+    hasVisualContext: /\b(?:figure|diagram|circuit|graph)\b|\b(?:following|given)\s+table/i.test(questionText),
+    mergedPartKeys: [...new Set(block.parts.map(part => `q${block.number}-${part}`.toLowerCase()))] };
 }
 function dedupeQuestions(questions) {
-  const keys = new Map(), texts = new Set();
+  const keys = new Map(), texts = new Set(), sections = new Map();
   return questions.filter((item) => {
     const text = `${item.section || ''}:${item.questionKey}:${cleanLine(item.questionText).toLowerCase()}`;
     if (!text || texts.has(text)) return false;
     texts.add(text);
+    const originalKey = item.questionKey;
+    if (sections.has(originalKey) && sections.get(originalKey) !== item.section) {
+      item.questionKey += `-${String(item.section || 'unsectioned').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      // Legacy child keys are section-ambiguous; do not retire them automatically.
+      item.mergedPartKeys = [];
+    }
+    if (!sections.has(originalKey)) sections.set(originalKey, item.section);
     const count = (keys.get(item.questionKey) || 0) + 1;
     keys.set(item.questionKey, count);
     if (count > 1) { item.questionKey += `-alternative-${count}`; if (!item.choiceGroup) item.needsReview = true; }
@@ -59,68 +106,20 @@ function buildOverallConfidence(questions) {
   return questions.length ? Math.round(questions.reduce((s, q) => s + q.confidence, 0) / questions.length) : 0;
 }
 function extractQuestionsFromText(rawText) {
-  const text = cleanPdfText(rawText), lines = text.split('\n').map(cleanLine).filter(Boolean);
+  const { blocks, text } = scanQuestionBlocks(rawText);
   const textLength = text.split(PAGE_BREAK).join('').trim().length;
-  const counts = new Map();
-  for (const line of lines) counts.set(line, (counts.get(line) || 0) + 1);
-  let page = 1, sawPage = false, section = '', top = null, current = null;
-  let stem = [], stemPage = null, nestedStem = [], nestedPage = null, alphabeticPart = '', pendingChoice = '', instructions = '', offset = 0;
-  const candidates = [];
-  const flush = () => { if (current) { const q = normalizeQuestionCandidate(current); if (q) candidates.push(q); } current = null; };
-  for (const line of lines) {
-    const location = Math.max(offset, text.indexOf(line, offset));
-    offset = location + line.length;
-    // A physical page boundary is not a question boundary.
-    if (line === PAGE_BREAK) { page += sawPage ? 1 : 0; sawPage = true; continue; }
-    if (/^(?:page\s*)?\d+(?:\s*(?:of|\/)\s*\d+)?$|^end of (?:paper|question paper)$/i.test(line)) continue;
-    if (counts.get(line) > 1 && /^(?:.*examination|.*institute|.*university|subject\s*:|course\s*:|time\s*:|maximum marks)/i.test(line)) continue;
-    const sec = parseSection(line);
-    if (sec) { flush(); section = sec; top = null; stem = []; nestedStem = []; alphabeticPart = ''; instructions = ''; continue; }
-    if (/^(?:instructions?\s*:?\s*)?(?:attempt|answer)\s+(?:any|all|only)\b/i.test(line)) { instructions = line; continue; }
-    if (/^(?:\(?OR\)?|alternatively)\s*[:.]?$/i.test(line)) {
-      pendingChoice = (current ? current.choiceGroup : candidates.at(-1)?.choiceGroup) || `${section || 'paper'}-q${top || candidates.length + 1}-or-${candidates.length + 1}`;
-      if (current) current.choiceGroup = pendingChoice; else if (candidates.length) candidates[candidates.length - 1].choiceGroup = pendingChoice;
-      flush(); continue;
-    }
-    let m = line.match(/^(?:q(?:uestion)?\s*\.?\s*)(\d{1,3})\s*(?:\(\s*([a-z]|[ivxlcdm]{1,6})\s*\))?\s*[.:)–—-]*\s*(.*)$/i);
-    let strength = 98, number, part = '', rest, kind = 'top';
-    if (!m) m = line.match(/^(\d{1,3})\s*\(\s*([a-z]|[ivxlcdm]{1,6})\s*\)\s*[.:–—-]*\s*(.*)$/i);
-    if (m) { number = m[1]; part = (m[2] || '').toLowerCase(); rest = m[3]; }
-    else {
-      m = line.match(/^(?:\((\d{1,2})\)|(\d{1,2})[.)])\s*(.*)$/);
-      if (m) { number = m[1] || m[2]; rest = m[3]; strength = 94; }
-      else {
-        m = line.match(/^([A-Z])[.)]\s+(.+)$/);
-        if (m && (top === null || /^[A-Z]$/.test(String(top)))) { number = m[1]; rest = m[2]; strength = 92; }
-        else {
-          m = line.match(/^(?:\(\s*([a-z]|[ivxlcdm]{1,6})\s*\)|([a-z]|[ivxlcdm]{1,6})[.)])\s*(.*)$/i);
-          if (m && top !== null) {
-            number = top; part = (m[1] || m[2]).toLowerCase(); rest = m[3]; kind = 'sub'; strength = 96;
-            if (/^[ivxlcdm]+$/.test(part) && alphabeticPart && alphabeticPart !== 'i') part = `${alphabeticPart}-${part}`;
-          } else m = null;
-        }
-      }
-    }
-    if (m) {
-      // Carry shared main/lettered stems into answerable children without saving a duplicate stem record.
-      if (kind === 'sub' && current && !current.part) { stem = current.lines; stemPage = current.pageNumber; current = null; }
-      else if (kind === 'sub' && part.includes('-') && current && current.part === alphabeticPart) { nestedStem = current.lines; nestedPage = current.pageNumber; current = null; }
-      else flush();
-      if (kind === 'top' && number !== top) { stem = []; stemPage = null; nestedStem = []; alphabeticPart = ''; }
-      top = number;
-      if (part && !part.includes('-') && !/^[ivxlcdm]+$/.test(part)) { alphabeticPart = part; nestedStem = []; nestedPage = null; }
-      const prefix = '';
-      current = { number, part, section, sequence: candidates.length + 1, markerStrength: strength,
-        pageNumber: (part.includes('-') ? nestedPage : stemPage) || (sawPage ? page : null),
-        charStart: location, charEnd: offset, pageEnd: sawPage ? page : null,
-        parentQuestionKey: part ? `${prefix}q${number}${part.includes('-') ? `-${alphabeticPart}` : ''}` : '',
-        lines: [...(part.includes('-') && nestedStem.length ? nestedStem : stem), ...(rest ? [rest] : [])], choiceGroup: pendingChoice, choiceInstructions: instructions };
-      pendingChoice = ''; continue;
-    }
-    if (current) { current.lines.push(line); current.pageEnd = sawPage ? page : null; current.charEnd = offset; }
+  const questions = dedupeQuestions(blocks.map(questionFromBlock).filter(Boolean)), warnings = [];
+  const introductory = text.slice(0, blocks[0]?.charStart ?? text.length);
+  const countPattern = '(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)';
+  const expected = introductory.match(new RegExp(`out of\\s+${countPattern}\\b|total(?:\\s+of)?\\s+${countPattern}\\s+questions?\\b`, 'i'));
+  const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+  const expectedValue = expected?.[1] || expected?.[2];
+  const expectedQuestionCount = expectedValue ? Number(expectedValue) || numberWords.indexOf(expectedValue.toLowerCase()) : null;
+  const incomplete = expectedQuestionCount > new Set(questions.map(q => `${q.section}:${q.questionNumber}`)).size;
+  if (incomplete) {
+    warnings.push(`The instructions refer to ${expectedQuestionCount} questions, but fewer were found. Check for missing pages or labels.`);
+    for (const question of questions) question.needsReview = true;
   }
-  flush();
-  const questions = dedupeQuestions(combineSubparts(candidates)), warnings = [];
   const tops = new Map();
   for (const q of questions) {
     const previous = tops.get(q.section);
@@ -133,7 +132,7 @@ function extractQuestionsFromText(rawText) {
   if (!questions.length) warnings.push('No reliable question boundaries were detected.');
   if (textLength < 180) warnings.push('Very little PDF text was extracted; the paper may be scanned.');
   if (questions.some((q) => q.needsReview)) warnings.push('Uncertain boundaries or missing marks require review.');
-  return { questions, confidence: buildOverallConfidence(questions), warnings, textLength };
+  return { questions, confidence: buildOverallConfidence(questions), warnings, textLength, incomplete, expectedQuestionCount };
 }
-module.exports = { PAGE_BREAK, cleanPdfText, parseSection, extractMarks, classifyQuestionType,
-  isQuestionText, normalizeQuestionCandidate, dedupeQuestions, buildOverallConfidence, extractQuestionsFromText };
+module.exports = { PAGE_BREAK, cleanPdfText, extractMarks, classifyQuestionType,
+  isQuestionText, dedupeQuestions, buildOverallConfidence, extractQuestionsFromText };
